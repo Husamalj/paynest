@@ -26,6 +26,11 @@ export default {
         soft: '0 1px 2px 0 rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.05)',
         card: '0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04)',
         elevated: '0 4px 16px -4px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04)',
+        'btn-hover': '0 4px 12px -2px rgba(15, 23, 42, 0.12), 0 2px 4px -1px rgba(15, 23, 42, 0.08)',
+        'btn-primary-hover': '0 4px 14px -2px rgba(0, 111, 198, 0.35)',
+        'btn-success-hover': '0 4px 14px -2px rgba(5, 150, 105, 0.35)',
+        'btn-danger-hover': '0 4px 14px -2px rgba(225, 29, 72, 0.35)',
+        'card-hover': '0 8px 24px -4px rgba(15, 23, 42, 0.10), 0 4px 8px -2px rgba(15, 23, 42, 0.06)',
       },
       keyframes: {
         'fade-in': {

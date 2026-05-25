@@ -32,23 +32,28 @@
   /* ============ BUTTONS ============ */
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
-           transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed
+           transition-all duration-150 active:scale-[0.98] active:translate-y-0
+           disabled:opacity-50 disabled:cursor-not-allowed
            disabled:active:scale-100 whitespace-nowrap select-none;
   }
   .btn-primary {
-    @apply bg-brand-600 text-white hover:bg-brand-700 shadow-sm;
+    @apply bg-brand-600 text-white hover:bg-brand-700 shadow-sm
+           hover:shadow-btn-primary-hover hover:-translate-y-0.5;
   }
   .btn-success {
-    @apply bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm;
+    @apply bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm
+           hover:shadow-btn-success-hover hover:-translate-y-0.5;
   }
   .btn-danger {
-    @apply bg-rose-600 text-white hover:bg-rose-700 shadow-sm;
+    @apply bg-rose-600 text-white hover:bg-rose-700 shadow-sm
+           hover:shadow-btn-danger-hover hover:-translate-y-0.5;
   }
   .btn-secondary {
-    @apply bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-sm;
+    @apply bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300
+           shadow-sm hover:shadow-btn-hover hover:-translate-y-0.5;
   }
   .btn-ghost {
-    @apply text-slate-600 hover:bg-slate-100;
+    @apply text-slate-600 hover:bg-slate-100 hover:shadow-soft;
   }
   .btn-sm {
     @apply px-3 py-1.5 text-xs gap-1.5;
@@ -59,11 +64,15 @@
 
   /* ============ CARDS ============ */
   .card {
-    @apply bg-white rounded-xl border border-slate-200/70 shadow-card p-5;
+    @apply bg-white rounded-xl border border-slate-200/70 shadow-card p-5
+           transition-shadow duration-200;
   }
   .card.compact { @apply p-4; }
   .card-elevated {
     @apply bg-white rounded-xl border border-slate-200/70 shadow-elevated p-5;
+  }
+  .card-interactive {
+    @apply card hover:shadow-card-hover hover:-translate-y-0.5 cursor-pointer transition-all duration-200;
   }
   .card-header {
     @apply flex items-center justify-between pb-3 mb-4 border-b border-slate-100;
