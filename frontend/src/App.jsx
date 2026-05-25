@@ -303,6 +303,7 @@ function SignupPage({ onLogin }) {
   const [slugTouched, setSlugTouched] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pending, setPending] = useState(false);
 
   const set = (field) => (e) => {
     const val = e.target.value;
@@ -345,12 +346,15 @@ function SignupPage({ onLogin }) {
         password: form.password,
       });
 
+      if (res.data.pending) {
+        setPending(true);
+        return;
+      }
       const { token, user } = res.data;
       localStorage.setItem('token', token);
       localStorage.setItem('paynest_logged_in', 'true');
       localStorage.setItem('role', user.role);
       localStorage.setItem('user', JSON.stringify(user));
-
       onLogin(user);
       window.location.href = getDefaultPath(user.role);
     } catch (err) {
@@ -415,6 +419,14 @@ function SignupPage({ onLogin }) {
           {field('Confirm Password', 'تأكيد كلمة السر', { type: 'password', value: form.confirmPassword, onChange: set('confirmPassword'), placeholder: ar ? 'أعد كتابة كلمة السر' : 'Repeat password', required: true })}
 
           {error && <div className="text-red-600 text-sm mb-4 text-center">{error}</div>}
+
+          {pending && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-sm text-center mb-4">
+              {ar
+                ? 'تم التسجيل بنجاح. سيتم مراجعة طلبك من قِبل الإدارة قريباً.'
+                : 'Registration submitted! Awaiting admin approval before you can log in.'}
+            </div>
+          )}
 
           <button disabled={loading} className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold disabled:opacity-60 transition-colors">
             {loading ? (ar ? 'جاري التسجيل...' : 'Creating account...') : (ar ? 'إنشاء الحساب' : 'Create Account')}

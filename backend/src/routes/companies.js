@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/index');
+const { requireAuth, requireRole } = require('../middleware/auth');
 
 function makeSlug(name) {
     return String(name || '')
@@ -15,14 +16,14 @@ router.get('/', async (req, res) => {
     try {
         const result = await pool.query(`
   SELECT
-    c.*,
+    c.id, c.name, c.slug, c.is_active, c.status, c.created_at,
     u.email AS owner_email,
-    u.name AS owner_name
+    COUNT(e.id)::int AS employee_count
   FROM companies c
-  LEFT JOIN users u
-    ON u.company_id = c.id
-   AND u.role = 'owner'
-  ORDER BY c.id ASC
+  LEFT JOIN users u ON u.company_id = c.id AND u.role = 'owner'
+  LEFT JOIN employees e ON e.company_id = c.id
+  GROUP BY c.id, c.name, c.slug, c.is_active, c.status, c.created_at, u.email
+  ORDER BY c.created_at DESC
 `);
         res.json(result.rows);
     } catch (err) {
@@ -180,4 +181,38 @@ router.patch('/:id/toggle-status', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// PATCH /api/companies/:id/approve  — super_admin only
+router.patch('/:id/approve', requireAuth, requireRole('super_admin'), async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE companies SET status = 'active', is_active = true WHERE id = $1 RETURNING *`,
+      [req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Approve company error:', err);
+    res.status(500).json({ error: 'Failed to approve company' });
+  }
+});
+
+// PATCH /api/companies/:id/reject  — super_admin only
+router.patch('/:id/reject', requireAuth, requireRole('super_admin'), async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE companies SET status = 'rejected', is_active = false WHERE id = $1 RETURNING *`,
+      [req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Reject company error:', err);
+    res.status(500).json({ error: 'Failed to reject company' });
+  }
+});
+
 module.exports = router;

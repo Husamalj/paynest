@@ -217,6 +217,8 @@ async function runMigrations() {
       `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS company_id INTEGER DEFAULT 1`,
       `ALTER TABLE remote_assignments ADD COLUMN IF NOT EXISTS company_id INTEGER DEFAULT 1`,
       `ALTER TABLE announcements ADD COLUMN IF NOT EXISTS company_id INTEGER DEFAULT 1`,
+      `ALTER TABLE companies ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active'`,
+      `ALTER TABLE companies ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`,
     ];
     for (const sql of alters) {
       try {

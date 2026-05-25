@@ -69,12 +69,8 @@ router.post('/register-company', async (req, res) => {
         }
 
         const companyResult = await client.query(
-            `
-      INSERT INTO companies (name, slug)
-      VALUES ($1, $2)
-      RETURNING id, name, slug, created_at
-      `,
-            [companyName, slug]
+          `INSERT INTO companies (name, slug, status, is_active) VALUES ($1, $2, 'pending', false) RETURNING id, name, slug, status, is_active, created_at`,
+          [companyName, slug]
         );
 
         const company = companyResult.rows[0];
@@ -123,13 +119,9 @@ router.post('/register-company', async (req, res) => {
 
         await client.query('COMMIT');
 
-        const user = userResult.rows[0];
-        const token = signToken(user);
-
         res.status(201).json({
-            token,
-            user,
-            company,
+          pending: true,
+          message: 'Company registered. Awaiting administrator approval.',
         });
     } catch (err) {
         await client.query('ROLLBACK');
@@ -160,7 +152,8 @@ router.post('/login', async (req, res) => {
         users.*,
         companies.name AS company_name,
         companies.slug AS company_slug,
-        companies.is_active
+        companies.is_active,
+        companies.status AS company_status
       FROM users
       LEFT JOIN companies
         ON companies.id = users.company_id
@@ -184,6 +177,16 @@ router.post('/login', async (req, res) => {
             return res.status(403).json({
                 error: 'Company subscription is inactive',
             });
+        }
+
+        if (
+          user.role !== 'super_admin' &&
+          user.company_id &&
+          user.company_status === 'pending'
+        ) {
+          return res.status(403).json({
+            error: 'Company registration is pending administrator approval.',
+          });
         }
 
         const validPassword = await bcrypt.compare(password, user.password);
