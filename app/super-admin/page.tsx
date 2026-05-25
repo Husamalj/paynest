@@ -20,7 +20,7 @@ type Tab = typeof TABS[number];
 
 export default function SuperAdminPage() {
   const [companies, setCompanies] = useState<any[]>([]);
-  const [tab, setTab] = useState<Tab>("pending");
+  const [tab, setTab] = useState<Tab>("all");
   const [showAdd, setShowAdd] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -141,12 +141,15 @@ export default function SuperAdminPage() {
         <div className="card p-0 overflow-hidden">
           <div className="border-b border-slate-200 px-6 pt-4">
             <div className="tabs mb-0">
-              {TABS.map((t) => (
-                <button key={t} className={clsx("tab", tab === t && "tab-active")} onClick={() => setTab(t)}>
-                  {t === "pending" ? "Pending" : t === "active" ? "Active" : t === "suspended" ? "Suspended" : "All"}
-                  {t === "pending" && stats.pending > 0 && (
-                    <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-bold">{stats.pending}</span>
-                  )}
+              {([
+                { key: "all", label: "All", count: stats.total, dot: "bg-slate-400" },
+                { key: "active", label: "Active", count: stats.active, dot: "bg-emerald-500" },
+                { key: "pending", label: "Pending", count: stats.pending, dot: "bg-amber-500" },
+                { key: "suspended", label: "Suspended", count: stats.suspended, dot: "bg-rose-500" },
+              ] as const).map(({ key, label, count, dot }) => (
+                <button key={key} className={clsx("tab", tab === key && "tab-active")} onClick={() => setTab(key)}>
+                  {label}
+                  <span className={clsx("ml-1.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-white text-[10px] font-bold", tab === key ? dot : "bg-slate-300")}>{count}</span>
                 </button>
               ))}
             </div>
