@@ -41,7 +41,7 @@ export default function EmployeePortalPage() {
   const savedUser = JSON.parse(typeof window !== "undefined" ? localStorage.getItem("user") || "{}" : "{}");
 
   const [employees, setEmployees] = useState<any[]>([]);
-  const [employeeId, setEmployeeId] = useState(savedUser.employee_number || (typeof window !== "undefined" ? localStorage.getItem("paynest_employee_id") : "") || "");
+  const [employeeId, setEmployeeId] = useState(savedUser.employeeNumber || savedUser.employee_number || (typeof window !== "undefined" ? localStorage.getItem("paynest_employee_id") : "") || "");
   const [employee, setEmployee] = useState<any>(null);
   const [payroll, setPayroll] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
@@ -86,7 +86,7 @@ export default function EmployeePortalPage() {
   useEffect(() => {
     if (!employeeId) { setEmployee(null); return; }
     localStorage.setItem("paynest_employee_id", employeeId);
-    setEmployee(employees.find((item) => item.employee_id === employeeId) || null);
+    setEmployee(employees.find((item) => (item.employeeId || item.employee_id) === employeeId) || null);
   }, [employeeId, employees]);
 
   const loadData = async () => {
@@ -99,7 +99,8 @@ export default function EmployeePortalPage() {
           api.get("/leaves"), api.get("/leaves/balances"), api.get("/announcements"),
         ]);
         const me = meRes.data;
-        setEmployees([me]); setEmployee(me); setEmployeeId(me.employee_id);
+        const meId = me.employeeId || me.employee_id;
+        setEmployees([me]); setEmployee(me); setEmployeeId(meId);
         setTasks(tasksRes.data || []); setLeaves(leavesRes.data || []);
         setBalances(balancesRes.data || []); setAnnouncements(announcementsRes.data || []);
         setPayroll(payrollRes.data?.results || []);
@@ -119,12 +120,12 @@ export default function EmployeePortalPage() {
 
   const myPayroll = useMemo(() => {
     if (!employeeId || !Array.isArray(payroll)) return null;
-    return payroll.find((row) => row.employee_id === employeeId) || null;
+    return payroll.find((row) => (row.employeeId || row.employee_id) === employeeId) || null;
   }, [employeeId, payroll]);
 
-  const myTasks = useMemo(() => tasks.filter((task) => task.employee_id === employeeId), [tasks, employeeId]);
-  const myLeaves = useMemo(() => leaves.filter((leave) => leave.employee_id === employeeId), [leaves, employeeId]);
-  const myBalance = useMemo(() => balances.find((b) => b.employee_id === employeeId) || null, [balances, employeeId]);
+  const myTasks = useMemo(() => tasks.filter((task) => (task.employeeId || task.employee_id) === employeeId), [tasks, employeeId]);
+  const myLeaves = useMemo(() => leaves.filter((leave) => (leave.employeeId || leave.employee_id) === employeeId), [leaves, employeeId]);
+  const myBalance = useMemo(() => balances.find((b) => (b.employeeId || b.employee_id) === employeeId) || null, [balances, employeeId]);
 
   const submitLeave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,7 +138,7 @@ export default function EmployeePortalPage() {
     setSaving(true); setError(""); setSuccess("");
     try {
       const res = await api.post("/leaves", {
-        employee_id: employee.employee_id, employee_name: employee.name,
+        employee_id: employee.employeeId || employee.employee_id, employee_name: employee.name,
         leave_type: leaveForm.leave_type, start_date: leaveForm.start_date,
         end_date: leaveForm.end_date, days_count: days, reason: leaveForm.reason,
       });
@@ -185,7 +186,7 @@ export default function EmployeePortalPage() {
               <select className="form-select min-w-0 sm:w-72" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
                 <option value="">{text.chooseEmployee}</option>
                 {employees.map((item) => (
-                  <option key={item.employee_id} value={item.employee_id}>{item.name} ({item.employee_id})</option>
+                  <option key={item.employeeId || item.employee_id} value={item.employeeId || item.employee_id}>{item.name} ({item.employeeId || item.employee_id})</option>
                 ))}
               </select>
             )}
@@ -206,10 +207,10 @@ export default function EmployeePortalPage() {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.base}</div><div className="text-xl font-bold text-slate-900">{formatCurrency(myPayroll?.base_salary || employee.base_salary)}</div></div>
-              <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.net}</div><div className="text-xl font-bold text-emerald-700">{formatCurrency(myPayroll?.net_salary)}</div></div>
-              <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.deductions}</div><div className="text-xl font-bold text-rose-700">{formatCurrency(Math.max(0, -(parseFloat(myPayroll?.adjustment) || 0)) + (parseFloat(myPayroll?.deduction_total) || 0) + (parseFloat(myPayroll?.social_security_deduct) || 0))}</div></div>
-              <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.hoursDiff}</div><div className={clsx("text-xl font-bold", parseFloat(myPayroll?.hour_diff || 0) < 0 ? "text-rose-700" : "text-emerald-700")}>{(parseFloat(myPayroll?.hour_diff) || 0).toFixed(2)}</div></div>
+              <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.base}</div><div className="text-xl font-bold text-slate-900">{formatCurrency(myPayroll?.baseSalary || myPayroll?.base_salary || employee.baseSalary || employee.base_salary)}</div></div>
+              <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.net}</div><div className="text-xl font-bold text-emerald-700">{formatCurrency(myPayroll?.netSalary || myPayroll?.net_salary)}</div></div>
+              <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.deductions}</div><div className="text-xl font-bold text-rose-700">{formatCurrency(Math.max(0, -(parseFloat(myPayroll?.adjustment) || 0)) + (parseFloat(myPayroll?.deductionTotal || myPayroll?.deduction_total) || 0) + (parseFloat(myPayroll?.socialSecurityDeduct || myPayroll?.social_security_deduct) || 0))}</div></div>
+              <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.hoursDiff}</div><div className={clsx("text-xl font-bold", parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff || 0) < 0 ? "text-rose-700" : "text-emerald-700")}>{(parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff) || 0).toFixed(2)}</div></div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-5">
