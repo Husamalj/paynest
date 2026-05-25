@@ -69,7 +69,11 @@ export default function SuperAdminPage() {
   const action = async (id: number, endpoint: string, successMsg: string) => {
     setBusyId(id); setError(""); setSuccess("");
     try {
-      await api.patch(`/companies/${id}/${endpoint}`);
+      if (endpoint === "toggle-status") {
+        await api.patch(`/companies/${id}`, { toggleStatus: true });
+      } else {
+        await api.patch(`/companies/${id}/${endpoint}`);
+      }
       setSuccess(successMsg);
       await load();
     } catch (e: any) { setError(safeErr(e)); }
