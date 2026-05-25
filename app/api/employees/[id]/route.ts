@@ -43,6 +43,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const data: Record<string, unknown> = {};
     if (body.name !== undefined) data.name = body.name;
     if (body.email !== undefined) data.email = body.email ?? "";
+    if (body.phone !== undefined) data.phone = body.phone ?? "";
     if (body.base_salary !== undefined) data.baseSalary = Number(body.base_salary) || 0;
     if (body.social_security !== undefined) data.socialSecurity = !!body.social_security;
     if (body.remote_days !== undefined) data.remoteDays = body.remote_days;

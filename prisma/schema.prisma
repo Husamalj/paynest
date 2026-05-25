@@ -77,6 +77,7 @@ model Employee {
   email          String   @default("") @db.VarChar(255)
   religion       String   @default("") @db.VarChar(50)
   baseSalary     Decimal  @default(0) @map("base_salary")
+  phone          String   @default("") @db.VarChar(30)
   socialSecurity Boolean  @default(false) @map("social_security")
   remoteDays     Int      @default(0) @map("remote_days")
   systemMode     String   @default("daily") @map("system_mode") @db.VarChar(20)
