@@ -139,17 +139,29 @@ export default function SuperAdminPage() {
         {success && <div className="alert alert-success"><CheckCircle2 size={16} />{success}</div>}
 
         <div className="card p-0 overflow-hidden">
-          <div className="border-b border-slate-200 px-6 pt-4">
-            <div className="tabs mb-0">
+          <div className="px-4 pt-4 pb-0 border-b border-slate-100">
+            <div className="flex w-full">
               {([
-                { key: "all", label: "All", count: stats.total, dot: "bg-slate-400" },
-                { key: "active", label: "Active", count: stats.active, dot: "bg-emerald-500" },
-                { key: "pending", label: "Pending", count: stats.pending, dot: "bg-amber-500" },
-                { key: "suspended", label: "Suspended", count: stats.suspended, dot: "bg-rose-500" },
-              ] as const).map(({ key, label, count, dot }) => (
-                <button key={key} className={clsx("tab", tab === key && "tab-active")} onClick={() => setTab(key)}>
+                { key: "all",       label: "All",       count: stats.total,     active: "bg-slate-700 text-white",   inactive: "text-slate-500 hover:text-slate-700 hover:bg-slate-100" },
+                { key: "active",    label: "Active",    count: stats.active,    active: "bg-emerald-600 text-white", inactive: "text-slate-500 hover:text-emerald-700 hover:bg-emerald-50" },
+                { key: "pending",   label: "Pending",   count: stats.pending,   active: "bg-amber-500 text-white",   inactive: "text-slate-500 hover:text-amber-700 hover:bg-amber-50" },
+                { key: "suspended", label: "Suspended", count: stats.suspended, active: "bg-rose-600 text-white",    inactive: "text-slate-500 hover:text-rose-700 hover:bg-rose-50" },
+              ] as const).map(({ key, label, count, active, inactive }) => (
+                <button
+                  key={key}
+                  onClick={() => setTab(key)}
+                  className={clsx(
+                    "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-t-lg transition-all duration-150 border-b-2",
+                    tab === key
+                      ? clsx(active, "border-current shadow-sm")
+                      : clsx(inactive, "border-transparent")
+                  )}
+                >
                   {label}
-                  <span className={clsx("ml-1.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-white text-[10px] font-bold", tab === key ? dot : "bg-slate-300")}>{count}</span>
+                  <span className={clsx(
+                    "inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full text-[11px] font-bold transition-colors",
+                    tab === key ? "bg-white/25 text-white" : "bg-slate-100 text-slate-500"
+                  )}>{count}</span>
                 </button>
               ))}
             </div>
