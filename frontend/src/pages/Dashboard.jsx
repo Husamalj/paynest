@@ -1,0 +1,487 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Users,
+  Wallet,
+  DollarSign,
+  TrendingDown,
+  Gift,
+  Shield,
+  AlertTriangle,
+  MapPin,
+  Bell,
+  Bot,
+  Sparkles,
+  Send,
+  Calendar,
+  CheckSquare,
+} from 'lucide-react';
+import { useLanguage } from '../hooks/useLanguage';
+import StatCard from '../components/StatCard';
+import api from '../utils/api';
+
+function formatCurrency(val) {
+  const n = parseFloat(val) || 0;
+  return n.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function getStatusBadge(status, t) {
+  const map = {
+    'Full Attendance': { cls: 'badge-green', label: t('fullAttendance') },
+    'Has Deductions': { cls: 'badge-red', label: t('hasDeductions') },
+    'Has Extras': { cls: 'badge-blue', label: t('hasExtras') },
+    Absent: { cls: 'badge-gray', label: t('absent') },
+  };
+
+  const info = map[status] || { cls: 'badge-gray', label: status };
+  return <span className={`badge ${info.cls}`}>{info.label}</span>;
+}
+
+function buildCopilotInsights(payroll, employees, isRTL) {
+  const label = (ar, en) => (isRTL ? ar : en);
+
+  const rows = payroll.map((row) => ({
+    ...row,
+    name: row.name || row.employee_id,
+    base_salary: parseFloat(row.base_salary) || 0,
+    net_salary: parseFloat(row.net_salary) || 0,
+    adjustment: parseFloat(row.adjustment) || 0,
+    deduction_total: parseFloat(row.deduction_total) || 0,
+    social_security_deduct: parseFloat(row.social_security_deduct) || 0,
+    hour_diff: parseFloat(row.hour_diff) || 0,
+  }));
+
+  if (!rows.length) {
+    return [
+      {
+        question: label('مين أكثر قسم عنده غياب؟', 'Who has the most absence?'),
+        answer: label(
+          'لسا ما في كشف رواتب محسوب. ارفع ملفات الحضور والرواتب ثم احسب الرواتب.',
+          'No payroll has been calculated yet. Upload attendance and salary files, then calculate payroll.'
+        ),
+      },
+      {
+        question: label('مين متوقع يترك الشركة؟', 'Who may be at risk of leaving?'),
+        answer: label(
+          'أحتاج بيانات رواتب وحضور أولاً حتى أعطي مؤشر منطقي.',
+          'I need payroll and attendance data first before giving a useful signal.'
+        ),
+      },
+      {
+        question: label('ليش الإنتاج نازل؟', 'Why is productivity down?'),
+        answer: label(
+          'بعد حساب الرواتب أقدر أربط فرق الساعات والغياب والخصومات.',
+          'After payroll is calculated, I can connect hour gaps, absence, and deductions.'
+        ),
+      },
+    ];
+  }
+
+  const biggestShortfall = [...rows].sort((a, b) => a.hour_diff - b.hour_diff)[0];
+
+  const biggestDeduction = [...rows].sort(
+    (a, b) =>
+      Math.abs(b.adjustment) +
+      b.deduction_total +
+      b.social_security_deduct -
+      (Math.abs(a.adjustment) + a.deduction_total + a.social_security_deduct)
+  )[0];
+
+  const lowestNet = [...rows].sort((a, b) => a.net_salary - b.net_salary)[0];
+  const highestNet = [...rows].sort((a, b) => b.net_salary - a.net_salary)[0];
+
+  const totalNet = rows.reduce((sum, row) => sum + row.net_salary, 0);
+
+  const totalDeductions = rows.reduce(
+    (sum, row) =>
+      sum +
+      Math.max(0, -row.adjustment) +
+      row.deduction_total +
+      row.social_security_deduct,
+    0
+  );
+
+  const affected = rows.filter(
+    (row) => row.hour_diff < 0 || row.deduction_total > 0 || row.social_security_deduct > 0
+  ).length;
+
+  return [
+    {
+      question: label('مين أكثر موظف عنده غياب/نقص ساعات؟', 'Who has the highest absence or hour gap?'),
+      answer: label(
+        `${biggestShortfall.name} عنده فرق ساعات ${biggestShortfall.hour_diff.toFixed(2)}، وهذا عامل خصم مباشر على الراتب.`,
+        `${biggestShortfall.name} has an hour gap of ${biggestShortfall.hour_diff.toFixed(2)}, which directly affects payroll.`
+      ),
+    },
+    {
+      question: label('مين عليه أعلى خصومات؟', 'Who has the highest deductions?'),
+      answer: label(
+        `${biggestDeduction.name} عليه أعلى أثر خصومات/ضمان بقيمة ${formatCurrency(
+          Math.max(0, -biggestDeduction.adjustment) +
+          biggestDeduction.deduction_total +
+          biggestDeduction.social_security_deduct
+        )}.`,
+        `${biggestDeduction.name} has the highest deduction/SS impact at ${formatCurrency(
+          Math.max(0, -biggestDeduction.adjustment) +
+          biggestDeduction.deduction_total +
+          biggestDeduction.social_security_deduct
+        )}.`
+      ),
+    },
+    {
+      question: label('كم صافي الرواتب المتوقع؟', 'What is expected net payroll?'),
+      answer: label(
+        `صافي الرواتب الحالي ${formatCurrency(totalNet)}، وإجمالي أثر الخصومات والضمان ${formatCurrency(totalDeductions)} على ${affected} موظف.`,
+        `Current net payroll is ${formatCurrency(totalNet)}, with total deductions and SS impact of ${formatCurrency(totalDeductions)} across ${affected} employees.`
+      ),
+    },
+    {
+      question: label('مين أعلى وأقل صافي راتب؟', 'Who has the highest and lowest net pay?'),
+      answer: label(
+        `أعلى صافي راتب: ${highestNet.name} (${formatCurrency(highestNet.net_salary)}). أقل صافي راتب: ${lowestNet.name} (${formatCurrency(lowestNet.net_salary)}).`,
+        `Highest net pay: ${highestNet.name} (${formatCurrency(highestNet.net_salary)}). Lowest net pay: ${lowestNet.name} (${formatCurrency(lowestNet.net_salary)}).`
+      ),
+    },
+  ];
+}
+
+export default function Dashboard({ settings }) {
+  const { t, isRTL } = useLanguage();
+
+  const [payroll, setPayroll] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [remoteAssignments, setRemoteAssignments] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [leaves, setLeaves] = useState([]);
+  const [tasks, setTasks] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [copilotQuestion, setCopilotQuestion] = useState('');
+  const [copilotAnswer, setCopilotAnswer] = useState('');
+  const [copilotLoading, setCopilotLoading] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/payroll/latest'),
+      api.get('/employees'),
+      api.get('/remote_assignments'),
+      api.get('/leaves'),
+      api.get('/tasks'),
+      api.get('/announcements'),
+    ])
+      .then(([prRes, empRes, raRes, leavesRes, tasksRes, annRes]) => {
+        setPayroll(prRes.data.results || []);
+        setEmployees(empRes.data || []);
+        setRemoteAssignments(raRes.data || []);
+        setLeaves(leavesRes.data || []);
+        setTasks(tasksRes.data || []);
+        setAnnouncements(annRes.data || []);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const totals = useMemo(() => {
+    const totalBase = payroll.reduce((s, r) => s + (parseFloat(r.base_salary) || 0), 0);
+    const totalNet = payroll.reduce((s, r) => s + (parseFloat(r.net_salary) || 0), 0);
+    const totalDeductions = payroll.reduce(
+      (s, r) => s + (parseFloat(r.deduction_total) || 0),
+      0
+    );
+    const totalBonuses = payroll.reduce((s, r) => s + (parseFloat(r.bonus_total) || 0), 0);
+    const totalSS = payroll.reduce(
+      (s, r) => s + (parseFloat(r.social_security_deduct) || 0),
+      0
+    );
+
+    return { totalBase, totalNet, totalDeductions, totalBonuses, totalSS };
+  }, [payroll]);
+
+  const pendingLeaves = leaves.filter((leave) => leave.status === 'pending').length;
+  const openTasks = tasks.filter((task) => task.status !== 'completed').length;
+
+  const remoteWorkEmployees = useMemo(() => {
+    const seen = new Set();
+
+    return remoteAssignments
+      .filter((a) => {
+        const key = `${a.employee_id}|${a.start_date}|${a.end_date}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 5);
+  }, [remoteAssignments]);
+
+  const copilotInsights = useMemo(
+    () => buildCopilotInsights(payroll, employees, isRTL),
+    [payroll, employees, isRTL]
+  );
+
+  const askCopilot = async (question) => {
+    const nextQuestion = String(question || copilotQuestion).trim();
+    if (!nextQuestion || copilotLoading) return;
+
+    setCopilotQuestion(nextQuestion);
+    setCopilotLoading(true);
+    setError('');
+
+    try {
+      const res = await api.post('/copilot/ask', { question: nextQuestion });
+      setCopilotAnswer(res.data.answer || '');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCopilotLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20 gap-3 text-slate-500">
+        <span className="spinner spinner-dark w-5 h-5" />
+        {t('loadingData')}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="page-header">
+        <div>
+          <h2 className="page-title">{t('dashboard')}</h2>
+          <p className="page-subtitle">
+            {settings?.company_name || 'PayZen'} • HR, payroll, attendance, and employee requests
+          </p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="alert alert-error">
+          <AlertTriangle size={16} />
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
+        <StatCard title={t('totalEmployees')} value={employees.length} icon={Users} color="brand" />
+        <StatCard title={t('totalBaseSalary')} value={formatCurrency(totals.totalBase)} icon={Wallet} color="blue" />
+        <StatCard title={t('totalNetPay')} value={formatCurrency(totals.totalNet)} icon={DollarSign} color="green" />
+        <StatCard title={t('totalDeductions')} value={formatCurrency(totals.totalDeductions)} icon={TrendingDown} color="red" />
+        <StatCard title={t('totalBonuses')} value={formatCurrency(totals.totalBonuses)} icon={Gift} color="orange" />
+        <StatCard title={t('ssDeductions')} value={formatCurrency(totals.totalSS)} icon={Shield} color="purple" />
+        <StatCard title={isRTL ? 'إجازات معلقة' : 'Pending Leaves'} value={pendingLeaves} icon={Calendar} color="orange" />
+        <StatCard title={isRTL ? 'مهام مفتوحة' : 'Open Tasks'} value={openTasks} icon={CheckSquare} color="blue" />
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-0">
+          <div className="p-5 bg-slate-950 text-white">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-9 h-9 rounded-lg bg-brand-500 flex items-center justify-center">
+                <Bot size={18} />
+              </div>
+
+              <div>
+                <div className="text-lg font-bold">HR AI Copilot .3</div>
+                <div className="text-xs text-slate-300">
+                  {isRTL
+                    ? 'مساعد ذكي يقرأ بيانات الرواتب والحضور'
+                    : 'Smart assistant for payroll and attendance'}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 text-sm text-slate-200 leading-6">
+              <Sparkles size={16} className="text-brand-300 mt-1 flex-shrink-0" />
+              <p>
+                {isRTL
+                  ? 'اسأل عن الغياب، الخصومات، صافي الرواتب، والموظفين الأكثر تأثراً مباشرة من بيانات النظام.'
+                  : 'Ask about absence, deductions, net payroll, and the most affected employees using live system data.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="p-5">
+            <form
+              className="flex gap-2 mb-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                askCopilot();
+              }}
+            >
+              <input
+                className="form-input flex-1"
+                value={copilotQuestion}
+                onChange={(e) => setCopilotQuestion(e.target.value)}
+                placeholder={
+                  isRTL
+                    ? 'اسأل مثل: مين عليه أعلى خصم؟'
+                    : 'Ask: who has the highest deduction?'
+                }
+              />
+
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={copilotLoading || !copilotQuestion.trim()}
+                title={isRTL ? 'إرسال السؤال' : 'Ask question'}
+              >
+                {copilotLoading ? <span className="spinner" /> : <Send size={15} />}
+              </button>
+            </form>
+
+            <div className="text-xs font-semibold text-slate-500 mb-3">
+              {isRTL ? 'اقتراحات سريعة:' : 'Quick prompts:'}
+            </div>
+
+            <div className="grid gap-2 mb-4 sm:grid-cols-2">
+              {copilotInsights.map((item) => (
+                <button
+                  key={item.question}
+                  type="button"
+                  onClick={() => askCopilot(item.question)}
+                  className="text-sm text-start px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  {item.question}
+                </button>
+              ))}
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold text-slate-500 mb-2">
+                {isRTL ? 'والنظام يحلل:' : 'System analysis:'}
+              </div>
+
+              <p className="text-sm leading-7 text-slate-800">
+                {copilotAnswer || copilotInsights[0]?.answer}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">
+              <MapPin size={16} className="text-brand-600" />
+              {t('remoteWorkStatus') || 'Remote Work Status'}
+            </div>
+          </div>
+
+          {remoteWorkEmployees.length === 0 ? (
+            <div className="text-center py-12 text-sm text-slate-400">{t('noData')}</div>
+          ) : (
+            <div className="space-y-3">
+              {remoteWorkEmployees.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                      {a.name?.[0]?.toUpperCase() || a.emp_id?.[0]}
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-slate-900 truncate">
+                        {a.label || t('working') || 'Working Remotely'}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {a.name} • {a.emp_id}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right flex-shrink-0">
+                    <div className="text-sm font-semibold text-slate-900">
+                      {new Date(a.start_date).toLocaleDateString()} →{' '}
+                      {new Date(a.end_date).toLocaleDateString()}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {a.label ? '' : t('remoteWorkStatus')}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">
+              <Bell size={16} className="text-brand-600" />
+              {t('announcements') || 'Announcements'}
+            </div>
+          </div>
+
+          {announcements.length === 0 ? (
+            <div className="text-center py-12 text-sm text-slate-400">{t('noData')}</div>
+          ) : (
+            <div className="space-y-3">
+              {announcements.slice(0, 5).map((ann) => (
+                <div key={ann.id} className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                  <div className="text-sm font-semibold text-slate-900 mb-1">
+                    {ann.title}
+                  </div>
+                  <div className="text-xs text-slate-600 mb-2">
+                    {ann.message}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {ann.created_at
+                      ? new Date(ann.created_at).toLocaleDateString()
+                      : '-'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title">
+            <Wallet size={16} className="text-brand-600" />
+            {t('recentPayroll')}
+          </div>
+        </div>
+
+        {payroll.length === 0 ? (
+          <div className="text-center py-12 text-sm text-slate-400">{t('noData')}</div>
+        ) : (
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>{t('name')}</th>
+                  <th className="text-right">{t('baseSalary')}</th>
+                  <th className="text-right">{t('netSalary')}</th>
+                  <th>{t('status')}</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {payroll.slice(0, 8).map((row, idx) => (
+                  <tr key={idx}>
+                    <td className="font-medium text-slate-900">{row.name}</td>
+                    <td className="text-right font-mono">{formatCurrency(row.base_salary)}</td>
+                    <td className="text-right font-mono font-semibold text-brand-700">
+                      {formatCurrency(row.net_salary)}
+                    </td>
+                    <td>{getStatusBadge(row.status, t)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
