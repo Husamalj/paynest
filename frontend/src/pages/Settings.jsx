@@ -27,7 +27,7 @@ export default function Settings({ settings: initialSettings, onSettingsSaved })
   const { t, lang } = useLanguage();
 
   const [form, setForm] = useState({
-    company_name: 'PayZen',
+    company_name: 'PayNest',
     system_mode: 'daily',
     language: 'ar',
     req_hours: 8,
@@ -47,7 +47,7 @@ export default function Settings({ settings: initialSettings, onSettingsSaved })
   useEffect(() => {
     if (initialSettings) {
       setForm({
-        company_name: initialSettings.company_name || 'PayZen',
+        company_name: initialSettings.company_name || 'PayNest',
         system_mode: initialSettings.system_mode || 'daily',
         language: initialSettings.language || 'ar',
         req_hours: initialSettings.req_hours || 8,

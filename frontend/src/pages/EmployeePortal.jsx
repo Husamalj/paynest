@@ -60,7 +60,7 @@ export default function EmployeePortal() {
 
   const [employees, setEmployees] = useState([]);
   const [employeeId, setEmployeeId] = useState(
-    savedUser.employee_number || localStorage.getItem('payzen_employee_id') || ''
+    savedUser.employee_number || localStorage.getItem('paynest_employee_id') || ''
   );
   const [employee, setEmployee] = useState(null);
   const [payroll, setPayroll] = useState(null);
@@ -117,7 +117,7 @@ export default function EmployeePortal() {
       return;
     }
 
-    localStorage.setItem('payzen_employee_id', employeeId);
+    localStorage.setItem('paynest_employee_id', employeeId);
     setEmployee(employees.find((item) => item.employee_id === employeeId) || null);
   }, [employeeId, employees]);
 
@@ -260,10 +260,10 @@ export default function EmployeePortal() {
 
   const signOut = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('payzen_logged_in');
+    localStorage.removeItem('paynest_logged_in');
     localStorage.removeItem('role');
     localStorage.removeItem('user');
-    localStorage.removeItem('payzen_employee_id');
+    localStorage.removeItem('paynest_employee_id');
     window.location.href = '/';
   };
 

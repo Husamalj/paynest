@@ -24,8 +24,8 @@ function logoutUser() {
   localStorage.removeItem('token');
   localStorage.removeItem('role');
   localStorage.removeItem('user');
-  localStorage.removeItem('payzen_logged_in');
-  localStorage.removeItem('payzen_employee_id');
+  localStorage.removeItem('paynest_logged_in');
+  localStorage.removeItem('paynest_employee_id');
 
   if (window.location.pathname !== '/') {
     window.location.href = '/';

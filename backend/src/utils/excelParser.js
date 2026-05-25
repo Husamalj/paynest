@@ -427,7 +427,7 @@ function parseSalaryFile(buffer) {
       employees.push({ employee_id, name, base_salary: salary, social_security: guarantee });
     }
   } else {
-    // Fallback: Column A = name, Column B = salary (old PayZen format)
+    // Fallback: Column A = name, Column B = salary (old PayNest format)
     const sample = rows.slice(0, 30);
     const ncols = Math.max(0, ...sample.map((r) => (r ? r.length : 0)));
     const nameScores = Array(ncols).fill(0);

@@ -26,10 +26,10 @@ import api from './utils/api';
 
 function clearAuth() {
   localStorage.removeItem('token');
-  localStorage.removeItem('payzen_logged_in');
+  localStorage.removeItem('paynest_logged_in');
   localStorage.removeItem('role');
   localStorage.removeItem('user');
-  localStorage.removeItem('payzen_employee_id');
+  localStorage.removeItem('paynest_employee_id');
 }
 
 function getDefaultPath(role) {
@@ -57,7 +57,7 @@ function LoginPage({ onLogin }) {
       const { token, user } = res.data;
 
       localStorage.setItem('token', token);
-      localStorage.setItem('payzen_logged_in', 'true');
+      localStorage.setItem('paynest_logged_in', 'true');
       localStorage.setItem('role', user.role);
       localStorage.setItem('user', JSON.stringify(user));
 
@@ -272,10 +272,10 @@ export default function App() {
           setSettings(settingsRes.data);
 
           const dbLang = settingsRes.data?.language;
-          const stored = localStorage.getItem('payzen_lang');
+          const stored = localStorage.getItem('paynest_lang');
 
           if (!stored) {
-            localStorage.setItem('payzen_lang', dbLang || 'ar');
+            localStorage.setItem('paynest_lang', dbLang || 'ar');
           }
         }
 
@@ -303,7 +303,7 @@ export default function App() {
           <Building2 size={26} className="text-white" strokeWidth={2.5} />
         </div>
 
-        <div className="text-lg font-bold text-slate-900">PayZen</div>
+        <div className="text-lg font-bold text-slate-900">PayNest</div>
         <span className="spinner spinner-dark w-5 h-5" />
         <p className="text-sm text-slate-500">{t('loadingData')}</p>
 

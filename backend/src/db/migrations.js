@@ -6,7 +6,7 @@ async function runMigrations() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS company_settings (
         id SERIAL PRIMARY KEY,
-        company_name VARCHAR(255) DEFAULT 'PayZen',
+        company_name VARCHAR(255) DEFAULT 'PayNest',
         system_mode VARCHAR(20) DEFAULT 'daily',
         language VARCHAR(10) DEFAULT 'ar',
         req_hours DECIMAL DEFAULT 8,
@@ -270,7 +270,7 @@ async function runMigrations() {
     if (settingsCheck.rows.length === 0) {
       await client.query(`
         INSERT INTO company_settings (company_name, system_mode, language, req_hours, month_days, late_tolerance, workdays, deduction_rate, extra_rate)
-        VALUES ('PayZen', 'daily', 'ar', 8, 26, 0, 'Sun,Mon,Tue,Wed,Thu', 1.0, 1.0)
+        VALUES ('PayNest', 'daily', 'ar', 8, 26, 0, 'Sun,Mon,Tue,Wed,Thu', 1.0, 1.0)
       `);
     }
 

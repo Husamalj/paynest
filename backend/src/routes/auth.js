@@ -6,7 +6,7 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'payzen_secret_change_later';
+const JWT_SECRET = process.env.JWT_SECRET || 'paynest_secret_change_later';
 
 function signToken(user) {
     return jwt.sign(

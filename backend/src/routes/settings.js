@@ -24,7 +24,7 @@ router.get('/', requireAuth, async (req, res) => {
     if (result.rows.length === 0) {
       return res.json({
         id: null,
-        company_name: 'PayZen',
+        company_name: 'PayNest',
         system_mode: 'daily',
         language: 'en',
         req_hours: 8,
@@ -86,7 +86,7 @@ router.put('/', requireAuth, requireRole('owner'), async (req, res) => {
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
         RETURNING *`,
         [
-          company_name || 'PayZen',
+          company_name || 'PayNest',
           system_mode || 'daily',
           language || 'en',
           req_hours || 8,

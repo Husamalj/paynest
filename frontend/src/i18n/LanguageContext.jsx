@@ -5,7 +5,7 @@ const LanguageContext = createContext(null);
 
 export function LanguageProvider({ children }) {
   const [lang, setLang] = useState(() => {
-    return localStorage.getItem('payzen_lang') || 'ar';
+    return localStorage.getItem('paynest_lang') || 'ar';
   });
 
   const t = useCallback(
@@ -19,7 +19,7 @@ export function LanguageProvider({ children }) {
     (newLang) => {
       const l = newLang || (lang === 'en' ? 'ar' : 'en');
       setLang(l);
-      localStorage.setItem('payzen_lang', l);
+      localStorage.setItem('paynest_lang', l);
     },
     [lang]
   );

@@ -29,7 +29,7 @@ export default function OwnerSetup({ settings, onSettingsSaved }) {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    company_name: 'PayZen',
+    company_name: 'PayNest',
     system_mode: 'daily',
     language: 'ar',
     req_hours: 8,
@@ -59,7 +59,7 @@ export default function OwnerSetup({ settings, onSettingsSaved }) {
     if (!settings) return;
 
     setForm({
-      company_name: settings.company_name || 'PayZen',
+      company_name: settings.company_name || 'PayNest',
       system_mode: settings.system_mode || 'daily',
       language: settings.language || 'ar',
       req_hours: settings.req_hours || 8,

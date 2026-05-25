@@ -77,7 +77,7 @@ async function startServer() {
     }
 
     app.listen(PORT, () => {
-      console.log(`PayZen backend running on port ${PORT}`);
+      console.log(`PayNest backend running on port ${PORT}`);
     });
   } catch (err) {
     console.error('Failed to start server:', err);

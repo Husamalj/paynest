@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db');
 
 const JWT_SECRET =
-    process.env.JWT_SECRET || 'payzen_secret_change_later';
+    process.env.JWT_SECRET || 'paynest_secret_change_later';
 
 async function requireAuth(req, res, next) {
     try {

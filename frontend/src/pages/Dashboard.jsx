@@ -254,7 +254,7 @@ export default function Dashboard({ settings }) {
         <div>
           <h2 className="page-title">{t('dashboard')}</h2>
           <p className="page-subtitle">
-            {settings?.company_name || 'PayZen'} • HR, payroll, attendance, and employee requests
+            {settings?.company_name || 'PayNest'} • HR, payroll, attendance, and employee requests
           </p>
         </div>
       </div>

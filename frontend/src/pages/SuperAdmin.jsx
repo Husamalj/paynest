@@ -29,10 +29,10 @@ export default function SuperAdmin() {
 
     const signOut = () => {
         localStorage.removeItem('token');
-        localStorage.removeItem('payzen_logged_in');
+        localStorage.removeItem('paynest_logged_in');
         localStorage.removeItem('role');
         localStorage.removeItem('user');
-        localStorage.removeItem('payzen_employee_id');
+        localStorage.removeItem('paynest_employee_id');
         window.location.href = '/';
     };
 

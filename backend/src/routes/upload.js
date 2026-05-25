@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 const { parseAttendanceFile, parseSalaryFile } = require('../utils/excelParser');
 
 const JWT_SECRET =
-  process.env.JWT_SECRET || 'payzen_secret_change_later';
+  process.env.JWT_SECRET || 'paynest_secret_change_later';
 
 function getCompanyId(req) {
   const authHeader = req.headers.authorization;

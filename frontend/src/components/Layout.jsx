@@ -68,10 +68,10 @@ export default function Layout({ children, settings }) {
 
   const signOut = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('payzen_logged_in');
+    localStorage.removeItem('paynest_logged_in');
     localStorage.removeItem('role');
     localStorage.removeItem('user');
-    localStorage.removeItem('payzen_employee_id');
+    localStorage.removeItem('paynest_employee_id');
     window.location.href = '/';
   };
 
@@ -113,7 +113,7 @@ export default function Layout({ children, settings }) {
       ? NAV_ITEMS
       : NAV_ITEMS.filter((item) => item.key !== 'settings');
 
-  const companyName = settings?.company_name || user.company_name || 'PayZen';
+  const companyName = settings?.company_name || user.company_name || 'PayNest';
 
   const currentNav = navItems.find((i) =>
     i.path === '/' ? location.pathname === '/' : location.pathname.startsWith(i.path)

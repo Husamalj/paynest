@@ -40,7 +40,7 @@ export default function SystemSelect({ onSettingsSaved }) {
         <div className="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 items-center justify-center text-white shadow-elevated mb-4">
           <Building2 size={30} strokeWidth={2.5} />
         </div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">PayZen</h1>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">PayNest</h1>
         <p className="text-sm text-slate-500">{t('selectMode')}</p>
       </div>
 

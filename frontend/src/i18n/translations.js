@@ -1,6 +1,6 @@
 export const translations = {
   en: {
-    appName: 'PayZen',
+    appName: 'PayNest',
     dashboard: 'Dashboard',
     upload: 'Upload Files',
     payroll: 'Payroll',
