@@ -164,7 +164,7 @@ export default function EmployeesPage() {
               <div><div className="text-xs text-slate-500 mb-1">{t("name")}</div><div className="text-lg font-semibold text-slate-900">{selectedEmployee.name}</div></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><div className="text-xs text-slate-500 mb-1">{t("employeeId")}</div><div className="font-mono text-sm">{selectedEmployee.employee_id}</div></div>
-                <div><div className="text-xs text-slate-500 mb-1">{emailTitle}</div><div className="text-sm">{selectedEmployee.email || "-"}</div></div>
+                <div className="min-w-0"><div className="text-xs text-slate-500 mb-1">{emailTitle}</div><div className="text-sm break-all">{selectedEmployee.email || "-"}</div></div>
                 <div><div className="text-xs text-slate-500 mb-1">{t("baseSalary")}</div><div className="font-mono text-sm">{formatCurrency(selectedEmployee.base_salary)}</div></div>
                 <div><div className="text-xs text-slate-500 mb-1">{religionTitle}</div><div className="text-sm font-medium">{religionLabel(selectedEmployee.religion)}</div></div>
                 <div><div className="text-xs text-slate-500 mb-1">{t("socialSecurity")}</div><div>{selectedEmployee.social_security ? <span className="badge badge-purple"><Shield size={11} /> {t("enabled")}</span> : <span className="badge badge-gray">{t("disabled")}</span>}</div></div>
