@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -24,6 +24,7 @@ import {
   X,
   AlertTriangle,
   CheckCircle2,
+  UserCircle,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import clsx from "clsx";
@@ -79,8 +80,19 @@ export default function Layout({ children, settings }: LayoutProps) {
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
 
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
   const role = typeof window !== "undefined" ? localStorage.getItem("role") || "guest" : "guest";
   const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {};
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const signOut = () => {
     localStorage.removeItem("token");
@@ -145,14 +157,6 @@ export default function Layout({ children, settings }: LayoutProps) {
             </div>
           </div>
 
-          <div className="mt-4 rounded-xl bg-slate-50 border border-slate-200 p-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-              <ShieldCheck size={14} className="text-brand-600" />
-              {user.name || "User"}
-            </div>
-            <div className="mt-1 text-[11px] text-slate-500 truncate">{user.email || "-"}</div>
-            <div className="mt-2 inline-flex px-2 py-1 rounded-full bg-brand-50 text-brand-700 text-[10px] font-bold uppercase">{role}</div>
-          </div>
         </div>
 
         <nav className="flex-1 px-3 py-4 overflow-y-auto">
@@ -219,35 +223,6 @@ export default function Layout({ children, settings }: LayoutProps) {
           </div>
         </nav>
 
-        <div className="px-3 pb-3 space-y-2">
-          <button
-            onClick={() => setShowPasswordModal(true)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-slate-700 rounded-lg bg-slate-100 hover:bg-slate-200 transition-all"
-          >
-            <KeyRound size={16} />
-            {lang === "ar" ? "تغيير كلمة السر" : "Change Password"}
-          </button>
-          <button
-            onClick={signOut}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-white rounded-lg bg-red-500 hover:bg-red-600 transition-all"
-          >
-            <LogOut size={16} />
-            {lang === "ar" ? "تسجيل خروج" : "Sign Out"}
-          </button>
-        </div>
-
-        <div className="px-3 py-3 border-t border-slate-100">
-          <button
-            onClick={() => toggleLanguage()}
-            className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all border border-slate-200"
-          >
-            <span className="flex items-center gap-2">
-              <Languages size={16} />
-              {lang === "en" ? "العربية" : "English"}
-            </span>
-            <span className="text-[11px] font-semibold text-slate-400 uppercase">{lang === "en" ? "AR" : "EN"}</span>
-          </button>
-        </div>
       </aside>
 
       <div className={clsx("min-h-screen flex flex-col transition-all", isRTL ? "lg:mr-64" : "lg:ml-64")}>
@@ -265,10 +240,59 @@ export default function Layout({ children, settings }: LayoutProps) {
               </h1>
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500">
-            <span className="font-semibold text-slate-700">{user.name || "User"}</span>
-            <span>•</span>
-            <span className="uppercase">{role}</span>
+
+          {/* Profile dropdown */}
+          <div className="relative" ref={profileRef}>
+            <button
+              onClick={() => setProfileOpen((o) => !o)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors"
+            >
+              <div className="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                {(user.name || "U")[0].toUpperCase()}
+              </div>
+              <div className="hidden sm:block text-left min-w-0">
+                <div className="text-sm font-semibold text-slate-800 truncate max-w-[120px]">{user.name || "User"}</div>
+                <div className="text-[11px] text-slate-400 uppercase font-medium">{role}</div>
+              </div>
+              <ChevronDown size={14} className={clsx("text-slate-400 transition-transform flex-shrink-0", profileOpen && "rotate-180")} />
+            </button>
+
+            {profileOpen && (
+              <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-elevated border border-slate-200 overflow-hidden z-50">
+                {/* User info */}
+                <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
+                  <div className="font-semibold text-slate-900 truncate">{user.name || "User"}</div>
+                  <div className="text-xs text-slate-500 truncate mt-0.5">{user.email || "-"}</div>
+                  <div className="mt-1.5 inline-flex px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 text-[10px] font-bold uppercase">{role}</div>
+                </div>
+                {/* Actions */}
+                <div className="p-2 space-y-0.5">
+                  <button
+                    onClick={() => { toggleLanguage(); setProfileOpen(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    <Languages size={16} className="text-slate-400" />
+                    <span>{lang === "en" ? "العربية" : "English"}</span>
+                    <span className="ml-auto text-[11px] font-bold text-slate-400 uppercase">{lang === "en" ? "AR" : "EN"}</span>
+                  </button>
+                  <button
+                    onClick={() => { setShowPasswordModal(true); setProfileOpen(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    <KeyRound size={16} className="text-slate-400" />
+                    {lang === "ar" ? "تغيير كلمة السر" : "Change Password"}
+                  </button>
+                  <div className="border-t border-slate-100 my-1" />
+                  <button
+                    onClick={signOut}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-rose-600 hover:bg-rose-50 transition-colors"
+                  >
+                    <LogOut size={16} />
+                    {lang === "ar" ? "تسجيل خروج" : "Sign Out"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </header>
 

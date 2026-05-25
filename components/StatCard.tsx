@@ -28,22 +28,22 @@ export default function StatCard({ title, value, subtitle, icon: Icon, color = "
   const c = palette[color] || palette.brand;
 
   return (
-    <div className="card group hover:shadow-elevated transition-shadow animate-fade-in">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">{title}</p>
-          <p className="text-[22px] font-bold text-slate-900 leading-tight truncate">{value}</p>
-          {subtitle && <p className="text-xs text-slate-500 mt-1.5 truncate">{subtitle}</p>}
-          {trend !== undefined && trend !== null && (
-            <p className={clsx("text-xs font-semibold mt-2 inline-flex items-center gap-1", trend >= 0 ? "text-emerald-600" : "text-rose-600")}>
-              {trend >= 0 ? "↑" : "↓"} {Math.abs(trend).toFixed(1)}%
-            </p>
+    <div className="card group hover:shadow-elevated transition-shadow animate-fade-in p-4">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider leading-tight line-clamp-2">{title}</p>
+          {Icon && (
+            <div className={clsx("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0", c.iconWrap)}>
+              <Icon size={15} strokeWidth={2} />
+            </div>
           )}
         </div>
-        {Icon && (
-          <div className={clsx("w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0", c.iconWrap)}>
-            <Icon size={20} strokeWidth={2} />
-          </div>
+        <p className="text-[20px] font-bold text-slate-900 leading-tight truncate">{value}</p>
+        {subtitle && <p className="text-xs text-slate-500 truncate">{subtitle}</p>}
+        {trend !== undefined && trend !== null && (
+          <p className={clsx("text-xs font-semibold inline-flex items-center gap-1", trend >= 0 ? "text-emerald-600" : "text-rose-600")}>
+            {trend >= 0 ? "↑" : "↓"} {Math.abs(trend).toFixed(1)}%
+          </p>
         )}
       </div>
     </div>

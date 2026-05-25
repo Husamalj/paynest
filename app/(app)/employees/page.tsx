@@ -138,7 +138,7 @@ export default function EmployeesPage() {
                       <td className="pl-3" />
                       <td className="font-mono text-xs text-slate-500">{emp.employee_id}</td>
                       <td className="font-medium">{emp.name}</td>
-                      <td className="text-sm text-slate-600">{emp.email || "-"}</td>
+                      <td className="text-sm text-slate-600 max-w-[200px]"><div className="truncate">{emp.email || "-"}</div></td>
                       <td className="text-right font-mono">{formatCurrency(emp.base_salary)}</td>
                       <td className="text-right">{emp.social_security ? <span className="badge badge-purple"><Shield size={11} /> {t("enabled")}</span> : <span className="badge badge-gray">{t("disabled")}</span>}</td>
                     </tr>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Users, Wallet, DollarSign, TrendingDown, Gift, Shield, AlertTriangle, MapPin, Bell, Bot, Sparkles, Send, Calendar, CheckSquare } from "lucide-react";
+import { Users, Wallet, DollarSign, TrendingDown, Gift, Shield, AlertTriangle, MapPin, Bell, Calendar, CheckSquare } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import StatCard from "@/components/StatCard";
 import api from "@/lib/api";
@@ -57,9 +57,6 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [copilotQuestion, setCopilotQuestion] = useState("");
-  const [copilotAnswer, setCopilotAnswer] = useState("");
-  const [copilotLoading, setCopilotLoading] = useState(false);
   const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
@@ -100,23 +97,6 @@ export default function DashboardPage() {
     return remoteAssignments.filter((a) => { const k = `${a.emp_id}|${a.start_date}|${a.end_date}`; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 5);
   }, [remoteAssignments]);
 
-  const copilotInsights = useMemo(() => buildCopilotInsights(payroll, isRTL), [payroll, isRTL]);
-
-  const askCopilot = async (question?: string) => {
-    const q = String(question || copilotQuestion).trim();
-    if (!q || copilotLoading) return;
-    setCopilotQuestion(q);
-    setCopilotLoading(true);
-    try {
-      const res = await api.post("/copilot/ask", { question: q });
-      setCopilotAnswer(res.data.answer || "");
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setCopilotLoading(false);
-    }
-  };
-
   if (loading) return <div className="flex items-center justify-center py-20 gap-3 text-slate-500"><span className="spinner spinner-dark w-5 h-5" />{t("loadingData")}</div>;
 
   return (
@@ -139,44 +119,6 @@ export default function DashboardPage() {
         <StatCard title={t("ssDeductions")} value={formatCurrency(totals.totalSS)} icon={Shield} color="purple" />
         <StatCard title={isRTL ? "إجازات معلقة" : "Pending Leaves"} value={pendingLeaves} icon={Calendar} color="orange" />
         <StatCard title={isRTL ? "مهام مفتوحة" : "Open Tasks"} value={openTasks} icon={CheckSquare} color="blue" />
-      </div>
-
-      <div className="card overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-0">
-          <div className="p-5 bg-slate-950 text-white">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-9 h-9 rounded-lg bg-brand-500 flex items-center justify-center"><Bot size={18} /></div>
-              <div>
-                <div className="text-lg font-bold">HR AI Copilot .3</div>
-                <div className="text-xs text-slate-300">{isRTL ? "مساعد ذكي يقرأ بيانات الرواتب والحضور" : "Smart assistant for payroll and attendance"}</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 text-sm text-slate-200 leading-6">
-              <Sparkles size={16} className="text-brand-300 mt-1 flex-shrink-0" />
-              <p>{isRTL ? "اسأل عن الغياب، الخصومات، صافي الرواتب، والموظفين الأكثر تأثراً مباشرة من بيانات النظام." : "Ask about absence, deductions, net payroll, and the most affected employees using live system data."}</p>
-            </div>
-          </div>
-          <div className="p-5">
-            <form className="flex gap-2 mb-4" onSubmit={(e) => { e.preventDefault(); askCopilot(); }}>
-              <input className="form-input flex-1" value={copilotQuestion} onChange={(e) => setCopilotQuestion(e.target.value)} placeholder={isRTL ? "اسأل مثل: مين عليه أعلى خصم؟" : "Ask: who has the highest deduction?"} />
-              <button type="submit" className="btn btn-primary" disabled={copilotLoading || !copilotQuestion.trim()}>
-                {copilotLoading ? <span className="spinner" /> : <Send size={15} />}
-              </button>
-            </form>
-            <div className="text-xs font-semibold text-slate-500 mb-3">{isRTL ? "اقتراحات سريعة:" : "Quick prompts:"}</div>
-            <div className="grid gap-2 mb-4 sm:grid-cols-2">
-              {copilotInsights.map((item) => (
-                <button key={item.question} type="button" onClick={() => askCopilot(item.question)} className="text-sm text-start px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors">
-                  {item.question}
-                </button>
-              ))}
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs font-semibold text-slate-500 mb-2">{isRTL ? "والنظام يحلل:" : "System analysis:"}</div>
-              <p className="text-sm leading-7 text-slate-800">{copilotAnswer || copilotInsights[0]?.answer}</p>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
