@@ -6,7 +6,7 @@ const BASE = import.meta.env.VITE_API_URL
 
 const api = axios.create({
   baseURL: BASE,
-  timeout: 30000,
+  timeout: 65000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -36,12 +36,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
-    const message =
-      (typeof error.response?.data?.error === 'string'
-        ? error.response.data.error
-        : null) ||
-      error.message ||
-      'Request failed';
+    const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
+    const message = isTimeout
+      ? 'Server is waking up, please try again in a moment.'
+      : (typeof error.response?.data?.error === 'string'
+          ? error.response.data.error
+          : null) ||
+        error.message ||
+        'Request failed';
 
     console.error('API Error:', status, message);
 
