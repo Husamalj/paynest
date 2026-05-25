@@ -10,6 +10,7 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
+  Globe,
 } from 'lucide-react';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -28,6 +29,26 @@ import OwnerSetup from './pages/OwnerSetup';
 import SuperAdmin from './pages/SuperAdmin';
 import { useLanguage } from './hooks/useLanguage';
 import api from './utils/api';
+
+function safeError(err) {
+  if (!err) return 'حدث خطأ';
+  if (typeof err === 'string') return err;
+  if (err.message && typeof err.message === 'string') return err.message;
+  return String(err);
+}
+
+function LangToggle() {
+  const { lang, toggleLanguage } = useLanguage();
+  return (
+    <button
+      onClick={() => toggleLanguage()}
+      className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm transition-colors"
+    >
+      <Globe size={15} />
+      {lang === 'ar' ? 'English' : 'العربية'}
+    </button>
+  );
+}
 
 function clearAuth() {
   localStorage.removeItem('token');
@@ -50,18 +71,23 @@ function getDefaultPath(role) {
 ───────────────────────────────────────────── */
 function LandingPage() {
   const navigate = useNavigate();
+  const { lang } = useLanguage();
+  const ar = lang === 'ar';
 
   return (
-    <div dir="rtl" className="min-h-screen flex flex-col items-center justify-center bg-slate-950 px-4 gap-10">
+    <div dir={ar ? 'rtl' : 'ltr'} className="min-h-screen flex flex-col items-center justify-center bg-slate-950 px-4 gap-10">
+      <div className="absolute top-4 right-4"><LangToggle /></div>
+
       <div className="text-center">
         <h1 className="text-4xl font-black text-white mb-2">
           Pay<span className="text-blue-500">Nest</span>
         </h1>
-        <p className="text-slate-400 text-sm">نظام إدارة الرواتب والموارد البشرية</p>
+        <p className="text-slate-400 text-sm">
+          {ar ? 'نظام إدارة الرواتب والموارد البشرية' : 'Payroll & HR Management System'}
+        </p>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-6 w-full max-w-2xl">
-        {/* HR Portal Card */}
         <button
           onClick={() => navigate('/hr-login')}
           className="flex-1 group bg-blue-600 hover:bg-blue-500 transition-all duration-200 rounded-3xl p-8 flex flex-col items-center gap-4 shadow-2xl cursor-pointer"
@@ -70,16 +96,19 @@ function LandingPage() {
             <Users size={32} className="text-white" />
           </div>
           <div className="text-center">
-            <div className="text-white text-xl font-bold">بوابة الموارد البشرية</div>
-            <div className="text-blue-100 text-sm mt-1">HR &amp; إدارة الشركة</div>
+            <div className="text-white text-xl font-bold">
+              {ar ? 'بوابة الموارد البشرية' : 'HR Portal'}
+            </div>
+            <div className="text-blue-100 text-sm mt-1">
+              {ar ? 'HR & إدارة الشركة' : 'HR & Company Management'}
+            </div>
           </div>
           <div className="flex items-center gap-2 text-blue-100 text-sm mt-2">
-            <span>تسجيل الدخول</span>
-            <ArrowRight size={16} className="rotate-180" />
+            <span>{ar ? 'تسجيل الدخول' : 'Log In'}</span>
+            <ArrowRight size={16} className={ar ? 'rotate-180' : ''} />
           </div>
         </button>
 
-        {/* Employee Portal Card */}
         <button
           onClick={() => navigate('/employee-login')}
           className="flex-1 group bg-slate-800 hover:bg-slate-700 transition-all duration-200 rounded-3xl p-8 flex flex-col items-center gap-4 shadow-2xl cursor-pointer border border-slate-700"
@@ -88,12 +117,16 @@ function LandingPage() {
             <UserCircle size={32} className="text-slate-300" />
           </div>
           <div className="text-center">
-            <div className="text-white text-xl font-bold">بوابة الموظف</div>
-            <div className="text-slate-400 text-sm mt-1">كشف الراتب والإجازات</div>
+            <div className="text-white text-xl font-bold">
+              {ar ? 'بوابة الموظف' : 'Employee Portal'}
+            </div>
+            <div className="text-slate-400 text-sm mt-1">
+              {ar ? 'كشف الراتب والإجازات' : 'Payslips & Leave Requests'}
+            </div>
           </div>
           <div className="flex items-center gap-2 text-slate-400 text-sm mt-2">
-            <span>تسجيل الدخول</span>
-            <ArrowRight size={16} className="rotate-180" />
+            <span>{ar ? 'تسجيل الدخول' : 'Log In'}</span>
+            <ArrowRight size={16} className={ar ? 'rotate-180' : ''} />
           </div>
         </button>
       </div>
@@ -102,7 +135,7 @@ function LandingPage() {
         onClick={() => navigate('/signup')}
         className="text-slate-400 hover:text-blue-400 text-sm transition-colors"
       >
-        ليس لديك حساب؟ <span className="underline">سجّل شركتك الآن</span>
+        {ar ? <>ليس لديك حساب؟ <span className="underline">سجّل شركتك الآن</span></> : <>No account? <span className="underline">Register your company</span></>}
       </button>
     </div>
   );
@@ -113,6 +146,8 @@ function LandingPage() {
 ───────────────────────────────────────────── */
 function LoginForm({ portalType, onLogin }) {
   const navigate = useNavigate();
+  const { lang } = useLanguage();
+  const ar = lang === 'ar';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -130,13 +165,12 @@ function LoginForm({ portalType, onLogin }) {
       const res = await api.post('/auth/login', { email, password });
       const { token, user } = res.data;
 
-      // Role guard per portal
       if (isHR && user.role === 'employee') {
-        setError('هذا الحساب مخصص لبوابة الموظف');
+        setError(ar ? 'هذا الحساب مخصص لبوابة الموظف' : 'This account belongs to the Employee Portal');
         return;
       }
       if (!isHR && user.role !== 'employee') {
-        setError('هذا الحساب مخصص لبوابة الموارد البشرية');
+        setError(ar ? 'هذا الحساب مخصص لبوابة الموارد البشرية' : 'This account belongs to the HR Portal');
         return;
       }
 
@@ -154,21 +188,22 @@ function LoginForm({ portalType, onLogin }) {
 
       window.location.href = getDefaultPath(user.role);
     } catch (err) {
-      setError(err.message || 'فشل تسجيل الدخول');
+      setError(safeError(err));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div dir="rtl" className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
+    <div dir={ar ? 'rtl' : 'ltr'} className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
+      <div className="absolute top-4 right-4"><LangToggle /></div>
       <div className="w-full max-w-md">
         <button
           onClick={() => navigate('/')}
           className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors"
         >
-          <ArrowRight size={16} />
-          العودة للرئيسية
+          <ArrowRight size={16} className={ar ? 'rotate-0' : 'rotate-180'} />
+          {ar ? 'العودة للرئيسية' : 'Back'}
         </button>
 
         <form onSubmit={handleLogin} className="bg-white rounded-3xl shadow-2xl p-8">
@@ -177,7 +212,9 @@ function LoginForm({ portalType, onLogin }) {
           </div>
 
           <h1 className="text-2xl font-black text-center text-slate-900 mb-1">
-            {isHR ? 'بوابة الموارد البشرية' : 'بوابة الموظف'}
+            {isHR
+              ? (ar ? 'بوابة الموارد البشرية' : 'HR Portal')
+              : (ar ? 'بوابة الموظف' : 'Employee Portal')}
           </h1>
           <p className="text-center text-slate-500 text-sm mb-6">
             Pay<span className={isHR ? 'text-blue-600' : 'text-slate-700'}>Nest</span>
@@ -187,9 +224,10 @@ function LoginForm({ portalType, onLogin }) {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="البريد الإلكتروني"
+            placeholder={ar ? 'البريد الإلكتروني' : 'Email address'}
             required
             className="w-full mb-4 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            dir="ltr"
           />
 
           <div className="relative mb-4">
@@ -197,14 +235,15 @@ function LoginForm({ portalType, onLogin }) {
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="كلمة السر"
+              placeholder={ar ? 'كلمة السر' : 'Password'}
               required
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+              dir="ltr"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -216,18 +255,18 @@ function LoginForm({ portalType, onLogin }) {
             disabled={loading}
             className={`w-full py-3 rounded-xl text-white font-bold disabled:opacity-60 mb-4 ${isHR ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-700 hover:bg-slate-800'} transition-colors`}
           >
-            {loading ? 'جاري الدخول...' : 'دخول'}
+            {loading ? (ar ? 'جاري الدخول...' : 'Signing in...') : (ar ? 'دخول' : 'Sign In')}
           </button>
 
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1 h-px bg-slate-200" />
-            <span className="text-slate-400 text-xs">أو</span>
+            <span className="text-slate-400 text-xs">{ar ? 'أو' : 'or'}</span>
             <div className="flex-1 h-px bg-slate-200" />
           </div>
 
           <button
             type="button"
-            onClick={() => alert('تسجيل الدخول بـ Google قريباً')}
+            onClick={() => alert(ar ? 'تسجيل الدخول بـ Google قريباً' : 'Google sign-in coming soon')}
             className="w-full py-3 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors flex items-center justify-center gap-3 text-slate-700 font-medium text-sm"
           >
             <svg width="18" height="18" viewBox="0 0 48 48">
@@ -236,14 +275,14 @@ function LoginForm({ portalType, onLogin }) {
               <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
               <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
             </svg>
-            المتابعة بـ Google
+            {ar ? 'المتابعة بـ Google' : 'Continue with Google'}
           </button>
 
           {isHR && (
             <p className="text-center text-slate-500 text-sm mt-6">
-              ليس لديك حساب؟{' '}
+              {ar ? 'ليس لديك حساب؟ ' : "Don't have an account? "}
               <button type="button" onClick={() => navigate('/signup')} className="text-blue-600 hover:underline font-medium">
-                سجّل شركتك
+                {ar ? 'سجّل شركتك' : 'Register your company'}
               </button>
             </p>
           )}
@@ -258,14 +297,10 @@ function LoginForm({ portalType, onLogin }) {
 ───────────────────────────────────────────── */
 function SignupPage({ onLogin }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    companyName: '',
-    slug: '',
-    ownerName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  });
+  const { lang } = useLanguage();
+  const ar = lang === 'ar';
+  const [form, setForm] = useState({ companyName: '', slug: '', ownerName: '', email: '', password: '', confirmPassword: '' });
+  const [slugTouched, setSlugTouched] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -273,27 +308,30 @@ function SignupPage({ onLogin }) {
     const val = e.target.value;
     setForm((prev) => {
       const next = { ...prev, [field]: val };
-      // auto-generate slug from company name
-      if (field === 'companyName') {
-        next.slug = val
-          .toLowerCase()
-          .replace(/\s+/g, '-')
-          .replace(/[^a-z0-9-]/g, '');
+      if (field === 'companyName' && !slugTouched) {
+        next.slug = val.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       }
+      if (field === 'slug') setSlugTouched(true);
       return next;
     });
   };
+
+  const slugValid = /^[a-z0-9][a-z0-9-]*$/.test(form.slug);
 
   const submit = async (e) => {
     e.preventDefault();
     setError('');
 
+    if (!slugValid) {
+      setError(ar ? 'المعرّف يجب أن يحتوي على أحرف إنجليزية وأرقام فقط' : 'Slug must contain only English letters and numbers');
+      return;
+    }
     if (form.password !== form.confirmPassword) {
-      setError('كلمتا السر غير متطابقتين');
+      setError(ar ? 'كلمتا السر غير متطابقتين' : 'Passwords do not match');
       return;
     }
     if (form.password.length < 6) {
-      setError('كلمة السر يجب أن تكون 6 أحرف على الأقل');
+      setError(ar ? 'كلمة السر يجب أن تكون 6 أحرف على الأقل' : 'Password must be at least 6 characters');
       return;
     }
 
@@ -316,106 +354,76 @@ function SignupPage({ onLogin }) {
       onLogin(user);
       window.location.href = getDefaultPath(user.role);
     } catch (err) {
-      setError(err.message || 'فشل التسجيل');
+      setError(safeError(err));
     } finally {
       setLoading(false);
     }
   };
 
+  const field = (label, arLabel, inputProps) => (
+    <div className="mb-4">
+      <label className="block text-xs font-semibold text-slate-500 mb-1">{ar ? arLabel : label}</label>
+      <input
+        {...inputProps}
+        className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 ${inputProps.className || 'border-slate-200'}`}
+      />
+    </div>
+  );
+
   return (
-    <div dir="rtl" className="min-h-screen flex items-center justify-center bg-slate-950 px-4 py-10">
+    <div dir={ar ? 'rtl' : 'ltr'} className="min-h-screen flex items-center justify-center bg-slate-950 px-4 py-10">
+      <div className="absolute top-4 right-4"><LangToggle /></div>
       <div className="w-full max-w-md">
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors"
-        >
-          <ArrowRight size={16} />
-          العودة
+        <button onClick={() => navigate('/')} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors">
+          <ArrowRight size={16} className={ar ? '' : 'rotate-180'} />
+          {ar ? 'العودة' : 'Back'}
         </button>
 
         <form onSubmit={submit} className="bg-white rounded-3xl shadow-2xl p-8">
           <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center mx-auto mb-4">
             <Building2 size={24} className="text-white" />
           </div>
-
-          <h1 className="text-2xl font-black text-center text-slate-900 mb-1">تسجيل شركة جديدة</h1>
+          <h1 className="text-2xl font-black text-center text-slate-900 mb-1">
+            {ar ? 'تسجيل شركة جديدة' : 'Register Your Company'}
+          </h1>
           <p className="text-center text-slate-500 text-sm mb-6">Pay<span className="text-blue-600">Nest</span></p>
 
-          <label className="block text-xs font-semibold text-slate-500 mb-1 mr-1">اسم الشركة</label>
-          <input
-            type="text"
-            value={form.companyName}
-            onChange={set('companyName')}
-            placeholder="مثال: شركة النجوم"
-            required
-            className="w-full mb-4 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          {field('Company Name', 'اسم الشركة', { type: 'text', value: form.companyName, onChange: set('companyName'), placeholder: ar ? 'مثال: شركة النجوم' : 'e.g. Stars Corp', required: true })}
 
-          <label className="block text-xs font-semibold text-slate-500 mb-1 mr-1">المعرّف (Slug)</label>
-          <input
-            type="text"
-            value={form.slug}
-            onChange={set('slug')}
-            placeholder="my-company"
-            required
-            className="w-full mb-4 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            dir="ltr"
-          />
+          <div className="mb-4">
+            <label className="block text-xs font-semibold text-slate-500 mb-1">
+              {ar ? 'المعرّف (Slug)' : 'Slug (unique ID)'}
+            </label>
+            <input
+              type="text"
+              value={form.slug}
+              onChange={set('slug')}
+              onBlur={() => setSlugTouched(true)}
+              placeholder="my-company"
+              required
+              dir="ltr"
+              className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 ${form.slug && !slugValid ? 'border-red-400' : 'border-slate-200'}`}
+            />
+            <p className="text-xs text-slate-400 mt-1">
+              {ar ? 'أحرف إنجليزية وأرقام وشرطة فقط — مثال: my-company' : 'English letters, numbers, and hyphens only — e.g. my-company'}
+            </p>
+          </div>
 
-          <label className="block text-xs font-semibold text-slate-500 mb-1 mr-1">اسم المالك</label>
-          <input
-            type="text"
-            value={form.ownerName}
-            onChange={set('ownerName')}
-            placeholder="الاسم الكامل"
-            required
-            className="w-full mb-4 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-
-          <label className="block text-xs font-semibold text-slate-500 mb-1 mr-1">البريد الإلكتروني</label>
-          <input
-            type="email"
-            value={form.email}
-            onChange={set('email')}
-            placeholder="email@company.com"
-            required
-            className="w-full mb-4 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            dir="ltr"
-          />
-
-          <label className="block text-xs font-semibold text-slate-500 mb-1 mr-1">كلمة السر</label>
-          <input
-            type="password"
-            value={form.password}
-            onChange={set('password')}
-            placeholder="6 أحرف على الأقل"
-            required
-            className="w-full mb-4 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-
-          <label className="block text-xs font-semibold text-slate-500 mb-1 mr-1">تأكيد كلمة السر</label>
-          <input
-            type="password"
-            value={form.confirmPassword}
-            onChange={set('confirmPassword')}
-            placeholder="أعد كتابة كلمة السر"
-            required
-            className="w-full mb-6 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          {field('Owner Name', 'اسم المالك', { type: 'text', value: form.ownerName, onChange: set('ownerName'), placeholder: ar ? 'الاسم الكامل' : 'Full name', required: true })}
+          {field('Email', 'البريد الإلكتروني', { type: 'email', value: form.email, onChange: set('email'), placeholder: 'email@company.com', required: true, dir: 'ltr' })}
+          {field('Password', 'كلمة السر', { type: 'password', value: form.password, onChange: set('password'), placeholder: ar ? '6 أحرف على الأقل' : 'At least 6 characters', required: true })}
+          {field('Confirm Password', 'تأكيد كلمة السر', { type: 'password', value: form.confirmPassword, onChange: set('confirmPassword'), placeholder: ar ? 'أعد كتابة كلمة السر' : 'Repeat password', required: true })}
 
           {error && <div className="text-red-600 text-sm mb-4 text-center">{error}</div>}
 
-          <button
-            disabled={loading}
-            className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold disabled:opacity-60 transition-colors"
-          >
-            {loading ? 'جاري التسجيل...' : 'إنشاء الحساب'}
+          <button disabled={loading} className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold disabled:opacity-60 transition-colors">
+            {loading ? (ar ? 'جاري التسجيل...' : 'Creating account...') : (ar ? 'إنشاء الحساب' : 'Create Account')}
           </button>
 
           <p className="text-center text-slate-500 text-sm mt-4">
-            لديك حساب؟{' '}
+            {ar ? 'لديك حساب؟ ' : 'Already have an account? '}
             <button type="button" onClick={() => navigate('/hr-login')} className="text-blue-600 hover:underline font-medium">
-              سجّل دخولك
+              {ar ? 'سجّل دخولك' : 'Sign in'}
             </button>
           </p>
         </form>
