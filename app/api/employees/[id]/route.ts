@@ -4,6 +4,25 @@ import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
+function toSnake(e: any) {
+  if (!e) return e;
+  return {
+    id: e.id,
+    company_id: e.companyId,
+    employee_id: e.employeeId,
+    name: e.name,
+    email: e.email,
+    phone: e.phone,
+    religion: e.religion,
+    base_salary: e.baseSalary,
+    social_security: e.socialSecurity,
+    remote_days: e.remoteDays,
+    system_mode: e.systemMode,
+    created_at: e.createdAt,
+    updated_at: e.updatedAt,
+  };
+}
+
 async function getSystemMode(companyId: number) {
   const s = await prisma.companySettings.findFirst({ where: { companyId } });
   return s?.systemMode ?? "daily";
@@ -41,6 +60,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const body = await req.json();
 
     const data: Record<string, unknown> = {};
+    if (body.employee_id !== undefined) data.employeeId = body.employee_id;
     if (body.name !== undefined) data.name = body.name;
     if (body.email !== undefined) data.email = body.email ?? "";
     if (body.phone !== undefined) data.phone = body.phone ?? "";
@@ -60,21 +80,24 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     });
     if (employee.count === 0) throw new HttpError(404, "Employee not found");
 
-    // Sync user record if email updated
-    if (body.email !== undefined) {
+    const newId = (body.employee_id as string | undefined) ?? id;
+
+    // Sync user record
+    if (body.email !== undefined || body.name !== undefined || body.employee_id !== undefined) {
       await prisma.user.updateMany({
         where: { employeeNumber: id, companyId: session.companyId, role: "employee" },
         data: {
           name: body.name ?? undefined,
           email: body.email || undefined,
+          employeeNumber: newId,
         },
       });
     }
 
     const updated = await prisma.employee.findFirst({
-      where: { employeeId: id, companyId: session.companyId },
+      where: { employeeId: newId, companyId: session.companyId },
     });
-    return NextResponse.json(updated);
+    return NextResponse.json(toSnake(updated));
   } catch (err) {
     return errorResponse(err);
   }

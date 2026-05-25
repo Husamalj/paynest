@@ -89,7 +89,7 @@ export default function EmployeesPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({ ...emptyForm });
-  const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", base_salary: "", social_security: false, religion: "" });
+  const [editForm, setEditForm] = useState({ employee_id: "", name: "", email: "", phone: "", base_salary: "", social_security: false, religion: "" });
 
   const religionLabel = (value: string) => {
     const item = religionOptions.find((r) => r.value === value);
@@ -138,6 +138,7 @@ export default function EmployeesPage() {
   const openEdit = () => {
     if (!selectedEmployee) return;
     setEditForm({
+      employee_id: selectedEmployee.employee_id || "",
       name: selectedEmployee.name || "",
       email: selectedEmployee.email || "",
       phone: selectedEmployee.phone || "",
@@ -151,11 +152,12 @@ export default function EmployeesPage() {
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEmployee) return;
-    if (!editForm.name || !editForm.email || !editForm.base_salary) { setError(t("fillRequired")); return; }
+    if (!editForm.employee_id || !editForm.name || !editForm.email || !editForm.base_salary) { setError(t("fillRequired")); return; }
     setSavingEdit(true);
     try {
       const res = await api.put(`/employees/${selectedEmployee.employee_id}`, { ...editForm, base_salary: parseFloat(editForm.base_salary) });
       setEmployees((p) => p.map((emp) => emp.employee_id === selectedEmployee.employee_id ? res.data : emp));
+      setSelectedId(res.data.employee_id);
       setSuccess(lang === "ar" ? "تم تعديل بيانات الموظف" : "Employee updated successfully");
       setShowEdit(false);
     } catch (err: any) { setError(err.message); }
@@ -341,7 +343,7 @@ export default function EmployeesPage() {
               <button className="modal-close" onClick={() => setShowEdit(false)}><X size={18} /></button>
             </div>
             <form onSubmit={handleEdit} className="space-y-4">
-              <div><label className="form-label">{t("employeeId")}</label><input className="form-input bg-slate-50" value={selectedEmployee?.employee_id || ""} disabled /></div>
+              <div><label className="form-label">{t("employeeId")} *</label><input className="form-input" value={editForm.employee_id} onChange={(e) => setEditForm((f) => ({ ...f, employee_id: e.target.value }))} /></div>
               <div><label className="form-label">{t("name")} *</label><input className="form-input" value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} /></div>
               <div><label className="form-label">{emailTitle} *</label><input type="email" className="form-input" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} /></div>
               <div>
