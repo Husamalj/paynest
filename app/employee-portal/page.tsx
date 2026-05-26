@@ -596,19 +596,23 @@ export default function EmployeePortalPage() {
                     <thead><tr><th>{text.leaveType}</th><th>{text.startDate}</th><th>{text.endDate}</th><th>{isRTL ? "المدة" : "Duration"}</th><th>{isRTL ? "الحالة" : "Status"}</th></tr></thead>
                     <tbody>
                       {myLeaves.map((leave) => {
-                        const isPerm = leave.leave_type === "permission";
+                        const lType   = leave.leaveType   || leave.leave_type   || "";
+                        const sDate   = leave.startDate   || leave.start_date;
+                        const eDate   = leave.endDate     || leave.end_date;
+                        const dCount  = leave.daysCount   ?? leave.days_count;
+                        const isPerm  = lType === "permission";
                         const typeLabel = isPerm
                           ? (isRTL ? "إذن مغادرة" : "Permission")
-                          : leave.leave_type === "annual"
+                          : lType === "annual"
                             ? (isRTL ? "سنوية" : "Annual")
-                            : leave.leave_type === "sick"
+                            : lType === "sick"
                               ? (isRTL ? "مرضية" : "Sick")
-                              : leave.leave_type === "unpaid"
+                              : lType === "unpaid"
                                 ? (isRTL ? "بدون راتب" : "Unpaid")
-                                : leave.leave_type;
+                                : lType;
                         const duration = isPerm
-                          ? `${leave.days_count} ${isRTL ? (leave.days_count === 1 ? "ساعة" : "ساعات") : (leave.days_count === 1 ? "hr" : "hrs")}`
-                          : `${leave.days_count} ${isRTL ? "يوم" : "days"}`;
+                          ? `${dCount} ${isRTL ? (dCount === 1 ? "ساعة" : "ساعات") : (dCount === 1 ? "hr" : "hrs")}`
+                          : `${dCount} ${isRTL ? "يوم" : "days"}`;
                         return (
                         <tr key={leave.id}>
                           <td>
@@ -616,8 +620,8 @@ export default function EmployeePortalPage() {
                               ? <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full text-xs font-medium"><Clock size={11}/>{typeLabel}</span>
                               : typeLabel}
                           </td>
-                          <td>{formatDate(leave.start_date)}</td>
-                          <td>{isPerm ? "-" : formatDate(leave.end_date)}</td>
+                          <td>{formatDate(sDate)}</td>
+                          <td>{isPerm ? "-" : formatDate(eDate)}</td>
                           <td>{duration}</td>
                           <td><StatusBadge status={leave.status} isRTL={isRTL} /></td>
                         </tr>
