@@ -4,38 +4,6 @@ import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-/** Creates the evaluations table if it doesn't exist yet (idempotent). */
-async function ensureTable() {
-  await prisma.$executeRaw`
-    CREATE TABLE IF NOT EXISTS evaluations (
-      id                      SERIAL PRIMARY KEY,
-      company_id              INTEGER NOT NULL DEFAULT 1,
-      evaluator_id            INTEGER NOT NULL,
-      employee_id             VARCHAR(50) NOT NULL,
-      period_month            INTEGER NOT NULL,
-      period_year             INTEGER NOT NULL,
-      score_accuracy          SMALLINT CHECK (score_accuracy BETWEEN 1 AND 5),
-      score_innovation        SMALLINT CHECK (score_innovation BETWEEN 1 AND 5),
-      score_speed             SMALLINT CHECK (score_speed BETWEEN 1 AND 5),
-      score_development       SMALLINT CHECK (score_development BETWEEN 1 AND 5),
-      score_quality_check     SMALLINT CHECK (score_quality_check BETWEEN 1 AND 5),
-      score_prioritization    SMALLINT CHECK (score_prioritization BETWEEN 1 AND 5),
-      score_independence      SMALLINT CHECK (score_independence BETWEEN 1 AND 5),
-      score_deadlines         SMALLINT CHECK (score_deadlines BETWEEN 1 AND 5),
-      score_teamwork          SMALLINT CHECK (score_teamwork BETWEEN 1 AND 5),
-      score_communication     SMALLINT CHECK (score_communication BETWEEN 1 AND 5),
-      score_knowledge_sharing SMALLINT CHECK (score_knowledge_sharing BETWEEN 1 AND 5),
-      score_feedback          SMALLINT CHECK (score_feedback BETWEEN 1 AND 5),
-      score_compliance        SMALLINT CHECK (score_compliance BETWEEN 1 AND 5),
-      bonus_worthy            BOOLEAN DEFAULT FALSE,
-      recommendations         TEXT,
-      created_at              TIMESTAMP DEFAULT NOW(),
-      updated_at              TIMESTAMP DEFAULT NOW(),
-      UNIQUE (company_id, evaluator_id, employee_id, period_month, period_year)
-    )
-  `;
-}
-
 /**
  * GET /api/evaluations?employee_id=...&month=...&year=...
  *   → returns the single evaluation for the logged-in evaluator + employee + period
@@ -50,8 +18,6 @@ export async function GET(req: NextRequest) {
     requireRole(session, ["owner", "hr", "employee"]);
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
-    await ensureTable();
-
     const url = new URL(req.url);
     const employeeId = url.searchParams.get("employee_id");
     const month = parseInt(url.searchParams.get("month") || "0", 10);
@@ -59,11 +25,11 @@ export async function GET(req: NextRequest) {
 
     if (!month || !year) throw new HttpError(400, "Missing month or year");
 
-    // ── Single eval (pre-fill modal) ──────────────────────────────────────
+    // ── Single eval (pre-fill modal) ─────────────────────────────────────
     if (employeeId) {
       const rows = await prisma.$queryRaw<any[]>`
         SELECT * FROM evaluations
-        WHERE company_id  = ${session.companyId}
+        WHERE company_id   = ${session.companyId}
           AND evaluator_id = ${session.id}
           AND employee_id  = ${employeeId}
           AND period_month = ${month}
@@ -73,19 +39,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(rows[0] ?? null);
     }
 
-    // ── List mode (HR results page) ───────────────────────────────────────
+    // ── List mode (results page) ─────────────────────────────────────────
     let rows: any[];
     if (session.role === "owner") {
       rows = await prisma.$queryRaw<any[]>`
         SELECT ev.*,
-               emp.name  AS employee_name,
-               u.name    AS evaluator_name
+               emp.name AS employee_name,
+               u.name   AS evaluator_name
         FROM   evaluations ev
         LEFT JOIN employees emp
                ON emp.employee_id = ev.employee_id
               AND emp.company_id  = ev.company_id
         LEFT JOIN users u ON u.id = ev.evaluator_id
-        WHERE  ev.company_id  = ${session.companyId}
+        WHERE  ev.company_id   = ${session.companyId}
           AND  ev.period_month = ${month}
           AND  ev.period_year  = ${year}
         ORDER BY emp.name
@@ -122,8 +88,6 @@ export async function POST(req: NextRequest) {
     const session = await requireAuth(req);
     requireRole(session, ["owner", "hr", "employee"]);
     if (session.companyId == null) throw new HttpError(403, "No company scope");
-
-    await ensureTable();
 
     const body = await req.json();
     const {
