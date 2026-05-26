@@ -85,8 +85,7 @@ model Employee {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
 
-  company   Company            @relation(fields: [companyId], references: [id])
-  documents EmployeeDocument[]
+  company Company @relation(fields: [companyId], references: [id])
 
   @@unique([employeeId, systemMode], map: "employees_emp_mode_uidx")
   @@map("employees")
