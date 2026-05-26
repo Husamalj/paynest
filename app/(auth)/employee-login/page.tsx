@@ -2,14 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { UserCircle, ArrowRight, Eye, EyeOff, Globe } from "lucide-react";
+import { UserCircle, ArrowRight, ArrowLeft, Eye, EyeOff, Globe } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 
 function LangToggle() {
   const { lang, toggleLanguage } = useLanguage();
   return (
-    <button onClick={() => toggleLanguage()} className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm transition-colors">
+    <button
+      onClick={() => toggleLanguage()}
+      className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-900 text-sm transition-colors"
+    >
       <Globe size={15} />
       {lang === "ar" ? "English" : "العربية"}
     </button>
@@ -20,11 +23,13 @@ export default function EmployeeLoginPage() {
   const router = useRouter();
   const { lang } = useLanguage();
   const ar = lang === "ar";
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const Back = ar ? ArrowRight : ArrowLeft;
+
+  const [email, setEmail]               = useState("");
+  const [password, setPassword]         = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [error, setError]               = useState("");
+  const [loading, setLoading]           = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,54 +62,118 @@ export default function EmployeeLoginPage() {
   };
 
   return (
-    <div dir={ar ? "rtl" : "ltr"} className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
-      <div className="absolute top-4 right-4"><LangToggle /></div>
-      <div className="w-full max-w-md">
-        <button onClick={() => router.push("/")} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors">
-          <ArrowRight size={16} className={ar ? "rotate-0" : "rotate-180"} />
-          {ar ? "العودة للرئيسية" : "Back"}
+    <div
+      dir={ar ? "rtl" : "ltr"}
+      className="relative min-h-screen flex flex-col bg-slate-50"
+    >
+      {/* Soft brand radial blob — matches landing hero */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(60% 50% at 50% 0%, rgba(12, 140, 232, 0.08) 0%, transparent 70%)",
+        }}
+      />
+
+      {/* Slim header */}
+      <header className="relative bg-white border-b border-slate-200 px-6 h-14 flex items-center justify-between">
+        <button
+          onClick={() => router.push("/portal-select")}
+          className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition-colors"
+        >
+          <Back size={16} />
+          {ar ? "رجوع" : "Back"}
         </button>
+        <div className="font-bold text-slate-900 text-[15px]">
+          Pay<span className="text-brand-600">Nest</span>
+        </div>
+        <LangToggle />
+      </header>
 
-        <form onSubmit={handleLogin} className="bg-white rounded-3xl shadow-2xl p-8">
-          <div className="w-14 h-14 rounded-2xl bg-slate-700 flex items-center justify-center mx-auto mb-4">
-            <UserCircle size={24} className="text-white" />
-          </div>
-          <h1 className="text-2xl font-black text-center text-slate-900 mb-1">
-            {ar ? "بوابة الموظف" : "Employee Portal"}
-          </h1>
-          <p className="text-center text-slate-500 text-sm mb-6">Pay<span className="text-slate-700">Nest</span></p>
+      {/* Main */}
+      <main className="relative flex-1 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md">
+          <form
+            onSubmit={handleLogin}
+            className="bg-white rounded-2xl shadow-elevated border border-slate-200/70 p-8"
+          >
+            {/* Icon + title */}
+            <div className="w-14 h-14 rounded-2xl bg-slate-700 flex items-center justify-center mx-auto mb-4 shadow-sm">
+              <UserCircle size={26} className="text-white" />
+            </div>
+            <h1 className="text-2xl font-black text-center text-slate-900 mb-1">
+              {ar ? "بوابة الموظف" : "Employee Portal"}
+            </h1>
+            <p className="text-center text-slate-400 text-xs mb-6">
+              {ar ? "كشف الراتب والإجازات والمهام" : "Payslips, leaves & tasks"}
+            </p>
 
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={ar ? "البريد الإلكتروني" : "Email address"}
-            required
-            className="w-full mb-4 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            dir="ltr"
-          />
-          <div className="relative mb-4">
+            {/* Email */}
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+              {ar ? "البريد الإلكتروني" : "Email Address"}
+            </label>
             <input
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={ar ? "كلمة السر" : "Password"}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="example@company.com"
               required
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+              className="w-full mb-4 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-500 text-sm transition-colors"
               dir="ltr"
             />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+
+            {/* Password */}
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+              {ar ? "كلمة السر" : "Password"}
+            </label>
+            <div className="relative mb-4">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-500 pr-11 text-sm transition-colors"
+                dir="ltr"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+
+            {error && (
+              <div className="text-red-600 text-sm mb-4 text-center bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                {error}
+              </div>
+            )}
+
+            <button
+              disabled={loading}
+              className="w-full py-3 rounded-xl text-white font-bold disabled:opacity-60 mb-4 bg-slate-700 hover:bg-slate-800 transition-colors shadow-sm text-sm"
+            >
+              {loading
+                ? ar ? "جاري الدخول..." : "Signing in..."
+                : ar ? "دخول" : "Sign In"}
             </button>
-          </div>
 
-          {error && <div className="text-red-600 text-sm mb-4 text-center">{error}</div>}
-
-          <button disabled={loading} className="w-full py-3 rounded-xl text-white font-bold disabled:opacity-60 bg-slate-700 hover:bg-slate-800 transition-colors">
-            {loading ? (ar ? "جاري الدخول..." : "Signing in...") : (ar ? "دخول" : "Sign In")}
-          </button>
-        </form>
-      </div>
+            <p className="text-center text-slate-400 text-xs">
+              {ar ? "موظف إداري؟ " : "Staff member? "}
+              <button
+                type="button"
+                onClick={() => router.push("/login")}
+                className="text-brand-600 hover:underline font-medium"
+              >
+                {ar ? "اضغط هنا" : "Click here"}
+              </button>
+            </p>
+          </form>
+        </div>
+      </main>
     </div>
   );
 }

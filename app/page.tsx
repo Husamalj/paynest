@@ -113,7 +113,7 @@ export default function LandingPage() {
                 <span
                   className="relative inline-block text-slate-900"
                   style={{
-                    background: "linear-gradient(104deg, transparent 0.9%, #fbbf24 2.4%, #fcd34d 97.9%, transparent 99%)",
+                    background: "linear-gradient(104deg, transparent 0.9%, #bae0fd 2.4%, #7cc7fc 97.9%, transparent 99%)",
                     backgroundRepeat: "no-repeat",
                     backgroundSize: "100% 88%",
                     backgroundPosition: "0 55%",
@@ -131,7 +131,7 @@ export default function LandingPage() {
                 <span
                   className="relative inline-block text-slate-900"
                   style={{
-                    background: "linear-gradient(104deg, transparent 0.9%, #fbbf24 2.4%, #fcd34d 97.9%, transparent 99%)",
+                    background: "linear-gradient(104deg, transparent 0.9%, #bae0fd 2.4%, #7cc7fc 97.9%, transparent 99%)",
                     backgroundRepeat: "no-repeat",
                     backgroundSize: "100% 88%",
                     backgroundPosition: "0 55%",
@@ -169,12 +169,32 @@ export default function LandingPage() {
               {ar ? "تسجيل الدخول" : "Log In"}
             </button>
 
-            {/* Decorative doodle arrow (hidden on mobile) */}
+            {/* Handwritten note + arrow pointing from CTA to the note */}
+            <span
+              className={clsx(
+                "absolute top-2 hidden md:block font-caveat text-brand-500 text-2xl leading-tight whitespace-nowrap",
+                ar ? "-left-44" : "-right-44"
+              )}
+            >
+              {ar ? (
+                <>
+                  مجاناً تماماً
+                  <br />
+                  بدون بطاقة
+                </>
+              ) : (
+                <>
+                  100% free —
+                  <br />
+                  no card needed
+                </>
+              )}
+            </span>
             <svg
               aria-hidden
               viewBox="0 0 80 60"
               className={clsx(
-                "absolute -top-10 hidden md:block w-20 h-14 text-brand-300",
+                "absolute top-12 hidden md:block w-16 h-12 text-brand-400",
                 ar ? "-left-24" : "-right-24",
                 ar && "scale-x-[-1]"
               )}
@@ -184,8 +204,8 @@ export default function LandingPage() {
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <path d="M5 50 C 20 20, 50 5, 70 20" />
-              <path d="M65 12 L 72 22 L 60 25" />
+              <path d="M70 10 C 55 5, 30 15, 10 40" />
+              <path d="M15 32 L 8 42 L 20 45" />
             </svg>
           </div>
 
