@@ -64,7 +64,7 @@ export default function StaffLoginPage() {
       } else if (user.role === "owner") {
         window.location.href = "/owner-portal";
       } else {
-        window.location.href = "/hr-portal";
+        window.location.href = "/dashboard";
       }
     } catch (err: any) {
       setError(err.message);

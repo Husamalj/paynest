@@ -38,10 +38,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           router.replace("/employee-portal");
           return;
         }
-        if (user.role === "hr") {
-          router.replace("/hr-portal");
-          return;
-        }
         if (user.role === "owner") {
           router.replace("/owner-portal");
           return;
