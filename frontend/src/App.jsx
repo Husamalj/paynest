@@ -24,6 +24,7 @@ import Employees from './pages/Employees';
 import Tasks from './pages/Tasks';
 import Announcements from './pages/Announcements';
 import Remote from './pages/Remote';
+import Evaluations from './pages/Evaluations';
 import EmployeePortal from './pages/EmployeePortal';
 import OwnerSetup from './pages/OwnerSetup';
 import SuperAdmin from './pages/SuperAdmin';
@@ -684,6 +685,7 @@ export default function App() {
                   <Route path="/reports" element={<Reports settings={settings} />} />
                   <Route path="/employees" element={<Employees />} />
                   <Route path="/tasks" element={<Tasks />} />
+                  <Route path="/evaluations" element={<Evaluations />} />
                   <Route path="/announcements" element={<Announcements />} />
                   <Route path="/employees/remote" element={<Remote />} />
                   <Route path="/settings" element={<ProtectedRoute allowedRoles={['owner']}><Settings settings={settings} onSettingsSaved={handleSettingsSaved} /></ProtectedRoute>} />

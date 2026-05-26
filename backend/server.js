@@ -16,6 +16,7 @@ const announcementsRoutes = require('./src/routes/announcements');
 const remoteAssignmentsRoutes = require('./src/routes/remote_assignments');
 const copilotRoutes = require('./src/routes/copilot');
 const authRoutes = require('./src/routes/auth');
+const evaluationsRoutes = require('./src/routes/evaluations');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -49,6 +50,7 @@ app.use('/api/tasks', tasksRoutes);
 app.use('/api/announcements', announcementsRoutes);
 app.use('/api/remote_assignments', remoteAssignmentsRoutes);
 app.use('/api/copilot', copilotRoutes);
+app.use('/api/evaluations', evaluationsRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

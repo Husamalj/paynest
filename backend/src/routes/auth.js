@@ -541,4 +541,29 @@ router.get('/me', requireAuth, async (req, res) => {
     }
 });
 
+/*
+=========
+GET /api/auth/users?role=hr
+Owner only — list active users in the same company filtered by role
+Used by Employees page to populate the supervisor assignment dropdown
+=========
+*/
+router.get('/users', requireAuth, requireRole('owner'), async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, email, role
+       FROM users
+       WHERE company_id = $1
+         AND role       = $2
+         AND is_active  = TRUE
+       ORDER BY name ASC`,
+      [req.user.companyId, req.query.role || 'hr']
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('GET /api/auth/users error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

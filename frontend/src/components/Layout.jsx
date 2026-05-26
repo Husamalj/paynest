@@ -21,6 +21,7 @@ import {
   X,
   AlertTriangle,
   CheckCircle2,
+  ClipboardList,
 } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import clsx from 'clsx';
@@ -42,6 +43,7 @@ const NAV_ITEMS = [
   { key: 'bonuses', path: '/bonuses', icon: Gift },
   { key: 'leaves', path: '/leaves', icon: Palmtree },
   { key: 'tasks', path: '/tasks', icon: CheckSquare },
+  { key: 'evaluations', path: '/evaluations', icon: ClipboardList },
   { key: 'announcements', path: '/announcements', icon: Bell },
   { key: 'reports', path: '/reports', icon: BarChart3 },
   { key: 'settings', path: '/settings', icon: SettingsIcon },

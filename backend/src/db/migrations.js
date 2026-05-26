@@ -173,6 +173,36 @@ async function runMigrations() {
       );
     `);
 
+    // ---- Evaluations table ----
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS evaluations (
+        id               SERIAL PRIMARY KEY,
+        company_id       INTEGER NOT NULL DEFAULT 1,
+        evaluator_id     INTEGER NOT NULL,
+        employee_id      VARCHAR(50) NOT NULL,
+        period_month     INTEGER NOT NULL,
+        period_year      INTEGER NOT NULL,
+        score_accuracy          SMALLINT CHECK (score_accuracy BETWEEN 1 AND 5),
+        score_innovation        SMALLINT CHECK (score_innovation BETWEEN 1 AND 5),
+        score_speed             SMALLINT CHECK (score_speed BETWEEN 1 AND 5),
+        score_development       SMALLINT CHECK (score_development BETWEEN 1 AND 5),
+        score_quality_check     SMALLINT CHECK (score_quality_check BETWEEN 1 AND 5),
+        score_prioritization    SMALLINT CHECK (score_prioritization BETWEEN 1 AND 5),
+        score_independence      SMALLINT CHECK (score_independence BETWEEN 1 AND 5),
+        score_deadlines         SMALLINT CHECK (score_deadlines BETWEEN 1 AND 5),
+        score_teamwork          SMALLINT CHECK (score_teamwork BETWEEN 1 AND 5),
+        score_communication     SMALLINT CHECK (score_communication BETWEEN 1 AND 5),
+        score_knowledge_sharing SMALLINT CHECK (score_knowledge_sharing BETWEEN 1 AND 5),
+        score_feedback          SMALLINT CHECK (score_feedback BETWEEN 1 AND 5),
+        score_compliance        SMALLINT CHECK (score_compliance BETWEEN 1 AND 5),
+        bonus_worthy     BOOLEAN DEFAULT FALSE,
+        recommendations  TEXT,
+        created_at       TIMESTAMP DEFAULT NOW(),
+        updated_at       TIMESTAMP DEFAULT NOW(),
+        UNIQUE (company_id, evaluator_id, employee_id, period_month, period_year)
+      );
+    `);
+
     // ---- ALTER: ensure system_mode column exists on existing installs ----
     await client.query(`
   CREATE TABLE IF NOT EXISTS companies (
@@ -219,6 +249,7 @@ async function runMigrations() {
       `ALTER TABLE announcements ADD COLUMN IF NOT EXISTS company_id INTEGER DEFAULT 1`,
       `ALTER TABLE companies ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active'`,
       `ALTER TABLE companies ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`,
+      `ALTER TABLE employees ADD COLUMN IF NOT EXISTS supervisor_user_id INTEGER REFERENCES users(id)`,
     ];
     for (const sql of alters) {
       try {

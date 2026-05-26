@@ -42,6 +42,9 @@ export default function Employees() {
 
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [hrUsers, setHrUsers] = useState([]);
+  const [assigningSupervisor, setAssigningSupervisor] = useState(false);
+  const role = localStorage.getItem('role');
 
   const [form, setForm] = useState({
     employee_id: '',
@@ -96,10 +99,11 @@ export default function Employees() {
     setError('');
 
     try {
-      const [empRes, balRes] = await Promise.all([
-        api.get('/employees'),
-        api.get('/leaves/balances'),
-      ]);
+      const requests = [api.get('/employees'), api.get('/leaves/balances')];
+      if (role === 'owner') requests.push(api.get('/auth/users', { params: { role: 'hr' } }));
+      const results = await Promise.all(requests);
+      const [empRes, balRes] = results;
+      if (role === 'owner' && results[2]) setHrUsers(results[2].data || []);
 
       const list = empRes.data || [];
 
@@ -475,6 +479,51 @@ export default function Employees() {
                   </span>
                 </div>
               </div>
+
+              {/* Supervisor assignment — owner only */}
+              {role === 'owner' && (
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <div className="text-xs text-slate-500 mb-1">{t('supervisor')}</div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="form-input flex-1 text-sm"
+                      value={selectedEmployee.supervisor_user_id || ''}
+                      disabled={assigningSupervisor}
+                      onChange={async (e) => {
+                        const val = e.target.value ? parseInt(e.target.value, 10) : null;
+                        setAssigningSupervisor(true);
+                        try {
+                          const res = await api.put(
+                            `/evaluations/assign-supervisor/${selectedEmployee.employee_id}`,
+                            { supervisor_user_id: val }
+                          );
+                          setEmployees((prev) =>
+                            prev.map((emp) =>
+                              emp.employee_id === selectedEmployee.employee_id ? res.data : emp
+                            )
+                          );
+                          setSuccess(t('supervisorAssigned'));
+                          setTimeout(() => setSuccess(''), 3000);
+                        } catch (err) {
+                          setError(err.message);
+                        } finally {
+                          setAssigningSupervisor(false);
+                        }
+                      }}
+                    >
+                      <option value="">{t('noSupervisor')}</option>
+                      {hrUsers.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </select>
+                    {assigningSupervisor && (
+                      <span className="text-xs text-slate-400">
+                        {lang === 'ar' ? 'جاري...' : '...'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
