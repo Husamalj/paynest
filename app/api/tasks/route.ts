@@ -43,7 +43,10 @@ export async function POST(req: NextRequest) {
         where: {
           employeeId: employee_id,
           companyId: session.companyId,
-          supervisorId: supervisor.id,
+          OR: [
+            { supervisorId: supervisor.id },
+            { supervisorIds: { has: supervisor.id } },
+          ],
         },
       });
       if (!subordinate) throw new HttpError(403, "You can only assign tasks to your direct subordinates");

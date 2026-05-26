@@ -20,19 +20,44 @@ export async function GET(req: NextRequest) {
         companyId: session.companyId,
         systemMode: mode,
       },
-      include: {
-        supervisor: {
-          select: { id: true, employeeId: true, name: true, email: true, phone: true },
-        },
-        subordinates: {
-          select: { id: true, employeeId: true, name: true, email: true, phone: true },
-          orderBy: { name: "asc" },
-        },
-      },
     });
     if (!employee) throw new HttpError(404, "Employee not found");
 
-    return NextResponse.json(employee);
+    // Combine legacy supervisorId with new supervisorIds array
+    const allSupervisorIds = Array.from(new Set([
+      ...(employee.supervisorIds || []),
+      ...(employee.supervisorId != null ? [employee.supervisorId] : []),
+    ]));
+
+    // Fetch all supervisor records
+    const supervisors = allSupervisorIds.length > 0
+      ? await prisma.employee.findMany({
+          where: { id: { in: allSupervisorIds }, companyId: session.companyId, systemMode: mode },
+          select: { id: true, employeeId: true, name: true, email: true, phone: true },
+          orderBy: { name: "asc" },
+        })
+      : [];
+
+    // Fetch subordinates — anyone where my id is in their supervisorIds OR supervisorId
+    const subordinates = await prisma.employee.findMany({
+      where: {
+        companyId: session.companyId,
+        systemMode: mode,
+        OR: [
+          { supervisorIds: { has: employee.id } },
+          { supervisorId: employee.id },
+        ],
+      },
+      select: { id: true, employeeId: true, name: true, email: true, phone: true },
+      orderBy: { name: "asc" },
+    });
+
+    return NextResponse.json({
+      ...employee,
+      supervisor: supervisors[0] ?? null, // backward compat (primary)
+      supervisors,                         // full array (new)
+      subordinates,
+    });
   } catch (err) {
     return errorResponse(err);
   }
