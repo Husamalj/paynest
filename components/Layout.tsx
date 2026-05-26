@@ -61,6 +61,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: "tasks", path: "/tasks", icon: CheckSquare },
   { key: "announcements", path: "/announcements", icon: Bell },
   { key: "reports", path: "/reports", icon: BarChart3 },
+  { key: "hrTeam", path: "/hr-team", icon: ShieldCheck },
   { key: "settings", path: "/settings", icon: SettingsIcon },
 ];
 
@@ -124,7 +125,9 @@ export default function Layout({ children, settings }: LayoutProps) {
     }
   };
 
-  const navItems = role === "owner" ? NAV_ITEMS : NAV_ITEMS.filter((item) => item.key !== "settings");
+  const navItems = role === "owner"
+    ? NAV_ITEMS
+    : NAV_ITEMS.filter((item) => item.key !== "settings" && item.key !== "hrTeam");
   const companyName = settings?.company_name || user.company_name || "PayNest";
 
   const currentNav = navItems.find((i) =>

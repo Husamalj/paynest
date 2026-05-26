@@ -1,13 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Building2, Users, UserCircle, ArrowRight, Globe } from "lucide-react";
+import { ShieldCheck, UserCircle, ArrowRight, Globe } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 function LangToggle() {
   const { lang, toggleLanguage } = useLanguage();
   return (
-    <button onClick={() => toggleLanguage()} className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm transition-colors">
+    <button
+      onClick={() => toggleLanguage()}
+      className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm transition-colors"
+    >
       <Globe size={15} />
       {lang === "ar" ? "English" : "العربية"}
     </button>
@@ -21,28 +24,16 @@ export default function LandingPage() {
 
   const portals = [
     {
-      label: ar ? "مدير الشركة" : "Company Owner",
-      sub: ar ? "التقارير المالية والرواتب والإعدادات" : "Financials, payroll & settings",
-      icon: Building2,
-      bg: "bg-violet-600 hover:bg-violet-500",
+      label: ar ? "بوابة الموظفين والإدارة" : "Staff Portal",
+      sub: ar ? "دخول المدير وموارد بشرية" : "Company Owner & HR Manager",
+      icon: ShieldCheck,
+      bg: "bg-gradient-to-br from-brand-600 to-brand-700 hover:from-brand-500 hover:to-brand-600",
       iconBg: "bg-white/20",
       textColor: "text-white",
-      subColor: "text-violet-100",
-      arrowColor: "text-violet-100",
-      href: "/owner-login",
-      badge: ar ? "OWNER" : "OWNER",
-    },
-    {
-      label: ar ? "الموارد البشرية" : "HR Manager",
-      sub: ar ? "الموظفون والإجازات والمهام" : "Employees, leaves & tasks",
-      icon: Users,
-      bg: "bg-blue-600 hover:bg-blue-500",
-      iconBg: "bg-white/20",
-      textColor: "text-white",
-      subColor: "text-blue-100",
-      arrowColor: "text-blue-100",
-      href: "/hr-login",
-      badge: "HR",
+      subColor: "text-brand-100",
+      arrowColor: "text-brand-100",
+      href: "/login",
+      badge: ar ? "STAFF" : "STAFF",
     },
     {
       label: ar ? "بوابة الموظف" : "Employee Portal",
@@ -59,27 +50,34 @@ export default function LandingPage() {
   ];
 
   return (
-    <div dir={ar ? "rtl" : "ltr"} className="min-h-screen flex flex-col items-center justify-center bg-slate-950 px-4 gap-10">
-      <div className="absolute top-4 right-4"><LangToggle /></div>
+    <div
+      dir={ar ? "rtl" : "ltr"}
+      className="min-h-screen flex flex-col items-center justify-center bg-slate-950 px-4 gap-10"
+    >
+      <div className="absolute top-4 right-4">
+        <LangToggle />
+      </div>
 
       <div className="text-center">
         <h1 className="text-4xl font-black text-white mb-2">
-          Pay<span className="text-blue-500">Nest</span>
+          Pay<span className="text-brand-400">Nest</span>
         </h1>
         <p className="text-slate-400 text-sm">
           {ar ? "نظام إدارة الرواتب والموارد البشرية" : "Payroll & HR Management System"}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 w-full max-w-3xl">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full max-w-xl">
         {portals.map((p) => (
           <button
-            key={p.label}
+            key={p.href}
             onClick={() => router.push(p.href)}
-            className={`group ${p.bg} transition-all duration-200 rounded-3xl p-7 flex flex-col items-center gap-4 shadow-2xl cursor-pointer`}
+            className={`group ${p.bg} transition-all duration-200 rounded-3xl p-8 flex flex-col items-center gap-4 shadow-2xl cursor-pointer`}
           >
-            <div className={clsx("w-14 h-14 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform", p.iconBg)}>
-              <p.icon size={28} className={p.textColor} />
+            <div
+              className={`w-16 h-16 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform ${p.iconBg}`}
+            >
+              <p.icon size={30} className={p.textColor} />
             </div>
             <div className="text-center">
               <div className={`${p.textColor} text-lg font-bold`}>{p.label}</div>
@@ -93,15 +91,21 @@ export default function LandingPage() {
         ))}
       </div>
 
-      <button onClick={() => router.push("/signup")} className="text-slate-400 hover:text-blue-400 text-sm transition-colors">
-        {ar
-          ? <span>ليس لديك حساب؟ <span className="underline">سجّل شركتك الآن</span></span>
-          : <span>No account? <span className="underline">Register your company</span></span>}
+      <button
+        onClick={() => router.push("/signup")}
+        className="text-slate-400 hover:text-brand-400 text-sm transition-colors"
+      >
+        {ar ? (
+          <span>
+            ليس لديك حساب؟{" "}
+            <span className="underline">سجّل شركتك الآن</span>
+          </span>
+        ) : (
+          <span>
+            No account? <span className="underline">Register your company</span>
+          </span>
+        )}
       </button>
     </div>
   );
-}
-
-function clsx(...classes: (string | undefined | false)[]) {
-  return classes.filter(Boolean).join(" ");
 }

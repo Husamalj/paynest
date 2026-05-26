@@ -19,7 +19,23 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(hrs);
+    // Enrich with employee record (salary, phone)
+    const enriched = await Promise.all(
+      hrs.map(async (hr) => {
+        if (!hr.employeeNumber) return { ...hr, base_salary: 0, phone: "" };
+        const emp = await prisma.employee.findFirst({
+          where: { employeeId: hr.employeeNumber, companyId: session.companyId! },
+          select: { baseSalary: true, phone: true },
+        });
+        return {
+          ...hr,
+          base_salary: emp ? Number(emp.baseSalary) : 0,
+          phone: emp?.phone ?? "",
+        };
+      })
+    );
+
+    return NextResponse.json(enriched);
   } catch (err) {
     return errorResponse(err);
   }

@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     requireRole(session, ["owner"]);
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
-    const { name, email, password, employee_number } = await req.json();
+    const { name, email, password, employee_number, phone, base_salary } = await req.json();
     if (!name || !email) throw new HttpError(400, "Name and email are required");
 
     const existing = await prisma.user.findFirst({ where: { email } });
@@ -43,7 +43,8 @@ export async function POST(req: NextRequest) {
         employeeId,
         name,
         email,
-        baseSalary: 0,
+        phone: phone || "",
+        baseSalary: parseFloat(base_salary) || 0,
         socialSecurity: false,
         systemMode,
         companyId: session.companyId,
