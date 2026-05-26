@@ -105,27 +105,51 @@ export default function LandingPage() {
           </div>
 
           {/* H1 */}
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight mb-5">
+          <h1 className="font-caveat text-5xl sm:text-6xl md:text-7xl text-slate-900 leading-[1.1] mb-5">
             {ar ? (
               <>
                 الرواتب والموارد البشرية،
                 <br />
-                <span className="text-brand-600">ببساطة.</span>
+                <span
+                  className="relative inline-block text-slate-900"
+                  style={{
+                    background: "linear-gradient(104deg, transparent 0.9%, #fbbf24 2.4%, #fcd34d 97.9%, transparent 99%)",
+                    backgroundRepeat: "no-repeat",
+                    backgroundSize: "100% 88%",
+                    backgroundPosition: "0 55%",
+                    WebkitBoxDecorationBreak: "clone",
+                    paddingInline: "0.15em",
+                  }}
+                >
+                  ببساطة.
+                </span>
               </>
             ) : (
               <>
-                Payroll and HR,
+                Payroll &amp; HR,
                 <br />
-                <span className="text-brand-600">made simple.</span>
+                <span
+                  className="relative inline-block text-slate-900"
+                  style={{
+                    background: "linear-gradient(104deg, transparent 0.9%, #fbbf24 2.4%, #fcd34d 97.9%, transparent 99%)",
+                    backgroundRepeat: "no-repeat",
+                    backgroundSize: "100% 88%",
+                    backgroundPosition: "0 55%",
+                    WebkitBoxDecorationBreak: "clone",
+                    paddingInline: "0.15em",
+                  }}
+                >
+                  made simple.
+                </span>
               </>
             )}
           </h1>
 
           {/* Subhead */}
-          <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto mb-8 leading-relaxed">
+          <p className="text-base sm:text-lg text-slate-500 max-w-xl mx-auto mb-8 leading-relaxed">
             {ar
-              ? "نظام متكامل يحسب الرواتب، يتابع الحضور، ويدير الموظفين — مصمم للشركات في الأردن والخليج."
-              : "An all-in-one platform that calculates payroll, tracks attendance, and manages teams — built for growing businesses in Jordan and the Gulf."}
+              ? "بسيط، فعّال، وبسعر مناسب — لكل شركة ناشئة في الأردن والخليج."
+              : "Simple, efficient, yet affordable — built for every growing business in Jordan and the Gulf."}
           </p>
 
           {/* CTAs + playful arrow doodle */}

@@ -11,6 +11,7 @@ const config: Config = {
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
         arabic: ["Cairo", "Segoe UI", "Tahoma", "sans-serif"],
+        caveat: ["var(--font-caveat)", "cursive"],
       },
       colors: {
         brand: {
