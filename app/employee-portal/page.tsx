@@ -76,6 +76,12 @@ export default function EmployeePortalPage() {
 
   const [leaveForm, setLeaveForm] = useState({ leave_type: "annual", start_date: "", end_date: "", reason: "" });
 
+  // ── Permission (short leave) ─────────────────────────────────────────────
+  const [permForm, setPermForm] = useState({ date: "", hours: "1", reason: "" });
+  const [permSaving, setPermSaving] = useState(false);
+  const [permError, setPermError] = useState("");
+  const [permSuccess, setPermSuccess] = useState("");
+
   const evalNow = new Date();
   const [evalPeriodMonth, setEvalPeriodMonth] = useState(evalNow.getMonth() + 1);
   const [evalPeriodYear, setEvalPeriodYear] = useState(evalNow.getFullYear());
@@ -200,6 +206,30 @@ export default function EmployeePortalPage() {
   const myTasks = useMemo(() => tasks.filter((task) => (task.employeeId || task.employee_id) === employeeId), [tasks, employeeId]);
   const myLeaves = useMemo(() => leaves.filter((leave) => (leave.employeeId || leave.employee_id) === employeeId), [leaves, employeeId]);
   const myBalance = useMemo(() => balances.find((b) => (b.employeeId || b.employee_id) === employeeId) || null, [balances, employeeId]);
+
+  const submitPermission = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!employee || !permForm.date) {
+      setPermError(isRTL ? "اختار التاريخ" : "Choose a date");
+      return;
+    }
+    setPermSaving(true); setPermError(""); setPermSuccess("");
+    try {
+      const res = await api.post("/leaves", {
+        employee_id: employee.employeeId || employee.employee_id,
+        employee_name: employee.name,
+        leave_type: "permission",
+        start_date: permForm.date,
+        end_date: permForm.date,
+        days_count: parseInt(permForm.hours),
+        reason: permForm.reason,
+      });
+      setLeaves((prev) => [res.data, ...prev]);
+      setPermForm({ date: "", hours: "1", reason: "" });
+      setPermSuccess(isRTL ? "تم إرسال طلب المغادرة" : "Permission request sent");
+    } catch (err: any) { setPermError(err.message); }
+    finally { setPermSaving(false); }
+  };
 
   const submitLeave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -434,6 +464,8 @@ export default function EmployeePortalPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-5">
+              {/* ── Left column: Leave + Permission stacked ─── */}
+              <div className="space-y-5">
               <div className="card">
                 <div className="card-header"><div className="card-title"><Palmtree size={16} className="text-brand-600" />{text.requestLeave}</div></div>
                 <form className="space-y-4" onSubmit={submitLeave}>
@@ -461,6 +493,65 @@ export default function EmployeePortalPage() {
                   </button>
                 </form>
               </div>
+
+              {/* ── Permission / Short Leave card ───────────────────────── */}
+              <div className="card">
+                <div className="card-header">
+                  <div className="card-title">
+                    <Clock size={16} className="text-amber-500" />
+                    {isRTL ? "طلب إذن مغادرة" : "Permission Request"}
+                  </div>
+                </div>
+                <form className="space-y-4" onSubmit={submitPermission}>
+                  <div>
+                    <label className="form-label">{isRTL ? "التاريخ" : "Date"}</label>
+                    <input
+                      type="date"
+                      required
+                      className="form-input"
+                      value={permForm.date}
+                      onChange={(e) => setPermForm((f) => ({ ...f, date: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">{isRTL ? "مدة المغادرة" : "Duration"}</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {["1", "2", "3"].map((h) => (
+                        <button
+                          type="button"
+                          key={h}
+                          onClick={() => setPermForm((f) => ({ ...f, hours: h }))}
+                          className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
+                            permForm.hours === h
+                              ? "border-amber-400 bg-amber-50 text-amber-700"
+                              : "border-slate-200 bg-white text-slate-500 hover:border-amber-300"
+                          }`}
+                        >
+                          {h} {isRTL ? (h === "1" ? "ساعة" : "ساعات") : (h === "1" ? "hour" : "hours")}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="form-label">{isRTL ? "السبب" : "Reason"}</label>
+                    <textarea
+                      className="form-textarea"
+                      rows={2}
+                      placeholder={isRTL ? "اكتب سبب المغادرة..." : "Enter reason..."}
+                      value={permForm.reason}
+                      onChange={(e) => setPermForm((f) => ({ ...f, reason: e.target.value }))}
+                    />
+                  </div>
+                  {permError && <div className="alert alert-error"><AlertTriangle size={14} />{permError}</div>}
+                  {permSuccess && <div className="alert alert-success"><CheckCircle2 size={14} />{permSuccess}</div>}
+                  <button className="btn w-full bg-amber-500 hover:bg-amber-600 text-white gap-2" disabled={permSaving}>
+                    {permSaving ? <span className="spinner" /> : <Send size={15} />}
+                    {isRTL ? "إرسال طلب المغادرة" : "Send Permission Request"}
+                  </button>
+                </form>
+              </div>
+
+              </div>{/* end left column */}
 
               <div className="space-y-5">
                 <div className="card">
@@ -506,17 +597,36 @@ export default function EmployeePortalPage() {
               {myLeaves.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{text.noData}</div> : (
                 <div className="table-wrapper">
                   <table>
-                    <thead><tr><th>{text.leaveType}</th><th>{text.startDate}</th><th>{text.endDate}</th><th>{isRTL ? "الأيام" : "Days"}</th><th>{isRTL ? "الحالة" : "Status"}</th></tr></thead>
+                    <thead><tr><th>{text.leaveType}</th><th>{text.startDate}</th><th>{text.endDate}</th><th>{isRTL ? "المدة" : "Duration"}</th><th>{isRTL ? "الحالة" : "Status"}</th></tr></thead>
                     <tbody>
-                      {myLeaves.map((leave) => (
+                      {myLeaves.map((leave) => {
+                        const isPerm = leave.leave_type === "permission";
+                        const typeLabel = isPerm
+                          ? (isRTL ? "إذن مغادرة" : "Permission")
+                          : leave.leave_type === "annual"
+                            ? (isRTL ? "سنوية" : "Annual")
+                            : leave.leave_type === "sick"
+                              ? (isRTL ? "مرضية" : "Sick")
+                              : leave.leave_type === "unpaid"
+                                ? (isRTL ? "بدون راتب" : "Unpaid")
+                                : leave.leave_type;
+                        const duration = isPerm
+                          ? `${leave.days_count} ${isRTL ? (leave.days_count === 1 ? "ساعة" : "ساعات") : (leave.days_count === 1 ? "hr" : "hrs")}`
+                          : `${leave.days_count} ${isRTL ? "يوم" : "days"}`;
+                        return (
                         <tr key={leave.id}>
-                          <td>{leave.leave_type}</td>
+                          <td>
+                            {isPerm
+                              ? <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full text-xs font-medium"><Clock size={11}/>{typeLabel}</span>
+                              : typeLabel}
+                          </td>
                           <td>{formatDate(leave.start_date)}</td>
-                          <td>{formatDate(leave.end_date)}</td>
-                          <td>{leave.days_count}</td>
+                          <td>{isPerm ? "-" : formatDate(leave.end_date)}</td>
+                          <td>{duration}</td>
                           <td><StatusBadge status={leave.status} isRTL={isRTL} /></td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
