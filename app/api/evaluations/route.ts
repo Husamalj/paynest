@@ -40,8 +40,10 @@ export async function GET(req: NextRequest) {
     }
 
     // ── List mode (results page) ─────────────────────────────────────────
+    // owner + hr  → see ALL evaluations for the company
+    // employee    → see only evaluations they personally submitted
     let rows: any[];
-    if (session.role === "owner") {
+    if (session.role === "owner" || session.role === "hr") {
       rows = await prisma.$queryRaw<any[]>`
         SELECT ev.*,
                emp.name AS employee_name,
