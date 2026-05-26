@@ -1,0 +1,3 @@
+{
+  "/(auth)/hr-login/page": "app/(auth)/hr-login/page.js"
+}

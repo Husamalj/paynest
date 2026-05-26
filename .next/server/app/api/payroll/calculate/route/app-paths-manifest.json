@@ -1,0 +1,3 @@
+{
+  "/api/payroll/calculate/route": "app/api/payroll/calculate/route.js"
+}
