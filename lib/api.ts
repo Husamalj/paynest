@@ -50,4 +50,17 @@ api.interceptors.response.use(
   }
 );
 
+export const apiPostForm = (url: string, formData: FormData) => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  return fetch(`/api${url}`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  }).then(async (res) => {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Upload failed");
+    return data;
+  });
+};
+
 export default api;

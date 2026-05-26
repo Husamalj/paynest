@@ -50,6 +50,8 @@ export default function HRLoginPage() {
       }
       if (user.role === "super_admin") {
         window.location.href = "/super-admin";
+      } else if (user.role === "hr") {
+        window.location.href = "/hr-portal";
       } else {
         window.location.href = "/dashboard";
       }

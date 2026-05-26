@@ -26,9 +26,10 @@ model Company {
   leaveRequests     LeaveRequest[]
   leaveBalances     LeaveBalance[]
   officialHolidays  OfficialHoliday[]
-  tasks             Task[]
-  remoteAssignments RemoteAssignment[]
-  announcements     Announcement[]
+  tasks              Task[]
+  remoteAssignments  RemoteAssignment[]
+  announcements      Announcement[]
+  employeeDocuments  EmployeeDocument[]
 
   @@map("companies")
 }
@@ -84,10 +85,25 @@ model Employee {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
 
-  company Company @relation(fields: [companyId], references: [id])
+  company   Company            @relation(fields: [companyId], references: [id])
+  documents EmployeeDocument[]
 
   @@unique([employeeId, systemMode], map: "employees_emp_mode_uidx")
   @@map("employees")
+}
+
+model EmployeeDocument {
+  id           Int      @id @default(autoincrement())
+  companyId    Int      @map("company_id")
+  employeeId   String   @map("employee_id") @db.VarChar(50)
+  documentType String   @map("document_type") @db.VarChar(50)
+  fileName     String   @map("file_name") @db.VarChar(255)
+  fileData     String   @map("file_data") @db.Text
+  uploadedAt   DateTime @default(now()) @map("uploaded_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("employee_documents")
 }
 
 model AttendanceRecord {
