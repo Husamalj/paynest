@@ -4,10 +4,10 @@ import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-/** Resolve the set of employeeId strings that belong to role="employee" users in this company. */
-async function getEmployeeOnlyIds(companyId: number): Promise<string[]> {
+/** Resolve the set of employeeId strings that belong to admin (owner/hr/super_admin) users — to exclude them. */
+async function getAdminIds(companyId: number): Promise<string[]> {
   const users = await prisma.user.findMany({
-    where: { companyId, role: "employee" },
+    where: { companyId, role: { in: ["owner", "hr", "super_admin"] } },
     select: { employeeNumber: true },
   });
   return users.map((u) => u.employeeNumber).filter(Boolean) as string[];
@@ -28,13 +28,13 @@ export async function GET(req: NextRequest) {
     });
     const mode = settings?.systemMode ?? "daily";
 
-    const empNums = await getEmployeeOnlyIds(session.companyId);
+    const adminNums = await getAdminIds(session.companyId);
 
     const employees = await prisma.employee.findMany({
       where: {
         companyId: session.companyId,
         systemMode: mode,
-        employeeId: { in: empNums },
+        ...(adminNums.length > 0 ? { NOT: { employeeId: { in: adminNums } } } : {}),
       },
       select: {
         id: true,

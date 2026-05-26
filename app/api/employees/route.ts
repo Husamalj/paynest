@@ -18,19 +18,19 @@ export async function GET(req: NextRequest) {
 
     const mode = await getSystemMode(session.companyId);
 
-    // Only return employee-role records — exclude owner, HR, and super_admin accounts.
-    // Two-step: resolve employeeNumbers from Users with role="employee", then filter.
-    const empUsers = await prisma.user.findMany({
-      where: { companyId: session.companyId, role: "employee" },
+    // Exclude employee records that belong to owner/hr/super_admin accounts.
+    // Show all employees EXCEPT those whose employeeId matches a non-employee user.
+    const adminUsers = await prisma.user.findMany({
+      where: { companyId: session.companyId, role: { in: ["owner", "hr", "super_admin"] } },
       select: { employeeNumber: true },
     });
-    const empNums = empUsers.map((u) => u.employeeNumber).filter(Boolean) as string[];
+    const adminNums = adminUsers.map((u) => u.employeeNumber).filter(Boolean) as string[];
 
     const employees = await prisma.employee.findMany({
       where: {
         companyId: session.companyId,
         systemMode: mode,
-        employeeId: { in: empNums },
+        ...(adminNums.length > 0 ? { NOT: { employeeId: { in: adminNums } } } : {}),
       },
       orderBy: { name: "asc" },
     });
