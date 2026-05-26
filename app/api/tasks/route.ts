@@ -25,11 +25,29 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth(req);
-    requireRole(session, ["owner", "hr", "super_admin"]);
+    requireRole(session, ["owner", "hr", "super_admin", "employee"]);
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
     const { task_name, employee_id, deadline, status } = await req.json();
     if (!task_name || !employee_id) throw new HttpError(400, "Task name and employee are required");
+
+    // Employees can only assign tasks to their direct subordinates
+    if (session.role === "employee") {
+      const supervisor = await prisma.employee.findFirst({
+        where: { employeeId: session.employeeNumber ?? "", companyId: session.companyId },
+        select: { id: true },
+      });
+      if (!supervisor) throw new HttpError(403, "Supervisor record not found");
+
+      const subordinate = await prisma.employee.findFirst({
+        where: {
+          employeeId: employee_id,
+          companyId: session.companyId,
+          supervisorId: supervisor.id,
+        },
+      });
+      if (!subordinate) throw new HttpError(403, "You can only assign tasks to your direct subordinates");
+    }
 
     const task = await prisma.task.create({
       data: {

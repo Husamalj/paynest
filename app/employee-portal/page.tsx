@@ -90,6 +90,47 @@ export default function EmployeePortalPage() {
   const [evalSuccess, setEvalSuccess] = useState("");
   const [completedEvals, setCompletedEvals] = useState<Set<string>>(new Set());
 
+  // ── Task assignment (supervisor → subordinate) ──────────────────────────
+  const [taskSub, setTaskSub] = useState<any>(null);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [taskName, setTaskName] = useState("");
+  const [taskDeadline, setTaskDeadline] = useState("");
+  const [taskSaving, setTaskSaving] = useState(false);
+  const [taskError, setTaskError] = useState("");
+  const [taskSuccess, setTaskSuccess] = useState("");
+
+  const openTaskModal = (sub: any) => {
+    setTaskSub(sub);
+    setTaskName("");
+    setTaskDeadline("");
+    setTaskError("");
+    setTaskSuccess("");
+    setShowTaskModal(true);
+  };
+
+  const submitTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskName.trim()) return;
+    setTaskSaving(true);
+    setTaskError("");
+    setTaskSuccess("");
+    try {
+      const empId = taskSub.employeeId || taskSub.employee_id;
+      await api.post("/tasks", {
+        task_name: taskName.trim(),
+        employee_id: empId,
+        deadline: taskDeadline || null,
+        status: "pending",
+      });
+      setTaskSuccess(isRTL ? "تمت إضافة المهمة بنجاح" : "Task assigned successfully");
+      setTimeout(() => setShowTaskModal(false), 1200);
+    } catch (err: any) {
+      setTaskError(err.message);
+    } finally {
+      setTaskSaving(false);
+    }
+  };
+
   const text = {
     title: isRTL ? "بوابة الموظف" : "Employee Portal",
     subtitle: isRTL ? "طلباتك ومهامك وملخص راتبك في مكان واحد" : "Your requests, tasks, and payroll summary",
@@ -363,6 +404,13 @@ export default function EmployeePortalPage() {
                               </span>
                             )}
                             <button
+                              className="btn btn-sm btn-secondary shrink-0"
+                              onClick={() => openTaskModal(sub)}
+                            >
+                              <CheckSquare size={13} />
+                              {isRTL ? "مهمة" : "Task"}
+                            </button>
+                            <button
                               className="btn btn-sm btn-primary shrink-0"
                               onClick={() => openEvalModal(sub)}
                             >
@@ -600,6 +648,90 @@ export default function EmployeePortalPage() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Task Assignment Modal ─────────────────────────────────────── */}
+      {showTaskModal && taskSub && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" dir={isRTL ? "rtl" : "ltr"}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <CheckSquare size={18} className="text-brand-600" />
+                <span className="font-bold text-slate-900">
+                  {isRTL ? "تعيين مهمة" : "Assign Task"}
+                </span>
+              </div>
+              <button onClick={() => setShowTaskModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Subordinate info */}
+            <div className="flex items-center gap-3 px-6 py-3 bg-slate-50 border-b border-slate-100">
+              <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm">
+                {(taskSub.name || "?").charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div className="font-semibold text-sm text-slate-900">{taskSub.name}</div>
+                <div className="text-xs text-slate-500">{taskSub.email || taskSub.employeeId || taskSub.employee_id}</div>
+              </div>
+            </div>
+
+            <form onSubmit={submitTask} className="px-6 py-5 space-y-4">
+              {/* Task name */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                  {isRTL ? "اسم المهمة" : "Task Name"} *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={taskName}
+                  onChange={(e) => setTaskName(e.target.value)}
+                  placeholder={isRTL ? "أدخل اسم المهمة..." : "Enter task name..."}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+                />
+              </div>
+
+              {/* Deadline */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                  {isRTL ? "الموعد النهائي (اختياري)" : "Deadline (optional)"}
+                </label>
+                <input
+                  type="date"
+                  value={taskDeadline}
+                  onChange={(e) => setTaskDeadline(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+                />
+              </div>
+
+              {taskError && (
+                <div className="text-red-600 text-sm bg-red-50 border border-red-100 rounded-xl px-4 py-2">
+                  {taskError}
+                </div>
+              )}
+              {taskSuccess && (
+                <div className="text-emerald-700 text-sm bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2 flex items-center gap-2">
+                  <CheckCircle2 size={15} /> {taskSuccess}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-1">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowTaskModal(false)}>
+                  {isRTL ? "إلغاء" : "Cancel"}
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={taskSaving}>
+                  {taskSaving
+                    ? <><span className="spinner" />{isRTL ? "جاري الإضافة..." : "Saving..."}</>
+                    : <><CheckSquare size={15} />{isRTL ? "إضافة المهمة" : "Assign Task"}</>
+                  }
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
