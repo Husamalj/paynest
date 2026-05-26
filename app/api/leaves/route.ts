@@ -58,9 +58,15 @@ export async function PATCH(req: NextRequest) {
     });
     if (!supervisor) throw new HttpError(403, "Supervisor record not found");
 
-    // Get all direct subordinates
+    // Get all direct subordinates (legacy supervisorId OR supervisorIds array)
     const subs = await prisma.employee.findMany({
-      where: { supervisorId: supervisor.id, companyId: session.companyId },
+      where: {
+        companyId: session.companyId,
+        OR: [
+          { supervisorId: supervisor.id },
+          { supervisorIds: { has: supervisor.id } },
+        ],
+      },
       select: { employeeId: true, name: true },
     });
     const subIds = subs.map((s) => s.employeeId).filter(Boolean) as string[];
@@ -95,12 +101,12 @@ export async function POST(req: NextRequest) {
       throw new HttpError(400, "Missing required fields");
     }
 
-    // Check if this employee has a supervisor — if so, supervisor must approve too
+    // Check if this employee has any supervisor — if so, supervisor must approve too
     const empRecord = await prisma.employee.findFirst({
       where: { employeeId: finalEmployeeId, companyId: session.companyId },
-      select: { supervisorId: true },
+      select: { supervisorId: true, supervisorIds: true },
     });
-    const hasSupervisor = !!empRecord?.supervisorId;
+    const hasSupervisor = !!empRecord?.supervisorId || (empRecord?.supervisorIds?.length ?? 0) > 0;
 
     const leave = await prisma.leaveRequest.create({
       data: {

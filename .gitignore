@@ -6,3 +6,4 @@ dist/
 uploads/
 frontend/node_modules/
 backend/node_modules/
+.vercel

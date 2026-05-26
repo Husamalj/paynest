@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "functions": {
+    "/api/announcements": {},
+    "/api/announcements/[id]": {},
+    "/api/auth/change-password": {},
+    "/api/auth/company-hrs": {},
+    "/api/auth/company-hrs/[id]": {},
+    "/api/auth/create-hr": {},
+    "/api/auth/login": {},
+    "/api/auth/me": {},
+    "/api/auth/register-company": {},
+    "/api/bonuses": {},
+    "/api/bonuses/[id]": {},
+    "/api/companies": {},
+    "/api/companies/[id]": {},
+    "/api/companies/[id]/approve": {},
+    "/api/companies/[id]/reject": {},
+    "/api/copilot/ask": {},
+    "/api/employees": {},
+    "/api/employees/[id]": {},
+    "/api/employees/[id]/documents": {},
+    "/api/employees/[id]/remote-assignments": {},
+    "/api/employees/[id]/remote-assignments/[rid]": {},
+    "/api/employees/me": {},
+    "/api/evaluations": {},
+    "/api/health": {},
+    "/api/leaves": {},
+    "/api/leaves/[id]": {},
+    "/api/leaves/balances": {},
+    "/api/leaves/holidays": {},
+    "/api/leaves/holidays/[id]": {},
+    "/api/payroll/calculate": {
+      "maxDuration": 60
+    },
+    "/api/payroll/employee-activity": {},
+    "/api/payroll/history": {},
+    "/api/payroll/latest": {},
+    "/api/payroll/period": {},
+    "/api/payroll/period-employees": {},
+    "/api/remote-assignments": {},
+    "/api/settings": {},
+    "/api/supervisors": {},
+    "/api/tasks": {},
+    "/api/tasks/[id]": {},
+    "/api/upload": {
+      "maxDuration": 60
+    }
+  }
+}

@@ -4,11 +4,7 @@ import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-/**
- * Exclude only owner and super_admin from the org tree.
- * HR CAN appear in the tree as subordinates and be evaluated.
- * Owner is never evaluated — they're the top of the hierarchy.
- */
+/** Exclude only owner/super_admin from the org tree. HR can appear and be evaluated. */
 async function getOwnerIds(companyId: number): Promise<string[]> {
   const users = await prisma.user.findMany({
     where: { companyId, role: { in: ["owner", "super_admin"] } },
@@ -17,19 +13,14 @@ async function getOwnerIds(companyId: number): Promise<string[]> {
   return users.map((u) => u.employeeNumber).filter(Boolean) as string[];
 }
 
-/**
- * GET /api/supervisors
- * Returns employees (role="employee" only) for the current company + system mode.
- */
+/** GET /api/supervisors - returns all non-owner employees with their multi-supervisor lists */
 export async function GET(req: NextRequest) {
   try {
     const session = await requireAuth(req);
     requireRole(session, ["owner", "hr", "super_admin"]);
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
-    const settings = await prisma.companySettings.findFirst({
-      where: { companyId: session.companyId },
-    });
+    const settings = await prisma.companySettings.findFirst({ where: { companyId: session.companyId } });
     const mode = settings?.systemMode ?? "daily";
 
     const ownerNums = await getOwnerIds(session.companyId);
@@ -47,6 +38,7 @@ export async function GET(req: NextRequest) {
         email: true,
         phone: true,
         supervisorId: true,
+        supervisorIds: true,
       },
       orderBy: { name: "asc" },
     });
@@ -58,14 +50,15 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * PUT /api/supervisors
- * Bulk update supervisor relationships.
- * Body: { assignments: [{ id: number, supervisorId: number | null }, ...] }
+ * PUT /api/supervisors — bulk update multi-supervisor relationships.
+ * Body: { assignments: [{ id: number, supervisorIds: number[] }, ...] }
  *
  * Validates:
- *  1. All employees belong to the caller's company + same systemMode + role="employee"
+ *  1. All employees belong to the caller's company + same systemMode
  *  2. supervisorId !== id (no self-supervision)
- *  3. No cycles in the resulting graph
+ *  3. No cycles in the resulting graph (any supervisor path must not include the node itself)
+ *
+ * Also keeps legacy `supervisorId` in sync with supervisorIds[0] (primary supervisor).
  */
 export async function PUT(req: NextRequest) {
   try {
@@ -74,66 +67,71 @@ export async function PUT(req: NextRequest) {
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
     const body = await req.json();
-    const assignments: Array<{ id: number; supervisorId: number | null }> =
+    // Accept both new (supervisorIds: number[]) and legacy (supervisorId: number|null) formats
+    const assignments: Array<{ id: number; supervisorIds?: number[]; supervisorId?: number | null }> =
       Array.isArray(body?.assignments) ? body.assignments : [];
 
-    if (assignments.length === 0) {
-      return NextResponse.json({ ok: true, updated: 0 });
-    }
+    if (assignments.length === 0) return NextResponse.json({ ok: true, updated: 0 });
 
-    const settings = await prisma.companySettings.findFirst({
-      where: { companyId: session.companyId },
-    });
+    const settings = await prisma.companySettings.findFirst({ where: { companyId: session.companyId } });
     const mode = settings?.systemMode ?? "daily";
 
-    // Validate by company + systemMode scope only — the role filter is a display
-    // concern (GET), not a security concern. Any employee in the company can be
-    // part of a supervisor chain regardless of whether their User record exists.
     const all = await prisma.employee.findMany({
-      where: {
-        companyId: session.companyId,
-        systemMode: mode,
-      },
-      select: { id: true, supervisorId: true },
+      where: { companyId: session.companyId, systemMode: mode },
+      select: { id: true, supervisorIds: true },
     });
-    const byId = new Map(all.map((e) => [e.id, { ...e }]));
+    const byId = new Map(all.map((e) => [e.id, { id: e.id, supervisorIds: [...(e.supervisorIds || [])] }]));
 
-    // Apply pending assignments into the in-memory map for validation
-    for (const a of assignments) {
+    // Normalise each assignment to a supervisorIds array
+    const normalised = assignments.map((a) => {
+      let ids: number[];
+      if (Array.isArray(a.supervisorIds)) ids = [...new Set(a.supervisorIds.filter((x) => typeof x === "number"))];
+      else if (a.supervisorId === null || a.supervisorId === undefined) ids = [];
+      else ids = [a.supervisorId];
+      return { id: a.id, supervisorIds: ids };
+    });
+
+    // Apply into in-memory map for validation
+    for (const a of normalised) {
       if (typeof a.id !== "number") throw new HttpError(400, "Invalid assignment id");
-      if (!byId.has(a.id)) {
-        throw new HttpError(400, `Employee ${a.id} not in your company / system mode`);
+      if (!byId.has(a.id)) throw new HttpError(400, `Employee ${a.id} not in your company / system mode`);
+      for (const supId of a.supervisorIds) {
+        if (supId === a.id) throw new HttpError(400, "An employee cannot supervise themselves");
+        if (!byId.has(supId)) throw new HttpError(400, `Supervisor ${supId} not in your company / system mode`);
       }
-      if (a.supervisorId != null) {
-        if (a.supervisorId === a.id) {
-          throw new HttpError(400, "An employee cannot supervise themselves");
-        }
-        if (!byId.has(a.supervisorId)) {
-          throw new HttpError(400, `Supervisor ${a.supervisorId} not in your company / system mode`);
-        }
-      }
-      byId.get(a.id)!.supervisorId = a.supervisorId;
+      byId.get(a.id)!.supervisorIds = a.supervisorIds;
     }
 
-    // Cycle detection: walk supervisor chain from every node; if we revisit, reject
-    for (const start of byId.values()) {
+    // Cycle detection — walk ALL supervisor paths via DFS, must not revisit start node
+    function hasCycleFrom(start: number): boolean {
+      const stack: number[] = [start];
       const seen = new Set<number>();
-      let cur: number | null = start.id;
-      while (cur != null) {
-        if (seen.has(cur)) {
-          throw new HttpError(400, "Cycle detected in supervisor chain");
-        }
+      while (stack.length) {
+        const cur = stack.pop()!;
+        if (cur === start && seen.size > 0) return true;
+        if (seen.has(cur)) continue;
         seen.add(cur);
-        cur = byId.get(cur)?.supervisorId ?? null;
+        const sups = byId.get(cur)?.supervisorIds ?? [];
+        for (const s of sups) {
+          if (s === start) return true;
+          stack.push(s);
+        }
       }
+      return false;
+    }
+    for (const node of byId.keys()) {
+      if (hasCycleFrom(node)) throw new HttpError(400, "Cycle detected in supervisor chain");
     }
 
-    // Persist atomically
+    // Persist atomically — write both new array and legacy primary-supervisor field
     await prisma.$transaction(
-      assignments.map((a) =>
+      normalised.map((a) =>
         prisma.employee.update({
           where: { id: a.id },
-          data: { supervisorId: a.supervisorId },
+          data: {
+            supervisorIds: a.supervisorIds,
+            supervisorId: a.supervisorIds[0] ?? null,
+          },
         })
       )
     );

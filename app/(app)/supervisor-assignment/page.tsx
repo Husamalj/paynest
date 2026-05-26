@@ -33,6 +33,7 @@ type Emp = {
   email: string;
   phone: string;
   supervisorId: number | null;
+  supervisorIds?: number[];
 };
 
 const NODE_W = 200;
@@ -77,7 +78,18 @@ function layoutNodes(employees: Emp[]): Node[] {
     arr.push(e);
     childrenOf.set(key, arr);
   }
-  const subordinateCount = (id: number) => (childrenOf.get(id) || []).length;
+  // Count direct reports including secondary supervisor relationships
+  const subordinateCount = (id: number) => {
+    let n = 0;
+    for (const e of employees) {
+      const all = new Set<number>([
+        ...((e as any).supervisorIds || []),
+        ...(e.supervisorId != null ? [e.supervisorId] : []),
+      ]);
+      if (all.has(id)) n++;
+    }
+    return n;
+  };
 
   const positioned: Node[] = [];
   let cursorX = 40;
@@ -123,23 +135,37 @@ function layoutNodes(employees: Emp[]): Node[] {
 }
 
 function buildEdges(employees: Emp[]): Edge[] {
-  return employees
-    .filter((e) => e.supervisorId != null)
-    .map((e) => ({
-      id: `e-${e.supervisorId}-${e.id}`,
-      source: String(e.supervisorId),
-      target: String(e.id),
-      type: "smoothstep",
-      animated: false,
-      style: { stroke: "#0c8ce8", strokeWidth: 2 },
-    }));
+  const out: Edge[] = [];
+  for (const e of employees) {
+    // Combine legacy supervisorId with new supervisorIds array
+    const all = Array.from(new Set([
+      ...((e as any).supervisorIds || []),
+      ...(e.supervisorId != null ? [e.supervisorId] : []),
+    ]));
+    for (const supId of all) {
+      out.push({
+        id: `e-${supId}-${e.id}`,
+        source: String(supId),
+        target: String(e.id),
+        type: "smoothstep",
+        animated: false,
+        style: { stroke: "#0c8ce8", strokeWidth: 2 },
+      });
+    }
+  }
+  return out;
 }
 
-// Compute supervisorId map from current edges (parent = source, child = target)
-function edgesToSupervisorMap(edges: Edge[]): Map<number, number | null> {
-  const m = new Map<number, number | null>();
+// Compute supervisorIds map from current edges (parent = source, child = target)
+// Each target can have multiple sources (multiple supervisors).
+function edgesToSupervisorMap(edges: Edge[]): Map<number, number[]> {
+  const m = new Map<number, number[]>();
   for (const e of edges) {
-    m.set(Number(e.target), Number(e.source));
+    const t = Number(e.target);
+    const s = Number(e.source);
+    const list = m.get(t) || [];
+    if (!list.includes(s)) list.push(s);
+    m.set(t, list);
   }
   return m;
 }
@@ -239,23 +265,22 @@ function CanvasInner({ employees, setEmployees, lang, t }: any) {
         setError(t("supervisorCycleError") || "Self-supervision not allowed");
         return;
       }
-      // Target may only have ONE supervisor — drop any existing inbound edge
-      const existingInbound = edges.find((e) => e.target === conn.target);
-      let next = edges;
-      if (existingInbound) next = next.filter((e) => e.id !== existingInbound.id);
-      // Cycle check
-      if (wouldCreateCycle(next, conn.source, conn.target)) {
+      // Allow multiple supervisors per employee — but reject duplicate of same edge
+      const edgeId = `e-${conn.source}-${conn.target}`;
+      if (edges.some((e) => e.id === edgeId)) return;
+      // Cycle check on the resulting edge set
+      if (wouldCreateCycle(edges, conn.source, conn.target)) {
         setError(t("supervisorCycleError") || "That connection would create a cycle");
         return;
       }
       const newEdge: Edge = {
-        id: `e-${conn.source}-${conn.target}`,
+        id: edgeId,
         source: conn.source,
         target: conn.target,
         type: "smoothstep",
         style: { stroke: "#0c8ce8", strokeWidth: 2 },
       };
-      setEdges(addEdge(newEdge, next));
+      setEdges(addEdge(newEdge, edges));
       setDirty(true);
       setError("");
     },
@@ -291,20 +316,21 @@ function CanvasInner({ employees, setEmployees, lang, t }: any) {
     setError("");
     setSuccess("");
     try {
-      // Build the supervisor map from current edges
+      // Build the multi-supervisor map from current edges
       const supMap = edgesToSupervisorMap(edges);
-      // For every employee currently on canvas, send its supervisorId (or null if no inbound edge)
       const onCanvas = nodes.map((n) => Number(n.id));
-      const assignments = onCanvas.map((id) => ({
+      const assignments: Array<{ id: number; supervisorIds: number[] }> = onCanvas.map((id) => ({
         id,
-        supervisorId: supMap.get(id) ?? null,
+        supervisorIds: supMap.get(id) ?? [],
       }));
-      // Also: any employee that's been removed from canvas should be cleared
-      // (their server record may still have a supervisorId)
+      // Any employee removed from canvas should be cleared (had supervisors before)
       const onCanvasSet = new Set(onCanvas);
       for (const e of employees as Emp[]) {
-        if (!onCanvasSet.has(e.id) && e.supervisorId != null) {
-          assignments.push({ id: e.id, supervisorId: null });
+        const hadSupervisors =
+          (Array.isArray((e as any).supervisorIds) && (e as any).supervisorIds.length > 0) ||
+          e.supervisorId != null;
+        if (!onCanvasSet.has(e.id) && hadSupervisors) {
+          assignments.push({ id: e.id, supervisorIds: [] });
         }
       }
       const res = await api.put("/supervisors", { assignments });

@@ -40,7 +40,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       if (!supervisorRecord) throw new HttpError(403, "Not a supervisor");
 
       const subordinate = await prisma.employee.findFirst({
-        where: { employeeId: existing.employeeId ?? "", companyId: session.companyId, supervisorId: supervisorRecord.id },
+        where: {
+          employeeId: existing.employeeId ?? "",
+          companyId: session.companyId,
+          OR: [
+            { supervisorId: supervisorRecord.id },
+            { supervisorIds: { has: supervisorRecord.id } },
+          ],
+        },
       });
       if (!subordinate) throw new HttpError(403, "This employee is not your subordinate");
 
