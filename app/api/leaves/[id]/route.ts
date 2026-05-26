@@ -4,11 +4,21 @@ import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-/** Recalculate overall status from hr + supervisor statuses */
+/**
+ * Sequential approval:
+ *   supervisor pending  → overall = "pending"
+ *   supervisor rejected → overall = "rejected"  (HR never involved)
+ *   supervisor approved + hr pending   → overall = "supervisor_approved"  (waiting for HR)
+ *   supervisor approved + hr approved  → overall = "approved"
+ *   supervisor approved + hr rejected  → overall = "rejected"
+ */
 function calcStatus(hrStatus: string, supervisorStatus: string): string {
-  if (hrStatus === "rejected" || supervisorStatus === "rejected") return "rejected";
-  if (hrStatus === "approved" && supervisorStatus === "approved") return "approved";
-  return "pending";
+  if (supervisorStatus === "rejected") return "rejected";
+  if (supervisorStatus === "pending")  return "pending";
+  // supervisor approved — now depends on HR
+  if (hrStatus === "approved")  return "approved";
+  if (hrStatus === "rejected")  return "rejected";
+  return "supervisor_approved"; // waiting for HR
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

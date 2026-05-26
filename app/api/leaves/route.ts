@@ -19,8 +19,11 @@ export async function GET(req: NextRequest) {
     if (session.role === "employee") {
       // Employee sees their own leaves only
       where.employeeId = session.employeeNumber;
-    } else if (employee_id) {
-      where.employeeId = employee_id;
+    } else {
+      // HR / owner / super_admin — only show leaves that passed supervisor stage
+      // (supervisorStatus = 'approved' means supervisor already approved or no supervisor existed)
+      where.supervisorStatus = "approved";
+      if (employee_id) where.employeeId = employee_id;
     }
     if (status) where.status = status;
 
