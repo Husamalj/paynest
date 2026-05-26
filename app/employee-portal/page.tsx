@@ -572,9 +572,15 @@ export default function EmployeePortalPage() {
                     <label className="form-label">{isRTL ? "السبب" : "Reason"}</label>
                     <textarea className="form-textarea" rows={3} placeholder={isRTL ? "اكتب سبب المغادرة..." : "Enter reason..."} value={permForm.reason} onChange={(e) => setPermForm((f) => ({ ...f, reason: e.target.value }))} />
                   </div>
+                  {/* note */}
+                  <p className="text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 leading-relaxed">
+                    {isRTL
+                      ? "⚠️ الإذن يكون لمدة ساعة أو ساعتين أو ثلاث ساعات كحد أقصى. في حال الحاجة إلى أكثر من ذلك، يُعتبر الغياب إجازة يوم كامل ويجب تقديم طلب إجازة."
+                      : "⚠️ Permission is granted for 1–3 hours only. If you need more than 3 hours, it counts as a full-day leave and a leave request must be submitted instead."}
+                  </p>
                   {permError && <div className="alert alert-error"><AlertTriangle size={14} />{permError}</div>}
                   {permSuccess && <div className="alert alert-success"><CheckCircle2 size={14} />{permSuccess}</div>}
-                  <button className="btn w-full bg-amber-500 hover:bg-amber-600 text-white gap-2" disabled={permSaving}>
+                  <button className="btn w-full bg-amber-500 hover:bg-amber-600 text-white gap-2 mt-auto" disabled={permSaving}>
                     {permSaving ? <span className="spinner" /> : <Send size={15} />}
                     {isRTL ? "إرسال طلب المغادرة" : "Send Permission Request"}
                   </button>
