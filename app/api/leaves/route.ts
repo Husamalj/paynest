@@ -24,7 +24,19 @@ export async function GET(req: NextRequest) {
     }
     if (status) where.status = status;
 
-    const leaves = await prisma.leaveRequest.findMany({ where, orderBy: { createdAt: "desc" } });
+    let leaves: any[];
+    try {
+      leaves = await prisma.leaveRequest.findMany({ where, orderBy: { createdAt: "desc" } });
+    } catch {
+      // Fallback: new columns may not exist yet in DB — use raw query with only original columns
+      const cond = session.role === "employee"
+        ? `AND employee_id = '${where.employeeId}'`
+        : employee_id ? `AND employee_id = '${employee_id}'` : "";
+      const statusCond = status ? `AND status = '${status}'` : "";
+      leaves = await prisma.$queryRawUnsafe(
+        `SELECT id, company_id, employee_id, employee_name, leave_type, start_date, end_date, days_count, reason, status, admin_note, created_at, updated_at FROM leave_requests WHERE company_id = ${session.companyId} ${cond} ${statusCond} ORDER BY created_at DESC`
+      ) as any[];
+    }
     return NextResponse.json(leaves);
   } catch (err) {
     return errorResponse(err);

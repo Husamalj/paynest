@@ -197,10 +197,16 @@ export default function EmployeePortalPage() {
     setLoading(true);
     setError("");
     try {
+      const safe = async (p: Promise<any>, fallback: any = null) => { try { return await p; } catch { return { data: fallback }; } };
+
       if (isEmployeeLogin) {
         const [meRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes] = await Promise.all([
-          api.get("/employees/me"), api.get("/payroll/latest"), api.get("/tasks"),
-          api.get("/leaves"), api.get("/leaves/balances"), api.get("/announcements"),
+          api.get("/employees/me"),
+          safe(api.get("/payroll/latest"), { results: [] }),
+          safe(api.get("/tasks"), []),
+          safe(api.get("/leaves"), []),
+          safe(api.get("/leaves/balances"), []),
+          safe(api.get("/announcements"), []),
         ]);
         const me = meRes.data;
         const meId = me.employeeId || me.employee_id;
@@ -214,8 +220,12 @@ export default function EmployeePortalPage() {
         }
       } else {
         const [employeesRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes] = await Promise.all([
-          api.get("/employees"), api.get("/payroll/latest"), api.get("/tasks"),
-          api.get("/leaves"), api.get("/leaves/balances"), api.get("/announcements"),
+          api.get("/employees"),
+          safe(api.get("/payroll/latest"), { results: [] }),
+          safe(api.get("/tasks"), []),
+          safe(api.get("/leaves"), []),
+          safe(api.get("/leaves/balances"), []),
+          safe(api.get("/announcements"), []),
         ]);
         setEmployees(employeesRes.data || []);
         setTasks(tasksRes.data || []); setLeaves(leavesRes.data || []);
