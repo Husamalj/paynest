@@ -10,10 +10,16 @@ export async function POST(req: NextRequest) {
     const { email, password } = (await req.json()) as { email?: string; password?: string };
     if (!email || !password) throw new HttpError(400, "Email and password required");
 
-    const user = await prisma.user.findFirst({
-      where: { email },
-      include: { company: true },
-    });
+    let user: any;
+    try {
+      user = await prisma.user.findFirst({
+        where: { email },
+        include: { company: true },
+      });
+    } catch (dbErr: any) {
+      console.error("DB error during login:", dbErr?.message ?? dbErr);
+      throw new HttpError(500, `Database error: ${dbErr?.message ?? "unknown"}`);
+    }
     if (!user) throw new HttpError(401, "Invalid credentials");
 
     const ok = await bcrypt.compare(password, user.password);
