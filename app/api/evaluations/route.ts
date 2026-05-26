@@ -75,7 +75,13 @@ export async function GET(req: NextRequest) {
         ORDER BY emp.name
       `;
     }
-    return NextResponse.json(rows);
+    // Serialize rows — convert any BigInt values from raw SQL to numbers
+    const safe = rows.map((r) =>
+      Object.fromEntries(
+        Object.entries(r).map(([k, v]) => [k, typeof v === "bigint" ? Number(v) : v])
+      )
+    );
+    return NextResponse.json(safe);
   } catch (err) {
     return errorResponse(err);
   }
