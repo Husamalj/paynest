@@ -198,10 +198,13 @@ model LeaveRequest {
   endDate      DateTime? @map("end_date") @db.Date
   daysCount    Int?      @map("days_count")
   reason       String?
-  status       String    @default("pending") @db.VarChar(20)
-  adminNote    String?   @map("admin_note")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+  status           String    @default("pending") @db.VarChar(20)
+  supervisorStatus String    @default("pending") @map("supervisor_status") @db.VarChar(20)
+  hrStatus         String    @default("pending") @map("hr_status") @db.VarChar(20)
+  attachmentUrl    String?   @map("attachment_url") @db.Text
+  adminNote        String?   @map("admin_note")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at")
 
   company Company @relation(fields: [companyId], references: [id])
 

@@ -4,22 +4,62 @@ import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
+/** Recalculate overall status from hr + supervisor statuses */
+function calcStatus(hrStatus: string, supervisorStatus: string): string {
+  if (hrStatus === "rejected" || supervisorStatus === "rejected") return "rejected";
+  if (hrStatus === "approved" && supervisorStatus === "approved") return "approved";
+  return "pending";
+}
+
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireAuth(req);
-    requireRole(session, ["owner", "hr", "super_admin"]);
+    requireRole(session, ["owner", "hr", "super_admin", "employee"]);
     if (session.companyId == null) throw new HttpError(403, "No company scope");
     const { id } = await params;
-    const { status, admin_note } = await req.json();
+    const body = await req.json();
+
+    const existing = await prisma.leaveRequest.findFirst({
+      where: { id: Number(id), companyId: session.companyId },
+    });
+    if (!existing) throw new HttpError(404, "Leave request not found");
+
+    let updateData: any = {};
+
+    if (session.role === "employee") {
+      // Must be this employee's supervisor
+      const supervisorRecord = await prisma.employee.findFirst({
+        where: { employeeId: session.employeeNumber ?? "", companyId: session.companyId },
+        select: { id: true },
+      });
+      if (!supervisorRecord) throw new HttpError(403, "Not a supervisor");
+
+      const subordinate = await prisma.employee.findFirst({
+        where: { employeeId: existing.employeeId ?? "", companyId: session.companyId, supervisorId: supervisorRecord.id },
+      });
+      if (!subordinate) throw new HttpError(403, "This employee is not your subordinate");
+
+      const newSupervisorStatus = body.supervisor_status ?? body.status;
+      const newStatus = calcStatus(existing.hrStatus, newSupervisorStatus);
+      updateData = { supervisorStatus: newSupervisorStatus, status: newStatus };
+    } else {
+      // HR / owner / super_admin
+      const newHrStatus = body.hr_status ?? body.status;
+      const newStatus = calcStatus(newHrStatus, existing.supervisorStatus);
+      updateData = {
+        hrStatus: newHrStatus,
+        status: newStatus,
+        adminNote: body.admin_note ?? null,
+      };
+    }
 
     const leave = await prisma.leaveRequest.update({
       where: { id: Number(id) },
-      data: { status, adminNote: admin_note ?? null },
+      data: updateData,
     });
-    if (!leave || leave.companyId !== session.companyId) throw new HttpError(404, "Leave request not found");
 
-    // Update leave balances on approval
-    if (status === "approved" && leave.startDate) {
+    // Update leave balances when fully approved
+    if (leave.status === "approved" && existing.status !== "approved" && leave.startDate) {
       const leaveYear = new Date(leave.startDate).getFullYear();
       if (leave.leaveType === "annual") {
         await prisma.leaveBalance.upsert({
@@ -42,8 +82,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
-export { PUT as PATCH };
-
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireAuth(req);
@@ -56,7 +94,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     });
     if (!leave) throw new HttpError(404, "Leave request not found");
 
-    // Reverse balance if was approved
     if (leave.status === "approved" && leave.startDate && leave.daysCount) {
       const leaveYear = new Date(leave.startDate).getFullYear();
       if (leave.leaveType === "annual") {

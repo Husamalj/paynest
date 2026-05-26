@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle, Bell, Calendar, CheckCircle2, CheckSquare,
-  ClipboardList, Clock, LogOut, Palmtree, Send, User, UserCheck, Users, X,
+  ClipboardList, Clock, LogOut, Palmtree, Paperclip, Send, ThumbsDown, ThumbsUp, User, UserCheck, Users, X,
 } from "lucide-react";
 import api from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -74,7 +74,8 @@ export default function EmployeePortalPage() {
   const role = typeof window !== "undefined" ? localStorage.getItem("role") : null;
   const isEmployeeLogin = role === "employee";
 
-  const [leaveForm, setLeaveForm] = useState({ leave_type: "annual", start_date: "", end_date: "", reason: "" });
+  const [leaveForm, setLeaveForm] = useState({ leave_type: "annual", start_date: "", end_date: "", reason: "", attachment: "" });
+  const [subLeaves, setSubLeaves] = useState<any[]>([]);
 
   // ── Permission (short leave) ─────────────────────────────────────────────
   const [permForm, setPermForm] = useState({ date: "", hours: "1", reason: "" });
@@ -104,6 +105,29 @@ export default function EmployeePortalPage() {
   const [taskSaving, setTaskSaving] = useState(false);
   const [taskError, setTaskError] = useState("");
   const [taskSuccess, setTaskSuccess] = useState("");
+
+  const toBase64 = (file: File): Promise<string> =>
+    new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result as string);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+
+  const handleAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setError(isRTL ? "الملف أكبر من 5MB" : "File exceeds 5MB"); return; }
+    const b64 = await toBase64(file);
+    setLeaveForm((f) => ({ ...f, attachment: b64 }));
+  };
+
+  const approveSubLeave = async (leaveId: number, approve: boolean) => {
+    try {
+      const res = await api.put(`/leaves/${leaveId}`, { supervisor_status: approve ? "approved" : "rejected" });
+      setSubLeaves((prev) => prev.map((l) => (l.id === leaveId ? res.data : l)));
+    } catch (err: any) { setError(err.message); }
+  };
 
   const openTaskModal = (sub: any) => {
     setTaskSub(sub);
@@ -184,6 +208,10 @@ export default function EmployeePortalPage() {
         setTasks(tasksRes.data || []); setLeaves(leavesRes.data || []);
         setBalances(balancesRes.data || []); setAnnouncements(announcementsRes.data || []);
         setPayroll(payrollRes.data?.results || []);
+        // Load subordinate leave requests if this employee is a supervisor
+        if (me.subordinates && me.subordinates.length > 0) {
+          try { const slRes = await api.patch("/leaves", {}); setSubLeaves(slRes.data || []); } catch { /* no subs */ }
+        }
       } else {
         const [employeesRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes] = await Promise.all([
           api.get("/employees"), api.get("/payroll/latest"), api.get("/tasks"),
@@ -245,9 +273,10 @@ export default function EmployeePortalPage() {
         employee_id: employee.employeeId || employee.employee_id, employee_name: employee.name,
         leave_type: leaveForm.leave_type, start_date: leaveForm.start_date,
         end_date: leaveForm.end_date, days_count: days, reason: leaveForm.reason,
+        attachment_url: leaveForm.attachment || null,
       });
       setLeaves((prev) => [res.data, ...prev]);
-      setLeaveForm({ leave_type: "annual", start_date: "", end_date: "", reason: "" });
+      setLeaveForm({ leave_type: "annual", start_date: "", end_date: "", reason: "", attachment: "" });
       setSuccess(isRTL ? "تم إرسال طلب الإجازة" : "Leave request sent");
     } catch (err: any) { setError(err.message); }
     finally { setSaving(false); }
@@ -487,6 +516,89 @@ export default function EmployeePortalPage() {
               );
             })()}
 
+            {/* ── Subordinate leave requests (supervisor view) ────────── */}
+            {subLeaves.length > 0 && (
+              <div className="card">
+                <div className="card-header">
+                  <div className="card-title">
+                    <Calendar size={16} className="text-brand-600" />
+                    {isRTL ? "طلبات إجازة موظفيك" : "Team Leave Requests"}
+                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold">
+                      {subLeaves.filter((l) => l.supervisorStatus === "pending").length} {isRTL ? "بانتظار موافقتك" : "pending"}
+                    </span>
+                  </div>
+                </div>
+                <div className="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>{isRTL ? "الموظف" : "Employee"}</th>
+                        <th>{isRTL ? "النوع" : "Type"}</th>
+                        <th>{isRTL ? "من" : "From"}</th>
+                        <th>{isRTL ? "إلى" : "To"}</th>
+                        <th>{isRTL ? "المدة" : "Duration"}</th>
+                        <th>{isRTL ? "حالة HR" : "HR"}</th>
+                        <th>{isRTL ? "إجراء" : "Action"}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {subLeaves.map((leave) => {
+                        const isPerm = leave.leaveType === "permission" || leave.leave_type === "permission";
+                        const lType  = leave.leaveType || leave.leave_type || "";
+                        const typeLabel = isPerm ? (isRTL ? "إذن مغادرة" : "Permission")
+                          : lType === "annual" ? (isRTL ? "سنوية" : "Annual")
+                          : lType === "sick"   ? (isRTL ? "مرضية" : "Sick")
+                          : lType === "unpaid" ? (isRTL ? "بدون راتب" : "Unpaid")
+                          : lType;
+                        const dc = leave.daysCount ?? leave.days_count ?? 0;
+                        const duration = isPerm
+                          ? `${dc} ${isRTL ? (dc === 1 ? "ساعة" : "ساعات") : (dc === 1 ? "hr" : "hrs")}`
+                          : `${dc} ${isRTL ? "يوم" : "days"}`;
+                        const supStatus = leave.supervisorStatus ?? leave.supervisor_status ?? "pending";
+                        const hrStatus  = leave.hrStatus ?? leave.hr_status ?? "pending";
+                        const attUrl    = leave.attachmentUrl ?? leave.attachment_url;
+                        return (
+                          <tr key={leave.id}>
+                            <td className="font-medium">{leave.employeeName || leave.employee_name || leave.employeeId}</td>
+                            <td>{typeLabel}</td>
+                            <td>{formatDate(leave.startDate || leave.start_date)}</td>
+                            <td>{isPerm ? "-" : formatDate(leave.endDate || leave.end_date)}</td>
+                            <td>{duration}</td>
+                            <td>
+                              <span className={`badge ${hrStatus === "approved" ? "badge-green" : hrStatus === "rejected" ? "badge-red" : "badge-yellow"}`}>
+                                {hrStatus === "approved" ? (isRTL ? "وافق" : "OK") : hrStatus === "rejected" ? (isRTL ? "رفض" : "Rej") : (isRTL ? "انتظار" : "Wait")}
+                              </span>
+                            </td>
+                            <td>
+                              {attUrl && (
+                                <a href={attUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-brand-600 text-xs hover:underline me-2">
+                                  <Paperclip size={11} />{isRTL ? "ملف" : "File"}
+                                </a>
+                              )}
+                              {supStatus === "pending" ? (
+                                <div className="flex gap-1">
+                                  <button onClick={() => approveSubLeave(leave.id, true)} className="btn btn-sm bg-emerald-500 hover:bg-emerald-600 text-white gap-1">
+                                    <ThumbsUp size={12} />{isRTL ? "موافق" : "Approve"}
+                                  </button>
+                                  <button onClick={() => approveSubLeave(leave.id, false)} className="btn btn-sm bg-rose-500 hover:bg-rose-600 text-white gap-1">
+                                    <ThumbsDown size={12} />{isRTL ? "رفض" : "Reject"}
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className={`badge ${supStatus === "approved" ? "badge-green" : "badge-red"}`}>
+                                  {supStatus === "approved" ? (isRTL ? "وافقت" : "Approved") : (isRTL ? "رفضت" : "Rejected")}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.base}</div><div className="text-xl font-bold text-slate-900">{formatCurrency(myPayroll?.baseSalary || myPayroll?.base_salary || employee.baseSalary || employee.base_salary)}</div></div>
               <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.net}</div><div className="text-xl font-bold text-emerald-700">{formatCurrency(myPayroll?.netSalary || myPayroll?.net_salary)}</div></div>
@@ -527,7 +639,23 @@ export default function EmployeePortalPage() {
                     <div><label className="form-label">{text.startDate}</label><input type="date" className="form-input" value={leaveForm.start_date} onChange={(e) => setLeaveForm((f) => ({ ...f, start_date: e.target.value }))} /></div>
                     <div><label className="form-label">{text.endDate}</label><input type="date" className="form-input" value={leaveForm.end_date} onChange={(e) => setLeaveForm((f) => ({ ...f, end_date: e.target.value }))} /></div>
                   </div>
-                  <div><label className="form-label">{text.reason}</label><textarea className="form-textarea" value={leaveForm.reason} onChange={(e) => setLeaveForm((f) => ({ ...f, reason: e.target.value }))} /></div>
+                  <div>
+                    <label className="form-label">{text.reason}</label>
+                    <textarea rows={2} className="form-textarea" value={leaveForm.reason} onChange={(e) => setLeaveForm((f) => ({ ...f, reason: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="form-label flex items-center gap-1.5"><Paperclip size={13} />{isRTL ? "إرفاق ملف (شهادة طبية / موافقة واتساب)" : "Attach file (medical cert / WhatsApp approval)"}</label>
+                    <label className={`flex items-center gap-2 cursor-pointer border-2 border-dashed rounded-xl px-4 py-3 text-sm transition-all ${leaveForm.attachment ? "border-emerald-400 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500 hover:border-brand-400"}`}>
+                      <Paperclip size={15} />
+                      {leaveForm.attachment ? (isRTL ? "✓ تم إرفاق الملف" : "✓ File attached") : (isRTL ? "اضغط لاختيار ملف (صورة أو PDF)" : "Click to choose file (image or PDF)")}
+                      <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleAttachment} />
+                    </label>
+                    {leaveForm.attachment && (
+                      <button type="button" className="text-xs text-rose-500 mt-1 hover:underline" onClick={() => setLeaveForm((f) => ({ ...f, attachment: "" }))}>
+                        {isRTL ? "حذف الملف" : "Remove file"}
+                      </button>
+                    )}
+                  </div>
                   {myBalance && (
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div className="rounded-lg bg-slate-50 border border-slate-200 p-3"><div className="text-xs text-slate-500">{text.annual}</div><div className="font-bold text-slate-900">{myBalance.annual_remaining}</div></div>
