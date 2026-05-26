@@ -357,104 +357,135 @@ export default function EmployeePortalPage() {
           </div>
         ) : (
           <>
-            {/* Supervisor / subordinates row — only when the data exists */}
-            {(employee.supervisor || (employee.subordinates && employee.subordinates.length > 0)) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {employee.supervisor && (
-                  <div className="card">
-                    <div className="card-header">
-                      <div className="card-title">
-                        <UserCheck size={16} className="text-brand-600" />
-                        {isRTL ? "مشرفك" : "Your Supervisor"}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold flex-shrink-0">
-                        {(employee.supervisor.name || "?").charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-slate-900 truncate">{employee.supervisor.name}</div>
-                        <div className="text-xs text-slate-500 truncate">{employee.supervisor.email || "-"}</div>
-                        {employee.supervisor.phone && (
-                          <div className="text-xs text-slate-500 truncate">{employee.supervisor.phone}</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {employee.subordinates && employee.subordinates.length > 0 && (
-                  <div className="card">
-                    <div className="card-header flex-wrap gap-2">
-                      <div className="card-title">
-                        <Users size={16} className="text-brand-600" />
-                        {isRTL ? "أنت تشرف على" : "You Supervise"}
-                        <span className="ml-2 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
-                          {employee.subordinates.length}
-                        </span>
-                      </div>
-                      {/* Period selector for evaluations */}
-                      <div className="flex items-center gap-1.5 ms-auto">
-                        <ClipboardList size={13} className="text-slate-400 shrink-0" />
-                        <select
-                          className="form-select text-xs py-1 px-2 h-7 w-28"
-                          value={evalPeriodMonth}
-                          onChange={(e) => setEvalPeriodMonth(+e.target.value)}
-                        >
-                          {(isRTL ? MONTHS_AR : MONTHS_EN).map((m, i) => (
-                            <option key={i + 1} value={i + 1}>{m}</option>
-                          ))}
-                        </select>
-                        <select
-                          className="form-select text-xs py-1 px-2 h-7 w-20"
-                          value={evalPeriodYear}
-                          onChange={(e) => setEvalPeriodYear(+e.target.value)}
-                        >
-                          {[evalNow.getFullYear() - 1, evalNow.getFullYear(), evalNow.getFullYear() + 1].map((y) => (
-                            <option key={y} value={y}>{y}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      {employee.subordinates.map((sub: any) => {
-                        const empId = sub.employeeId || sub.employee_id;
-                        const isDone = completedEvals.has(empId);
-                        return (
-                          <div key={sub.id} className="flex items-center gap-2 text-sm py-1">
-                            <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                              {(sub.name || "?").charAt(0).toUpperCase()}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="font-medium text-slate-900 truncate">{sub.name}</div>
-                              <div className="text-[11px] text-slate-500 truncate">{sub.email || empId}</div>
-                            </div>
-                            {isDone && (
-                              <span className="badge badge-green text-[10px]">
-                                {isRTL ? "تم التقييم" : "Evaluated"}
-                              </span>
-                            )}
-                            <button
-                              className="btn btn-sm btn-secondary shrink-0"
-                              onClick={() => openTaskModal(sub)}
-                            >
-                              <CheckSquare size={13} />
-                              {isRTL ? "مهمة" : "Task"}
-                            </button>
-                            <button
-                              className="btn btn-sm btn-primary shrink-0"
-                              onClick={() => openEvalModal(sub)}
-                            >
-                              <ClipboardList size={13} />
-                              {isDone ? (isRTL ? "تعديل" : "Edit") : (isRTL ? "تقييم" : "Evaluate")}
-                            </button>
+            {/* ── My Tasks card (reusable inline) ── */}
+            {(() => {
+              const myTasksCard = (
+                <div className="card h-full">
+                  <div className="card-header"><div className="card-title"><CheckSquare size={16} className="text-brand-600" />{text.myTasks}</div></div>
+                  {myTasks.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{text.noData}</div> : (
+                    <div className="space-y-3">
+                      {myTasks.map((task) => (
+                        <div key={task.id} className="rounded-lg border border-slate-200 bg-white p-3 flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <div className="font-semibold text-slate-900">{task.task_name || task.taskName}</div>
+                            <div className="text-xs text-slate-500 flex items-center gap-1 mt-1"><Clock size={12} />{formatDate(task.deadline)}</div>
                           </div>
-                        );
-                      })}
+                          <div className="flex items-center gap-2">
+                            <StatusBadge status={task.status} isRTL={isRTL} />
+                            {task.status !== "completed" && (
+                              <button className="btn btn-sm btn-success" onClick={() => updateTaskStatus(task.id, "completed")}>{isRTL ? "تم" : "Done"}</button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
+                  )}
+                </div>
+              );
+
+              const hasSupervisor = !!employee.supervisor;
+              const hasSubordinates = employee.subordinates && employee.subordinates.length > 0;
+
+              if (!hasSupervisor && !hasSubordinates) {
+                // No supervisor data — show My Tasks alone in full width
+                return myTasksCard;
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                  {/* Left side: supervisor info + subordinates stacked */}
+                  <div className="space-y-4">
+                    {hasSupervisor && (
+                      <div className="card">
+                        <div className="card-header">
+                          <div className="card-title">
+                            <UserCheck size={16} className="text-brand-600" />
+                            {isRTL ? "مشرفك" : "Your Supervisor"}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold flex-shrink-0">
+                            {(employee.supervisor.name || "?").charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-slate-900 truncate">{employee.supervisor.name}</div>
+                            <div className="text-xs text-slate-500 truncate">{employee.supervisor.email || "-"}</div>
+                            {employee.supervisor.phone && (
+                              <div className="text-xs text-slate-500 truncate">{employee.supervisor.phone}</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {hasSubordinates && (
+                      <div className="card">
+                        <div className="card-header flex-wrap gap-2">
+                          <div className="card-title">
+                            <Users size={16} className="text-brand-600" />
+                            {isRTL ? "أنت تشرف على" : "You Supervise"}
+                            <span className="ml-2 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+                              {employee.subordinates.length}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 ms-auto">
+                            <ClipboardList size={13} className="text-slate-400 shrink-0" />
+                            <select
+                              className="form-select text-xs py-1 px-2 h-7 w-28"
+                              value={evalPeriodMonth}
+                              onChange={(e) => setEvalPeriodMonth(+e.target.value)}
+                            >
+                              {(isRTL ? MONTHS_AR : MONTHS_EN).map((m, i) => (
+                                <option key={i + 1} value={i + 1}>{m}</option>
+                              ))}
+                            </select>
+                            <select
+                              className="form-select text-xs py-1 px-2 h-7 w-20"
+                              value={evalPeriodYear}
+                              onChange={(e) => setEvalPeriodYear(+e.target.value)}
+                            >
+                              {[evalNow.getFullYear() - 1, evalNow.getFullYear(), evalNow.getFullYear() + 1].map((y) => (
+                                <option key={y} value={y}>{y}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {employee.subordinates.map((sub: any) => {
+                            const empId = sub.employeeId || sub.employee_id;
+                            const isDone = completedEvals.has(empId);
+                            return (
+                              <div key={sub.id} className="flex items-center gap-2 text-sm py-1">
+                                <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                  {(sub.name || "?").charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium text-slate-900 truncate">{sub.name}</div>
+                                  <div className="text-[11px] text-slate-500 truncate">{sub.email || empId}</div>
+                                </div>
+                                {isDone && (
+                                  <span className="badge badge-green text-[10px]">
+                                    {isRTL ? "تم التقييم" : "Evaluated"}
+                                  </span>
+                                )}
+                                <button className="btn btn-sm btn-secondary shrink-0" onClick={() => openTaskModal(sub)}>
+                                  <CheckSquare size={13} />{isRTL ? "مهمة" : "Task"}
+                                </button>
+                                <button className="btn btn-sm btn-primary shrink-0" onClick={() => openEvalModal(sub)}>
+                                  <ClipboardList size={13} />
+                                  {isDone ? (isRTL ? "تعديل" : "Edit") : (isRTL ? "تقييم" : "Evaluate")}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            )}
+                  {/* Right side: My Tasks */}
+                  {myTasksCard}
+                </div>
+              );
+            })()}
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.base}</div><div className="text-xl font-bold text-slate-900">{formatCurrency(myPayroll?.baseSalary || myPayroll?.base_salary || employee.baseSalary || employee.base_salary)}</div></div>
@@ -554,28 +585,6 @@ export default function EmployeePortalPage() {
               </div>{/* end left column */}
 
               <div className="space-y-5">
-                <div className="card">
-                  <div className="card-header"><div className="card-title"><CheckSquare size={16} className="text-brand-600" />{text.myTasks}</div></div>
-                  {myTasks.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{text.noData}</div> : (
-                    <div className="space-y-3">
-                      {myTasks.map((task) => (
-                        <div key={task.id} className="rounded-lg border border-slate-200 bg-white p-3 flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <div className="font-semibold text-slate-900">{task.task_name}</div>
-                            <div className="text-xs text-slate-500 flex items-center gap-1 mt-1"><Clock size={12} />{formatDate(task.deadline)}</div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <StatusBadge status={task.status} isRTL={isRTL} />
-                            {task.status !== "completed" && (
-                              <button className="btn btn-sm btn-success" onClick={() => updateTaskStatus(task.id, "completed")}>{isRTL ? "تم" : "Done"}</button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
                 <div className="card">
                   <div className="card-header"><div className="card-title"><Bell size={16} className="text-brand-600" />{text.announcements}</div></div>
                   {announcements.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{text.noData}</div> : (
