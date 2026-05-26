@@ -494,9 +494,24 @@ export default function EmployeePortalPage() {
               <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.hoursDiff}</div><div className={clsx("text-xl font-bold", parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff || 0) < 0 ? "text-rose-700" : "text-emerald-700")}>{(parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff) || 0).toFixed(2)}</div></div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-5">
-              {/* ── Left column: Leave + Permission stacked ─── */}
-              <div className="space-y-5">
+            {/* ── Announcements full width ───────────────────────────────── */}
+            <div className="card">
+              <div className="card-header"><div className="card-title"><Bell size={16} className="text-brand-600" />{text.announcements}</div></div>
+              {announcements.length === 0 ? <div className="text-center py-6 text-sm text-slate-400">{text.noData}</div> : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {announcements.slice(0, 4).map((item) => (
+                    <div key={item.id} className="rounded-lg bg-brand-50 border border-brand-100 p-3">
+                      <div className="font-semibold text-slate-900">{item.title}</div>
+                      <div className="text-sm text-slate-600 mt-1">{item.message}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Leave + Permission side by side ───────────────────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Request Leave */}
               <div className="card">
                 <div className="card-header"><div className="card-title"><Palmtree size={16} className="text-brand-600" />{text.requestLeave}</div></div>
                 <form className="space-y-4" onSubmit={submitLeave}>
@@ -525,7 +540,7 @@ export default function EmployeePortalPage() {
                 </form>
               </div>
 
-              {/* ── Permission / Short Leave card ───────────────────────── */}
+              {/* Permission / Short Leave */}
               <div className="card">
                 <div className="card-header">
                   <div className="card-title">
@@ -536,28 +551,18 @@ export default function EmployeePortalPage() {
                 <form className="space-y-4" onSubmit={submitPermission}>
                   <div>
                     <label className="form-label">{isRTL ? "التاريخ" : "Date"}</label>
-                    <input
-                      type="date"
-                      required
-                      className="form-input"
-                      value={permForm.date}
-                      onChange={(e) => setPermForm((f) => ({ ...f, date: e.target.value }))}
-                    />
+                    <input type="date" required className="form-input" value={permForm.date} onChange={(e) => setPermForm((f) => ({ ...f, date: e.target.value }))} />
                   </div>
                   <div>
                     <label className="form-label">{isRTL ? "مدة المغادرة" : "Duration"}</label>
                     <div className="grid grid-cols-3 gap-2">
                       {["1", "2", "3"].map((h) => (
-                        <button
-                          type="button"
-                          key={h}
-                          onClick={() => setPermForm((f) => ({ ...f, hours: h }))}
+                        <button type="button" key={h} onClick={() => setPermForm((f) => ({ ...f, hours: h }))}
                           className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
                             permForm.hours === h
                               ? "border-amber-400 bg-amber-50 text-amber-700"
                               : "border-slate-200 bg-white text-slate-500 hover:border-amber-300"
-                          }`}
-                        >
+                          }`}>
                           {h} {isRTL ? (h === "1" ? "ساعة" : "ساعات") : (h === "1" ? "hour" : "hours")}
                         </button>
                       ))}
@@ -565,13 +570,7 @@ export default function EmployeePortalPage() {
                   </div>
                   <div>
                     <label className="form-label">{isRTL ? "السبب" : "Reason"}</label>
-                    <textarea
-                      className="form-textarea"
-                      rows={2}
-                      placeholder={isRTL ? "اكتب سبب المغادرة..." : "Enter reason..."}
-                      value={permForm.reason}
-                      onChange={(e) => setPermForm((f) => ({ ...f, reason: e.target.value }))}
-                    />
+                    <textarea className="form-textarea" rows={3} placeholder={isRTL ? "اكتب سبب المغادرة..." : "Enter reason..."} value={permForm.reason} onChange={(e) => setPermForm((f) => ({ ...f, reason: e.target.value }))} />
                   </div>
                   {permError && <div className="alert alert-error"><AlertTriangle size={14} />{permError}</div>}
                   {permSuccess && <div className="alert alert-success"><CheckCircle2 size={14} />{permSuccess}</div>}
@@ -580,24 +579,6 @@ export default function EmployeePortalPage() {
                     {isRTL ? "إرسال طلب المغادرة" : "Send Permission Request"}
                   </button>
                 </form>
-              </div>
-
-              </div>{/* end left column */}
-
-              <div className="space-y-5">
-                <div className="card">
-                  <div className="card-header"><div className="card-title"><Bell size={16} className="text-brand-600" />{text.announcements}</div></div>
-                  {announcements.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{text.noData}</div> : (
-                    <div className="space-y-3">
-                      {announcements.slice(0, 4).map((item) => (
-                        <div key={item.id} className="rounded-lg bg-brand-50 border border-brand-100 p-3">
-                          <div className="font-semibold text-slate-900">{item.title}</div>
-                          <div className="text-sm text-slate-600 mt-1">{item.message}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
 
