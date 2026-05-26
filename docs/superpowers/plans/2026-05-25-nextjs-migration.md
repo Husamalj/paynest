@@ -2,7 +2,51 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Migrate PayNest from React+Vite + Express + Render Postgres to a single Next.js 16 (App Router) + TypeScript + Prisma + Supabase Postgres app deployed on Vercel — same stack as the user's HiredJo project — to eliminate cold-start sleeping, simplify deployment, and unify frontend/backend in one repo.
+---
+
+## Read this first — context for the AI assistant executing this plan
+
+You are being handed this plan cold. The original author is not in this conversation. Before you start, understand the following:
+
+**What PayNest is today (the current production system):**
+- Multi-tenant HR + Payroll SaaS for small companies in Jordan. Bilingual Arabic/English (RTL/LTR). Live at https://paynest.vercel.app (frontend) talking to https://paynest-2s5b.onrender.com (backend).
+- Frontend: React 18 + Vite + Tailwind, deployed on Vercel from this repo's `frontend/` directory.
+- Backend: Node.js + Express, deployed on Render free tier from this repo's `backend/` directory. **Sleeps after 15 min of idle → ~50s cold-start → user pain.** This is the main reason we're migrating.
+- Database: PostgreSQL on Render (external hostname looks like `dpg-d8a6r88js32c739qcas0-a.oregon-postgres.render.com`). Accessed via the raw `pg` driver. Schema is created/altered at server boot by `backend/src/db/migrations.js`.
+- Auth: JWT (`jsonwebtoken`), 7-day expiry, header `Authorization: Bearer <token>`. Roles: `super_admin`, `owner`, `hr`, `employee`.
+- Tenancy: every table has a `company_id` column. Every API route filters by `req.user.companyId` from the JWT. The `super_admin` role is global (no `company_id`).
+- Repo layout TODAY:
+  ```
+  paynest/
+  ├── frontend/   (Vite app, deployed to Vercel)
+  ├── backend/    (Express app, deployed to Render)
+  ├── mobile/     (Expo app — unrelated to this migration, leave alone)
+  ├── desktop/    (Electron app — unrelated, leave alone)
+  └── docs/       (this plan lives here)
+  ```
+
+**What this plan does:**
+- Builds a new Next.js 16 + TypeScript + Prisma + Supabase app at the **repo root** on a parallel branch (`next-migration`), feature-parity with the current system.
+- When parity is verified on a Vercel preview deployment, the new branch is merged to `main`, Vercel automatically promotes it to production, and the old Render backend + Render Postgres are decommissioned.
+- The `frontend/` and `backend/` directories are deleted in the final task. `mobile/` and `desktop/` are NOT touched.
+
+**Things you (the AI) MUST do, not assume:**
+- **Never invent secrets.** Whenever the plan asks for a `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `RENDER_DATABASE_URL`, Vercel project name, or any other credential, STOP and ask the human operator for it. Do not put placeholder values into `.env.local` and hope it works. Do not generate a JWT secret without asking — if they have an existing one in Render env vars, reuse it so existing tokens don't get invalidated (ask them).
+- **Never run Task 13 (data migration) before Tasks 1–12 are complete and verified on a preview deployment.** Running it early will wipe Supabase and break dev for everyone.
+- **Never run destructive Step 5/6 of Task 14 (delete Render service, delete legacy directories) without explicit human approval in the chat for that specific action.** Even if the human said "execute the whole plan", confirm again before each destructive operation.
+- **Commit after every task or sub-slice as the plan specifies.** Do not batch many tasks into one mega-commit. The plan's commit boundaries are the rollback points.
+- **Use the user's actual repo path.** The plan uses repo-relative paths like `frontend/src/...` everywhere. Run all shell commands from the repo root. Detect the operating system from the environment and use the matching shell (PowerShell on Windows, bash on macOS/Linux). The example commands below are written as POSIX bash; on PowerShell, translate them (e.g., `cp` → `Copy-Item`, `&&` → `; if ($?) {...}`, env vars → `$env:NAME`).
+- **Two-person workflow.** A coworker is implementing this; the original author is not always available. If a step is ambiguous, ask the coworker — don't escalate to "the original author" who isn't here.
+
+**What you can assume:**
+- Node 20+ and npm are installed.
+- The coworker has push access to the GitHub repo `Husamalj/paynest` (or whatever the actual remote is — verify with `git remote -v`).
+- The coworker has — or can create — a Supabase account and a Vercel account.
+- The legacy production system stays live and untouched until Task 14 cutover.
+
+---
+
+**Goal:** Migrate PayNest from React+Vite + Express + Render Postgres to a single Next.js 16 (App Router) + TypeScript + Prisma + Supabase Postgres app deployed on Vercel — same stack as the original author's HiredJo project — to eliminate cold-start sleeping, simplify deployment, and unify frontend/backend in one repo.
 
 **Architecture:**
 - One Next.js app replaces both the `frontend/` (Vite) and `backend/` (Express) folders. Pages live in `app/(routes)/...`, APIs in `app/api/.../route.ts`.
@@ -109,14 +153,38 @@ The old `frontend/` and `backend/` directories are deleted in the final task. Ev
 
 ---
 
-## Pre-flight (do once, before Task 1)
+## Pre-flight (human operator does these — not the AI)
 
-These are operator actions, not code. Do them before running any task and record the resulting values in `.env.local`.
+These are manual actions the coworker performs in browser dashboards and their local terminal. The AI assistant should NOT run these; instead, it should ask the human to confirm each one is done before starting Task 1.
 
-1. Create Supabase project: https://supabase.com → New Project → name `paynest`, region closest to Jordan (Frankfurt). Wait ~2 min for provisioning.
-2. From Supabase dashboard → Project Settings → Database → Connection string → copy the **Transaction pooler** URL (port 6543) — this is your `DATABASE_URL`. Also copy the **direct connection** URL (port 5432) — this is your `DIRECT_URL` for Prisma migrations.
-3. Generate a long random JWT secret: `openssl rand -base64 48` → save as `JWT_SECRET`.
-4. Create a Vercel project pointed at the GitHub repo, production branch initially set to `master` so production traffic is unaffected during the rebuild.
+**AI: when you reach this section, post a checklist to the chat asking the human to confirm each item below is complete, and to paste the resulting values into the chat (or into `.env.local` themselves — see Task 1 Step 4 for the file shape). Do not proceed to Task 1 until they confirm.**
+
+1. **Create the Supabase project.** Go to https://supabase.com → New Project → name `paynest` (or `paynest-prod` if that's taken), region `eu-central-1` (Frankfurt, closest to Jordan). Set a strong DB password and SAVE IT (you'll need it for env vars). Wait ~2 min for provisioning.
+
+2. **Grab the two connection strings.** In Supabase dashboard → Project Settings → Database → "Connection string" section:
+   - **Transaction pooler** URL (port `6543`) → this is `DATABASE_URL` (used by app at runtime).
+   - **Direct connection** URL (port `5432`) → this is `DIRECT_URL` (used by Prisma migrations only).
+   - Both URLs will already contain the DB password you just set.
+
+3. **Decide on the JWT secret.**
+   - If you want existing user tokens from the live production app to keep working after cutover, reuse the JWT secret that's currently set in Render → paynest backend → Environment → `JWT_SECRET`. Copy it out of Render.
+   - If you're fine forcing everyone to log in again after cutover, generate a new one:
+     - macOS/Linux: `openssl rand -base64 48`
+     - Windows PowerShell: `[Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Maximum 256 }))`
+   - Either way, this value becomes `JWT_SECRET`.
+
+4. **Get the legacy Render Postgres URL** (needed in Task 13, not Task 1, but get it now so you don't have to context-switch later). Render dashboard → paynest Postgres database → "External Database URL". This becomes `RENDER_DATABASE_URL` later.
+
+5. **Confirm the Vercel project exists and points at this repo.** Vercel dashboard → check that there's a project linked to the `Husamalj/paynest` GitHub repo (or whatever the actual remote is — confirm with `git remote -v` in the repo). If not, create one but **do not change the production branch yet** — leave it at `main` so live traffic keeps hitting the current production build until cutover (Task 14).
+
+6. **Tell the AI assistant when all 5 items above are done**, and paste these values in the chat (the AI will write them into `.env.local`, which is gitignored):
+   - `DATABASE_URL=...`
+   - `DIRECT_URL=...`
+   - `JWT_SECRET=...`
+   - `RENDER_DATABASE_URL=...` (for Task 13)
+   - The Vercel project name/slug
+
+**AI: never invent these values. If the human hasn't given them to you, stop and ask. Never commit `.env.local` (it should already be in `.gitignore` — verify before Task 1 Step 5).**
 
 ---
 
@@ -125,23 +193,33 @@ These are operator actions, not code. Do them before running any task and record
 **Files:**
 - Create: `next.config.ts`, `tsconfig.json`, `tailwind.config.ts`, `postcss.config.js`, `package.json`, `app/layout.tsx`, `app/page.tsx`, `app/globals.css`, `.env.example`, `.gitignore` (additions), `README.md` (additions)
 
-- [ ] **Step 1: Create and switch to migration branch**
+- [ ] **Step 1: Verify the working tree is clean and create the migration branch**
 
 ```bash
-git checkout master
+git status                     # must show "nothing to commit, working tree clean"
+git fetch origin
+git checkout main              # the default branch — if your repo uses 'master', use that instead
 git pull
 git checkout -b next-migration
 ```
 
-- [ ] **Step 2: Initialize Next.js in repo root with TypeScript + Tailwind + App Router**
+If `git status` shows uncommitted changes, STOP and ask the human what to do (do not stash or discard without asking).
 
-Run from `E:\payzen\payzen`:
+- [ ] **Step 2: Initialize Next.js in the repo root**
+
+Run from the repo root (wherever you cloned `paynest`):
 
 ```bash
-npx create-next-app@latest . --typescript --tailwind --app --eslint --src-dir false --import-alias "@/*" --use-npm
+npx create-next-app@latest . --typescript --tailwind --app --eslint --no-src-dir --import-alias "@/*" --use-npm
 ```
 
-When prompted to overwrite, choose **No** for any file we want to keep (README.md, .gitignore lines for docs/mobile/desktop). Confirm `Yes` for new files.
+When the installer prompts to overwrite existing files:
+- `.gitignore` → **No** (we want to keep the existing one which excludes `mobile/`, `desktop/`, etc.; the installer's additions for Next/Vercel will be added by hand in a later step)
+- `README.md` → **No** (keep existing)
+- `package.json` → **No** if one exists at root (none should — the existing `package.json` files are inside `frontend/` and `backend/`); if the installer reports no conflict, accept its file
+- Everything else → **Yes**
+
+After install, append the Next.js-relevant ignore lines to `.gitignore` (only the ones not already present): `.next/`, `next-env.d.ts`, `.env*.local`, `.vercel`.
 
 - [ ] **Step 3: Add runtime dependencies**
 

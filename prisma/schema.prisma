@@ -30,6 +30,7 @@ model Company {
   remoteAssignments  RemoteAssignment[]
   announcements      Announcement[]
   employeeDocuments  EmployeeDocument[]
+  evaluations        Evaluation[]
 
   @@map("companies")
 }
@@ -46,7 +47,8 @@ model User {
   companyId          Int?     @map("company_id")
   createdAt          DateTime @default(now()) @map("created_at")
 
-  company Company? @relation(fields: [companyId], references: [id])
+  company     Company?     @relation(fields: [companyId], references: [id])
+  evaluations Evaluation[] @relation("EvaluatorEvaluations")
 
   @@map("users")
 }
@@ -264,6 +266,38 @@ model RemoteAssignment {
 
   @@unique([employeeId, startDate, endDate], map: "remote_assignments_unique_idx")
   @@map("remote_assignments")
+}
+
+model Evaluation {
+  id                    Int      @id @default(autoincrement())
+  companyId             Int      @default(1) @map("company_id")
+  evaluatorId           Int      @map("evaluator_id")
+  employeeId            String   @map("employee_id") @db.VarChar(50)
+  periodMonth           Int      @map("period_month")
+  periodYear            Int      @map("period_year")
+  scoreAccuracy         Int?     @map("score_accuracy") @db.SmallInt
+  scoreInnovation       Int?     @map("score_innovation") @db.SmallInt
+  scoreSpeed            Int?     @map("score_speed") @db.SmallInt
+  scoreDevelopment      Int?     @map("score_development") @db.SmallInt
+  scoreQualityCheck     Int?     @map("score_quality_check") @db.SmallInt
+  scorePrioritization   Int?     @map("score_prioritization") @db.SmallInt
+  scoreIndependence     Int?     @map("score_independence") @db.SmallInt
+  scoreDeadlines        Int?     @map("score_deadlines") @db.SmallInt
+  scoreTeamwork         Int?     @map("score_teamwork") @db.SmallInt
+  scoreCommunication    Int?     @map("score_communication") @db.SmallInt
+  scoreKnowledgeSharing Int?     @map("score_knowledge_sharing") @db.SmallInt
+  scoreFeedback         Int?     @map("score_feedback") @db.SmallInt
+  scoreCompliance       Int?     @map("score_compliance") @db.SmallInt
+  bonusWorthy           Boolean  @default(false) @map("bonus_worthy")
+  recommendations       String?
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
+
+  company   Company @relation(fields: [companyId], references: [id])
+  evaluator User    @relation("EvaluatorEvaluations", fields: [evaluatorId], references: [id])
+
+  @@unique([companyId, evaluatorId, employeeId, periodMonth, periodYear])
+  @@map("evaluations")
 }
 
 model Announcement {
