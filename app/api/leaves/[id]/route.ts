@@ -5,20 +5,15 @@ import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 export const runtime = "nodejs";
 
 /**
- * Sequential approval:
- *   supervisor pending  → overall = "pending"
- *   supervisor rejected → overall = "rejected"  (HR never involved)
- *   supervisor approved + hr pending   → overall = "supervisor_approved"  (waiting for HR)
- *   supervisor approved + hr approved  → overall = "approved"
- *   supervisor approved + hr rejected  → overall = "rejected"
+ * Only supervisor decides. HR can view but never changes the outcome.
+ *   supervisor pending  → "pending"
+ *   supervisor approved → "approved"
+ *   supervisor rejected → "rejected"
  */
-function calcStatus(hrStatus: string, supervisorStatus: string): string {
+function calcStatus(supervisorStatus: string): string {
+  if (supervisorStatus === "approved") return "approved";
   if (supervisorStatus === "rejected") return "rejected";
-  if (supervisorStatus === "pending")  return "pending";
-  // supervisor approved — now depends on HR
-  if (hrStatus === "approved")  return "approved";
-  if (hrStatus === "rejected")  return "rejected";
-  return "supervisor_approved"; // waiting for HR
+  return "pending";
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -50,17 +45,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       if (!subordinate) throw new HttpError(403, "This employee is not your subordinate");
 
       const newSupervisorStatus = body.supervisor_status ?? body.status;
-      const newStatus = calcStatus(existing.hrStatus, newSupervisorStatus);
+      const newStatus = calcStatus(newSupervisorStatus);
       updateData = { supervisorStatus: newSupervisorStatus, status: newStatus };
     } else {
-      // HR / owner / super_admin
-      const newHrStatus = body.hr_status ?? body.status;
-      const newStatus = calcStatus(newHrStatus, existing.supervisorStatus);
-      updateData = {
-        hrStatus: newHrStatus,
-        status: newStatus,
-        adminNote: body.admin_note ?? null,
-      };
+      // HR / owner / super_admin — view only, cannot change approval status
+      // They can only add an admin note
+      updateData = { adminNote: body.admin_note ?? null };
     }
 
     const leave = await prisma.leaveRequest.update({

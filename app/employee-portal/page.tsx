@@ -45,13 +45,13 @@ function calcDays(start: string, end: string) {
 function StatusBadge({ status, isRTL }: { status: string; isRTL: boolean }) {
   const labels: Record<string, string> = {
     pending: isRTL ? "بانتظار المشرف" : "Awaiting supervisor",
-    supervisor_approved: isRTL ? "بانتظار HR" : "Awaiting HR",
+    supervisor_approved: isRTL ? "موافق عليه" : "Approved",
     approved: isRTL ? "موافق عليه" : "Approved",
     rejected: isRTL ? "مرفوض" : "Rejected",
     in_progress: isRTL ? "قيد التنفيذ" : "In progress",
     completed: isRTL ? "مكتمل" : "Completed",
   };
-  const cls: Record<string, string> = { pending: "badge-yellow", supervisor_approved: "badge-blue", approved: "badge-green", rejected: "badge-red", in_progress: "badge-blue", completed: "badge-green" };
+  const cls: Record<string, string> = { pending: "badge-yellow", supervisor_approved: "badge-green", approved: "badge-green", rejected: "badge-red", in_progress: "badge-blue", completed: "badge-green" };
   return <span className={`badge ${cls[status] || "badge-gray"}`}>{labels[status] || status}</span>;
 }
 
