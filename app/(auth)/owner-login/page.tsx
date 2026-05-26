@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, ArrowRight, Eye, EyeOff, Globe } from "lucide-react";
+import { Building2, ArrowRight, Eye, EyeOff, Globe } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 
@@ -16,7 +16,7 @@ function LangToggle() {
   );
 }
 
-export default function HRLoginPage() {
+export default function OwnerLoginPage() {
   const router = useRouter();
   const { lang } = useLanguage();
   const ar = lang === "ar";
@@ -34,8 +34,8 @@ export default function HRLoginPage() {
       const res = await api.post("/auth/login", { email, password });
       const { token, user } = res.data;
 
-      if (user.role !== "hr") {
-        setError(ar ? "هذا الحساب ليس حساب HR. يرجى استخدام البوابة الصحيحة." : "This account is not an HR account. Please use the correct portal.");
+      if (user.role !== "owner") {
+        setError(ar ? "هذا الحساب ليس حساب مدير شركة. يرجى استخدام البوابة الصحيحة." : "This account is not a Company Owner account. Please use the correct portal.");
         return;
       }
 
@@ -48,7 +48,7 @@ export default function HRLoginPage() {
         window.location.href = "/force-change-password";
         return;
       }
-      window.location.href = "/hr-portal";
+      window.location.href = "/dashboard";
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -66,13 +66,13 @@ export default function HRLoginPage() {
         </button>
 
         <form onSubmit={handleLogin} className="bg-white rounded-3xl shadow-2xl p-8">
-          <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center mx-auto mb-4">
-            <Users size={24} className="text-white" />
+          <div className="w-14 h-14 rounded-2xl bg-violet-600 flex items-center justify-center mx-auto mb-4">
+            <Building2 size={24} className="text-white" />
           </div>
           <h1 className="text-2xl font-black text-center text-slate-900 mb-1">
-            {ar ? "بوابة الموارد البشرية" : "HR Portal"}
+            {ar ? "بوابة مدير الشركة" : "Company Owner Portal"}
           </h1>
-          <p className="text-center text-slate-500 text-sm mb-6">Pay<span className="text-blue-600">Nest</span></p>
+          <p className="text-center text-slate-500 text-sm mb-6">Pay<span className="text-violet-600">Nest</span></p>
 
           <input
             type="email"
@@ -80,7 +80,7 @@ export default function HRLoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder={ar ? "البريد الإلكتروني" : "Email address"}
             required
-            className="w-full mb-4 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full mb-4 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500"
             dir="ltr"
           />
           <div className="relative mb-4">
@@ -90,7 +90,7 @@ export default function HRLoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder={ar ? "كلمة السر" : "Password"}
               required
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500 pr-10"
               dir="ltr"
             />
             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -100,13 +100,13 @@ export default function HRLoginPage() {
 
           {error && <div className="text-red-600 text-sm mb-4 text-center">{error}</div>}
 
-          <button disabled={loading} className="w-full py-3 rounded-xl text-white font-bold disabled:opacity-60 mb-4 bg-blue-600 hover:bg-blue-700 transition-colors">
+          <button disabled={loading} className="w-full py-3 rounded-xl text-white font-bold disabled:opacity-60 mb-4 bg-violet-600 hover:bg-violet-700 transition-colors">
             {loading ? (ar ? "جاري الدخول..." : "Signing in...") : (ar ? "دخول" : "Sign In")}
           </button>
 
           <p className="text-center text-slate-500 text-sm mt-4">
             {ar ? "ليس لديك حساب؟ " : "Don't have an account? "}
-            <button type="button" onClick={() => router.push("/signup")} className="text-blue-600 hover:underline font-medium">
+            <button type="button" onClick={() => router.push("/signup")} className="text-violet-600 hover:underline font-medium">
               {ar ? "سجّل شركتك" : "Register your company"}
             </button>
           </p>

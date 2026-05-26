@@ -29,7 +29,7 @@ export default function LandingPage() {
       textColor: "text-white",
       subColor: "text-violet-100",
       arrowColor: "text-violet-100",
-      href: "/hr-login",
+      href: "/owner-login",
       badge: ar ? "OWNER" : "OWNER",
     },
     {
