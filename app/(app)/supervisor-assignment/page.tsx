@@ -110,26 +110,13 @@ function layoutNodes(employees: Emp[]): Node[] {
   };
 
   const roots = childrenOf.get(null) || [];
-  // Place trees first (those with subordinates), then leaves
+  // Only place employees that are part of a supervisor chain (have subordinates).
+  // Orphans (no supervisor, no subordinates) stay in the left rail — not on canvas.
   const trees = roots.filter((r) => subordinateCount(r.id) > 0);
-  const leaves = roots.filter((r) => subordinateCount(r.id) === 0);
 
   for (const root of trees) {
     place(root, cursorX, 0);
     cursorX += subtreeWidth(root) * xStep + xStep / 2;
-  }
-
-  // Leaves stack in a single column to the right
-  if (leaves.length > 0) {
-    const leafX = cursorX + 20;
-    leaves.forEach((leaf, i) => {
-      positioned.push({
-        id: String(leaf.id),
-        type: "employee",
-        position: { x: leafX, y: i * yStep + 40 },
-        data: { emp: leaf, subordinateCount: 0 },
-      });
-    });
   }
 
   return positioned;

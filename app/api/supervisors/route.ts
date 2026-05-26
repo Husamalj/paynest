@@ -4,11 +4,18 @@ import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
+/** Resolve the set of employeeId strings that belong to role="employee" users in this company. */
+async function getEmployeeOnlyIds(companyId: number): Promise<string[]> {
+  const users = await prisma.user.findMany({
+    where: { companyId, role: "employee" },
+    select: { employeeNumber: true },
+  });
+  return users.map((u) => u.employeeNumber).filter(Boolean) as string[];
+}
+
 /**
  * GET /api/supervisors
- * Returns the full employee list (id, employeeId, name, supervisorId, etc.)
- * for the current company + active system mode. Used by the supervisor
- * assignment canvas to render the org tree.
+ * Returns employees (role="employee" only) for the current company + system mode.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -21,8 +28,14 @@ export async function GET(req: NextRequest) {
     });
     const mode = settings?.systemMode ?? "daily";
 
+    const empNums = await getEmployeeOnlyIds(session.companyId);
+
     const employees = await prisma.employee.findMany({
-      where: { companyId: session.companyId, systemMode: mode },
+      where: {
+        companyId: session.companyId,
+        systemMode: mode,
+        employeeId: { in: empNums },
+      },
       select: {
         id: true,
         employeeId: true,
@@ -46,7 +59,7 @@ export async function GET(req: NextRequest) {
  * Body: { assignments: [{ id: number, supervisorId: number | null }, ...] }
  *
  * Validates:
- *  1. All employees belong to the caller's company + same systemMode
+ *  1. All employees belong to the caller's company + same systemMode + role="employee"
  *  2. supervisorId !== id (no self-supervision)
  *  3. No cycles in the resulting graph
  */
@@ -69,9 +82,15 @@ export async function PUT(req: NextRequest) {
     });
     const mode = settings?.systemMode ?? "daily";
 
-    // Load every employee in the same scope so we can validate + cycle-check
+    const empNums = await getEmployeeOnlyIds(session.companyId);
+
+    // Load only role="employee" records for cycle + scope validation
     const all = await prisma.employee.findMany({
-      where: { companyId: session.companyId, systemMode: mode },
+      where: {
+        companyId: session.companyId,
+        systemMode: mode,
+        employeeId: { in: empNums },
+      },
       select: { id: true, supervisorId: true },
     });
     const byId = new Map(all.map((e) => [e.id, { ...e }]));
