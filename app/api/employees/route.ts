@@ -17,8 +17,21 @@ export async function GET(req: NextRequest) {
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
     const mode = await getSystemMode(session.companyId);
+
+    // Only return employee-role records — exclude owner, HR, and super_admin accounts.
+    // Two-step: resolve employeeNumbers from Users with role="employee", then filter.
+    const empUsers = await prisma.user.findMany({
+      where: { companyId: session.companyId, role: "employee" },
+      select: { employeeNumber: true },
+    });
+    const empNums = empUsers.map((u) => u.employeeNumber).filter(Boolean) as string[];
+
     const employees = await prisma.employee.findMany({
-      where: { companyId: session.companyId, systemMode: mode },
+      where: {
+        companyId: session.companyId,
+        systemMode: mode,
+        employeeId: { in: empNums },
+      },
       orderBy: { name: "asc" },
     });
     return NextResponse.json(employees.map(toSnake));

@@ -82,14 +82,13 @@ export async function PUT(req: NextRequest) {
     });
     const mode = settings?.systemMode ?? "daily";
 
-    const empNums = await getEmployeeOnlyIds(session.companyId);
-
-    // Load only role="employee" records for cycle + scope validation
+    // Validate by company + systemMode scope only — the role filter is a display
+    // concern (GET), not a security concern. Any employee in the company can be
+    // part of a supervisor chain regardless of whether their User record exists.
     const all = await prisma.employee.findMany({
       where: {
         companyId: session.companyId,
         systemMode: mode,
-        employeeId: { in: empNums },
       },
       select: { id: true, supervisorId: true },
     });
