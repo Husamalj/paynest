@@ -216,6 +216,7 @@ export const translations = {
     hrEmployeeNumber: "Employee No.",
     staffPortal: "Staff Portal",
     staffPortalSub: "Owner & HR access",
+    evaluations: "Evaluations",
   },
   ar: {
     appName: "بيزن",
@@ -434,6 +435,7 @@ export const translations = {
     hrEmployeeNumber: "رقم الموظف",
     staffPortal: "بوابة الموظفين",
     staffPortalSub: "دخول المدير وموارد بشرية",
+    evaluations: "التقييمات",
   },
 } as const;
 
