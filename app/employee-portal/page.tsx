@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle, Bell, Calendar, CheckCircle2, CheckSquare,
-  Clock, LogOut, Palmtree, Send, User,
+  Clock, LogOut, Palmtree, Send, User, UserCheck, Users,
 } from "lucide-react";
 import api from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -206,6 +206,65 @@ export default function EmployeePortalPage() {
           </div>
         ) : (
           <>
+            {/* Supervisor / subordinates row — only when the data exists */}
+            {(employee.supervisor || (employee.subordinates && employee.subordinates.length > 0)) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {employee.supervisor && (
+                  <div className="card">
+                    <div className="card-header">
+                      <div className="card-title">
+                        <UserCheck size={16} className="text-brand-600" />
+                        {isRTL ? "مشرفك" : "Your Supervisor"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold flex-shrink-0">
+                        {(employee.supervisor.name || "?").charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-slate-900 truncate">{employee.supervisor.name}</div>
+                        <div className="text-xs text-slate-500 truncate">{employee.supervisor.email || "-"}</div>
+                        {employee.supervisor.phone && (
+                          <div className="text-xs text-slate-500 truncate">{employee.supervisor.phone}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {employee.subordinates && employee.subordinates.length > 0 && (
+                  <div className="card">
+                    <div className="card-header">
+                      <div className="card-title">
+                        <Users size={16} className="text-brand-600" />
+                        {isRTL ? "أنت تشرف على" : "You Supervise"}
+                        <span className="ml-2 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+                          {employee.subordinates.length}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                      {employee.subordinates.slice(0, 10).map((sub: any) => (
+                        <div key={sub.id} className="flex items-center gap-2 text-sm">
+                          <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                            {(sub.name || "?").charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-slate-900 truncate">{sub.name}</div>
+                            <div className="text-[11px] text-slate-500 truncate">{sub.email || sub.employeeId}</div>
+                          </div>
+                        </div>
+                      ))}
+                      {employee.subordinates.length > 10 && (
+                        <div className="text-xs text-slate-400 pt-1">
+                          + {employee.subordinates.length - 10} {isRTL ? "آخرين" : "more"}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.base}</div><div className="text-xl font-bold text-slate-900">{formatCurrency(myPayroll?.baseSalary || myPayroll?.base_salary || employee.baseSalary || employee.base_salary)}</div></div>
               <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.net}</div><div className="text-xl font-bold text-emerald-700">{formatCurrency(myPayroll?.netSalary || myPayroll?.net_salary)}</div></div>

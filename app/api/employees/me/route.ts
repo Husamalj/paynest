@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 
@@ -19,6 +19,15 @@ export async function GET(req: NextRequest) {
         employeeId: session.employeeNumber,
         companyId: session.companyId,
         systemMode: mode,
+      },
+      include: {
+        supervisor: {
+          select: { id: true, employeeId: true, name: true, email: true, phone: true },
+        },
+        subordinates: {
+          select: { id: true, employeeId: true, name: true, email: true, phone: true },
+          orderBy: { name: "asc" },
+        },
       },
     });
     if (!employee) throw new HttpError(404, "Employee not found");

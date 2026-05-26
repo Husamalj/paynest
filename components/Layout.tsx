@@ -20,6 +20,7 @@ import {
   ChevronDown,
   LogOut,
   ShieldCheck,
+  Network,
   KeyRound,
   X,
   AlertTriangle,
@@ -61,6 +62,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: "tasks", path: "/tasks", icon: CheckSquare },
   { key: "announcements", path: "/announcements", icon: Bell },
   { key: "reports", path: "/reports", icon: BarChart3 },
+  { key: "supervisorAssignment", path: "/supervisor-assignment", icon: Network },
   { key: "hrTeam", path: "/hr-team", icon: ShieldCheck },
   { key: "settings", path: "/settings", icon: SettingsIcon },
 ];
@@ -125,6 +127,8 @@ export default function Layout({ children, settings }: LayoutProps) {
     }
   };
 
+  // Owner sees everything. HR sees everything except owner-only items.
+  // supervisorAssignment is visible to both owner and HR.
   const navItems = role === "owner"
     ? NAV_ITEMS
     : NAV_ITEMS.filter((item) => item.key !== "settings" && item.key !== "hrTeam");

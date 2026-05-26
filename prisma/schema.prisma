@@ -82,12 +82,16 @@ model Employee {
   socialSecurity Boolean  @default(false) @map("social_security")
   remoteDays     Int      @default(0) @map("remote_days")
   systemMode     String   @default("daily") @map("system_mode") @db.VarChar(20)
+  supervisorId   Int?     @map("supervisor_id")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
 
-  company Company @relation(fields: [companyId], references: [id])
+  company      Company    @relation(fields: [companyId], references: [id])
+  supervisor   Employee?  @relation("EmployeeSupervisor", fields: [supervisorId], references: [id], onDelete: SetNull)
+  subordinates Employee[] @relation("EmployeeSupervisor")
 
   @@unique([employeeId, systemMode], map: "employees_emp_mode_uidx")
+  @@index([supervisorId])
   @@map("employees")
 }
 
