@@ -39,11 +39,11 @@ export default function StaffLoginPage() {
       const res = await api.post("/auth/login", { email, password });
       const { token, user } = res.data;
 
-      if (user.role !== "owner" && user.role !== "hr") {
+      if (user.role === "employee") {
         setError(
           ar
-            ? "هذه البوابة مخصصة للمدراء وموظفي الموارد البشرية فقط. يرجى استخدام بوابة الموظف."
-            : "This portal is for owners and HR managers only. Please use the Employee Portal."
+            ? "هذه البوابة ليست للموظفين. يرجى استخدام بوابة الموظف."
+            : "This portal is not for employees. Please use the Employee Portal."
         );
         return;
       }
@@ -59,7 +59,9 @@ export default function StaffLoginPage() {
       }
 
       // Route based on role
-      if (user.role === "owner") {
+      if (user.role === "super_admin") {
+        window.location.href = "/super-admin";
+      } else if (user.role === "owner") {
         window.location.href = "/dashboard";
       } else {
         window.location.href = "/hr-portal";
@@ -101,7 +103,7 @@ export default function StaffLoginPage() {
             Pay<span className="text-brand-600">Nest</span>
           </p>
           <p className="text-center text-slate-400 text-xs mb-6">
-            {ar ? "للمدراء وموارد بشرية" : "Company Owners & HR Managers"}
+            {ar ? "للمدراء وموارد بشرية والسوبر أدمن" : "Super Admin, Company Owners & HR Managers"}
           </p>
 
           {/* Email */}

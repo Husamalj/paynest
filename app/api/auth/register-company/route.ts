@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       data: { name: companyName, slug, status: "pending", isActive: false },
     });
 
-    await prisma.user.create({
+    const ownerUser = await prisma.user.create({
       data: {
         name: ownerName,
         email,
@@ -45,6 +45,25 @@ export async function POST(req: NextRequest) {
         isActive: true,
         mustChangePassword: password === "123456",
       },
+    });
+
+    // Auto-create an employee record for the owner so their hours & salary are tracked
+    const ownerEmpId = `OWNER-${ownerUser.id}`;
+    await prisma.employee.create({
+      data: {
+        employeeId: ownerEmpId,
+        name: ownerName,
+        email,
+        baseSalary: 0,
+        socialSecurity: false,
+        systemMode: "daily",
+        companyId: company.id,
+      },
+    });
+
+    await prisma.user.update({
+      where: { id: ownerUser.id },
+      data: { employeeNumber: ownerEmpId },
     });
 
     await prisma.companySettings.create({
