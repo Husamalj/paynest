@@ -83,8 +83,9 @@ export default function EvaluationsPage() {
 
   const loadEmployees = async () => {
     try {
-      const res = await api.get("/employees");
-      setEmployees(res.data || []);
+      // Use supervisors endpoint — returns all employees except owner/super_admin (HR included)
+      const res = await api.get("/supervisors");
+      setEmployees(res.data?.employees || []);
     } catch { /* ignore */ }
   };
 
@@ -286,11 +287,14 @@ export default function EvaluationsPage() {
                 <label className="form-label">{ar ? "اختر الموظف" : "Select Employee"} *</label>
                 <select className="form-select" value={modalEmpId} onChange={(e) => setModalEmpId(e.target.value)} required>
                   <option value="">{ar ? "-- اختر --" : "-- Choose --"}</option>
-                  {employees.map((emp: any) => (
-                    <option key={emp.employee_id || emp.employeeId} value={emp.employee_id || emp.employeeId}>
-                      {emp.name} ({emp.employee_id || emp.employeeId})
-                    </option>
-                  ))}
+                  {employees.map((emp: any) => {
+                    const id = emp.employeeId || emp.employee_id;
+                    return (
+                      <option key={id} value={id}>
+                        {emp.name} ({id})
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

@@ -4,10 +4,14 @@ import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-/** Resolve the set of employeeId strings that belong to admin (owner/hr/super_admin) users — to exclude them. */
-async function getAdminIds(companyId: number): Promise<string[]> {
+/**
+ * Exclude only owner and super_admin from the org tree.
+ * HR CAN appear in the tree as subordinates and be evaluated.
+ * Owner is never evaluated — they're the top of the hierarchy.
+ */
+async function getOwnerIds(companyId: number): Promise<string[]> {
   const users = await prisma.user.findMany({
-    where: { companyId, role: { in: ["owner", "hr", "super_admin"] } },
+    where: { companyId, role: { in: ["owner", "super_admin"] } },
     select: { employeeNumber: true },
   });
   return users.map((u) => u.employeeNumber).filter(Boolean) as string[];
@@ -28,13 +32,13 @@ export async function GET(req: NextRequest) {
     });
     const mode = settings?.systemMode ?? "daily";
 
-    const adminNums = await getAdminIds(session.companyId);
+    const ownerNums = await getOwnerIds(session.companyId);
 
     const employees = await prisma.employee.findMany({
       where: {
         companyId: session.companyId,
         systemMode: mode,
-        ...(adminNums.length > 0 ? { NOT: { employeeId: { in: adminNums } } } : {}),
+        ...(ownerNums.length > 0 ? { NOT: { employeeId: { in: ownerNums } } } : {}),
       },
       select: {
         id: true,
