@@ -42,6 +42,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           router.replace("/hr-portal");
           return;
         }
+        if (user.role === "owner") {
+          router.replace("/owner-portal");
+          return;
+        }
 
         const settingsRes = await api.get("/settings");
         const s = settingsRes.data;

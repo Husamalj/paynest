@@ -62,7 +62,7 @@ export default function StaffLoginPage() {
       if (user.role === "super_admin") {
         window.location.href = "/super-admin";
       } else if (user.role === "owner") {
-        window.location.href = "/dashboard";
+        window.location.href = "/owner-portal";
       } else {
         window.location.href = "/hr-portal";
       }
