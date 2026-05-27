@@ -9,8 +9,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        arabic: ["Cairo", "Segoe UI", "Tahoma", "sans-serif"],
+        sans: ["var(--font-sans)", "Plus Jakarta Sans", "Inter", "system-ui", "sans-serif"],
+        arabic: ["var(--font-arabic)", "Tajawal", "Segoe UI", "Tahoma", "sans-serif"],
         caveat: ["var(--font-caveat)", "cursive"],
       },
       colors: {
