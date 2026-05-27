@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { Zap, Download, ChevronRight, ChevronDown, CheckCircle2, AlertTriangle, X, Calendar, Clock, Calculator } from "lucide-react";
+
+const MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 import clsx from "clsx";
@@ -17,53 +20,46 @@ function getStatusBadge(status: string, t: (k: any) => string) {
 }
 
 export default function PayrollPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const now = new Date();
+  const ar = lang === "ar";
+  const months = ar ? MONTHS_AR : MONTHS_EN;
   const [payroll, setPayroll] = useState<any[]>([]);
-  const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
-  const [selectedPeriod, setSelectedPeriod] = useState<{ month: number; year: number } | null>(null);
+  const [periodMonth, setPeriodMonth] = useState(now.getMonth() + 1);
+  const [periodYear, setPeriodYear]   = useState(now.getFullYear());
+  const yearOptions = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1];
 
-  const loadPayroll = async (month?: number, year?: number) => {
+  const loadPayroll = async (m: number, y: number) => {
     try {
-      const params = month && year ? `?month=${month}&year=${year}` : "";
-      const res = await api.get(`/payroll/latest${params}`);
-      setPayroll(res.data.results || []);
+      // Try period endpoint first (historical), fall back to latest if empty
+      const periodRes = await api.get(`/payroll/period?month=${m}&year=${y}`).catch(() => ({ data: [] as any[] }));
+      if (Array.isArray(periodRes.data) && periodRes.data.length > 0) {
+        setPayroll(periodRes.data);
+        return;
+      }
+      const latestRes = await api.get(`/payroll/latest?month=${m}&year=${y}`);
+      setPayroll(latestRes.data?.results || []);
     } catch (err: any) { setError(err.message); }
   };
 
-  const loadHistory = async () => {
-    try { const res = await api.get("/payroll/history"); setHistory(res.data || []); }
-    catch { }
-  };
-
   useEffect(() => {
-    Promise.all([loadPayroll(), loadHistory()]).finally(() => setLoading(false));
-  }, []);
+    setLoading(true);
+    loadPayroll(periodMonth, periodYear).finally(() => setLoading(false));
+  }, [periodMonth, periodYear]);
 
   const handleCalculate = async () => {
     setCalculating(true); setError(""); setSuccess("");
     try {
-      await api.post("/payroll/calculate", {});
-      setSuccess(t("calculationDone"));
-      await Promise.all([loadPayroll(), loadHistory()]);
+      await api.post("/payroll/calculate", { month: periodMonth, year: periodYear });
+      setSuccess(`${t("calculationDone")} — ${months[periodMonth - 1]} ${periodYear}`);
+      await loadPayroll(periodMonth, periodYear);
     } catch (err: any) { setError(err.message); }
     finally { setCalculating(false); }
-  };
-
-  const handleSelectPeriod = async (period: any) => {
-    const m = period.period_month || period.periodMonth;
-    const y = period.period_year || period.periodYear;
-    setSelectedPeriod({ month: m, year: y });
-    setLoading(true);
-    try {
-      const res = await api.get(`/payroll/period?month=${m}&year=${y}`);
-      setPayroll(res.data || []);
-    } catch (err: any) { setError(err.message); }
-    finally { setLoading(false); }
   };
 
   const toggleExpand = (id: number) => {
@@ -87,25 +83,6 @@ export default function PayrollPage() {
       {error && <div className="alert alert-error"><AlertTriangle size={16} className="flex-shrink-0" /><span className="flex-1">{error}</span><button onClick={() => setError("")}><X size={14} /></button></div>}
       {success && <div className="alert alert-success"><CheckCircle2 size={16} className="flex-shrink-0" /><span className="flex-1">{success}</span><button onClick={() => setSuccess("")}><X size={14} /></button></div>}
 
-      {history.length > 0 && (
-        <div className="card">
-          <div className="card-header"><div className="card-title"><Clock size={16} className="text-brand-600" />{t("history")}</div></div>
-          <div className="flex flex-wrap gap-2">
-            {history.map((p, i) => {
-              const m = p.period_month || p.periodMonth;
-              const y = p.period_year || p.periodYear;
-              const isSelected = selectedPeriod?.month === m && selectedPeriod?.year === y;
-              return (
-                <button key={i} onClick={() => handleSelectPeriod(p)}
-                  className={clsx("px-3 py-1.5 rounded-lg text-sm font-medium border transition-all", isSelected ? "bg-brand-600 text-white border-brand-600" : "bg-white text-slate-700 border-slate-200 hover:border-brand-400")}>
-                  {m}/{y}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {payroll.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="card"><div className="text-[11px] font-semibold text-slate-500 uppercase mb-1">{t("totalBaseSalary")}</div><div className="text-xl font-bold text-slate-900">{formatCurrency(totalBase)}</div></div>
@@ -115,7 +92,17 @@ export default function PayrollPage() {
       )}
 
       <div className="card">
-        <div className="card-header"><div className="card-title"><Calculator size={16} className="text-brand-600" />{t("recentPayroll")}</div></div>
+        <div className="card-header flex-wrap gap-2">
+          <div className="card-title"><Calculator size={16} className="text-brand-600" />{t("recentPayroll")}</div>
+          <div className="flex items-center gap-2 ms-auto">
+            <select className="form-select text-sm h-8 py-0 w-32" value={periodMonth} onChange={(e) => setPeriodMonth(+e.target.value)}>
+              {months.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+            </select>
+            <select className="form-select text-sm h-8 py-0 w-24" value={periodYear} onChange={(e) => setPeriodYear(+e.target.value)}>
+              {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+        </div>
         {payroll.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noData")}</div> : (
           <div className="table-wrapper">
             <table>
