@@ -32,7 +32,12 @@ export default function ForceChangePasswordPage() {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       localStorage.setItem("user", JSON.stringify({ ...user, must_change_password: false }));
       const role = localStorage.getItem("role");
-      router.replace(role === "super_admin" ? "/super-admin" : "/dashboard");
+      const dest =
+        role === "super_admin" ? "/super-admin"
+        : role === "owner"     ? "/owner-portal"
+        : role === "employee"  ? "/employee-portal"
+        : "/dashboard"; // hr default
+      router.replace(dest);
     } catch (err: any) {
       setError(err.message || "فشل تغيير كلمة السر");
     } finally {
