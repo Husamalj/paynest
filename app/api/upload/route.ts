@@ -128,6 +128,33 @@ export async function POST(req: NextRequest) {
         employeeCount = emps.length;
         preview = emps.slice(0, 10);
 
+        // Enforce quota: count new employees that would be added vs the cap
+        const company = await prisma.company.findUnique({
+          where: { id: companyId },
+          select: { maxEmployees: true },
+        });
+        if (company?.maxEmployees != null) {
+          const adminUsers = await prisma.user.findMany({
+            where: { companyId, role: { in: ["owner", "hr", "super_admin"] } },
+            select: { employeeNumber: true },
+          });
+          const adminNums = adminUsers.map((u) => u.employeeNumber).filter(Boolean) as string[];
+          const existingIds = new Set(
+            (await prisma.employee.findMany({
+              where: { companyId, systemMode, ...(adminNums.length > 0 ? { NOT: { employeeId: { in: adminNums } } } : {}) },
+              select: { employeeId: true },
+            })).map((e) => e.employeeId).filter(Boolean) as string[]
+          );
+          const currentCount = existingIds.size;
+          const newIds = emps.filter((e) => !existingIds.has(e.employee_id) && !adminNums.includes(e.employee_id));
+          if (currentCount + newIds.length > company.maxEmployees) {
+            throw new HttpError(
+              403,
+              `QUOTA_EXCEEDED: Your plan allows up to ${company.maxEmployees} employees. You have ${currentCount}, the file adds ${newIds.length} new ones (total ${currentCount + newIds.length}). Please upgrade your plan.`
+            );
+          }
+        }
+
         for (const emp of emps) {
           await prisma.employee.upsert({
             where: { employeeId_systemMode: { employeeId: emp.employee_id, systemMode } },

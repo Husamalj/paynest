@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Upload as UploadIcon, Clock, Wallet, FileSpreadsheet, Trash2, CheckCircle2, AlertTriangle, X, Eye, Users } from "lucide-react";
+import { Upload as UploadIcon, Clock, Wallet, FileSpreadsheet, Trash2, CheckCircle2, AlertTriangle, X, Eye, Users, Crown } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 import axios from "axios";
@@ -46,6 +46,7 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [quotaError, setQuotaError] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
   const [preview, setPreview] = useState<any[]>([]);
   const [previewType, setPreviewType] = useState("");
@@ -93,7 +94,12 @@ export default function UploadPage() {
       const nextFiles = await loadUploadedFiles();
       await maybeAutoCalculate(uploadedFiles, nextFiles);
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message);
+      const msg = err.response?.data?.error || err.message;
+      if (typeof msg === "string" && msg.startsWith("QUOTA_EXCEEDED")) {
+        setQuotaError(msg.replace("QUOTA_EXCEEDED: ", ""));
+      } else {
+        setError(msg);
+      }
     } finally { setUploading(""); }
   };
 
@@ -197,6 +203,32 @@ export default function UploadPage() {
           </div>
         )}
       </div>
+
+      {/* ── Quota Exceeded Modal ──────────────────────── */}
+      {quotaError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-gradient-to-br from-amber-400 to-amber-600 px-6 py-8 text-white text-center">
+              <div className="mx-auto w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-3">
+                <Crown size={32} />
+              </div>
+              <h2 className="text-xl font-bold mb-1">Employee Limit Reached</h2>
+              <p className="text-amber-50 text-sm">Subscribe to a larger plan to continue</p>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                {quotaError}
+              </div>
+              <p className="text-sm text-slate-500">
+                Contact the system administrator (Super Admin) to raise your company's employee cap.
+              </p>
+              <div className="flex justify-end">
+                <button className="btn btn-secondary" onClick={() => setQuotaError("")}>OK</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

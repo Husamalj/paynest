@@ -50,6 +50,40 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { employee_id, name, email, phone, base_salary, social_security, religion, allowance } = body;
 
+    // Enforce employee quota — block new employees if company is at max
+    const company = await prisma.company.findUnique({
+      where: { id: session.companyId },
+      select: { maxEmployees: true },
+    });
+    if (company?.maxEmployees != null) {
+      // Check if this is a NEW employee (not updating existing)
+      const existing = await prisma.employee.findUnique({
+        where: { employeeId_systemMode: { employeeId: employee_id, systemMode: mode } },
+        select: { id: true },
+      });
+      if (!existing) {
+        // Count only non-admin employees (matches what HR/Owner see in Employees page)
+        const adminUsers = await prisma.user.findMany({
+          where: { companyId: session.companyId, role: { in: ["owner", "hr", "super_admin"] } },
+          select: { employeeNumber: true },
+        });
+        const adminNums = adminUsers.map((u) => u.employeeNumber).filter(Boolean) as string[];
+        const currentCount = await prisma.employee.count({
+          where: {
+            companyId: session.companyId,
+            systemMode: mode,
+            ...(adminNums.length > 0 ? { NOT: { employeeId: { in: adminNums } } } : {}),
+          },
+        });
+        if (currentCount >= company.maxEmployees) {
+          throw new HttpError(
+            403,
+            `QUOTA_EXCEEDED: Your plan allows up to ${company.maxEmployees} employees. You currently have ${currentCount}. Please upgrade your plan to add more.`
+          );
+        }
+      }
+    }
+
     const employee = await prisma.employee.upsert({
       where: { employeeId_systemMode: { employeeId: employee_id, systemMode: mode } },
       create: {

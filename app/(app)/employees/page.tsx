@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Users, Plus, AlertTriangle, CheckCircle2, X, Shield, Edit2, Trash2,
-  Calendar, Phone, Mail, Hash, Upload, FileText, CheckCircle, ChevronRight,
+  Calendar, Phone, Mail, Hash, Upload, FileText, CheckCircle, ChevronRight, Crown,
 } from "lucide-react";
 import clsx from "clsx";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -75,6 +75,7 @@ export default function EmployeesPage() {
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [quotaError, setQuotaError] = useState("");  // friendly upgrade prompt
 
   // Add modal multi-step
   const [showAdd, setShowAdd] = useState(false);
@@ -145,7 +146,14 @@ export default function EmployeesPage() {
       setCreatedEmpId(form.employee_id);
       setAddStep(2);
       setError("");
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) {
+      if (err.message?.startsWith("QUOTA_EXCEEDED")) {
+        setShowAdd(false);
+        setQuotaError(err.message.replace("QUOTA_EXCEEDED: ", ""));
+      } else {
+        setError(err.message);
+      }
+    }
   };
 
   // Step 2: upload documents
@@ -487,6 +495,40 @@ export default function EmployeesPage() {
             <div className="flex justify-end gap-2 mt-5">
               <button className="btn btn-secondary" onClick={() => setShowDeleteConfirm(false)} disabled={deleting}>{ar ? "لا" : "Cancel"}</button>
               <button className="btn btn-danger" onClick={handleDelete} disabled={deleting}>{deleting ? <span className="spinner" /> : <Trash2 size={15} />}{ar ? "نعم، حذف" : "Yes, Delete"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Quota Exceeded Modal (Upgrade Plan) ──────────────────────── */}
+      {quotaError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden" dir={ar ? "rtl" : "ltr"}>
+            <div className="bg-gradient-to-br from-amber-400 to-amber-600 px-6 py-8 text-white text-center">
+              <div className="mx-auto w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-3">
+                <Crown size={32} />
+              </div>
+              <h2 className="text-xl font-bold mb-1">
+                {ar ? "تم الوصول إلى الحد الأقصى" : "Employee Limit Reached"}
+              </h2>
+              <p className="text-amber-50 text-sm">
+                {ar ? "اشترك في باقة أكبر للمتابعة" : "Subscribe to a larger plan to continue"}
+              </p>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                {quotaError}
+              </div>
+              <p className="text-sm text-slate-500">
+                {ar
+                  ? "للترقية، تواصل مع مسؤول النظام (Super Admin) لرفع حدود الموظفين لشركتك."
+                  : "To upgrade, contact the system administrator (Super Admin) to raise your company's employee cap."}
+              </p>
+              <div className="flex justify-end gap-2">
+                <button className="btn btn-secondary" onClick={() => setQuotaError("")}>
+                  {ar ? "حسناً" : "OK"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
