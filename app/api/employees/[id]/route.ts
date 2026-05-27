@@ -17,6 +17,7 @@ function toSnake(e: any) {
     religion: e.religion,
     base_salary: e.baseSalary,
     allowance: e.allowance,
+    job_title: e.jobTitle,
     social_security: e.socialSecurity,
     remote_days: e.remoteDays,
     system_mode: e.systemMode,
@@ -68,6 +69,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (body.phone !== undefined) data.phone = body.phone ?? "";
     if (body.base_salary !== undefined) data.baseSalary = Number(body.base_salary) || 0;
     if (body.allowance !== undefined) data.allowance = Number(body.allowance) || 0;
+    if (body.job_title !== undefined) data.jobTitle = body.job_title || null;
     if (body.social_security !== undefined) data.socialSecurity = !!body.social_security;
     if (body.remote_days !== undefined) data.remoteDays = body.remote_days;
     if (body.religion !== undefined) data.religion = body.religion ?? "";
