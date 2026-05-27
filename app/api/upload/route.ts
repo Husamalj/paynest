@@ -84,12 +84,20 @@ export async function POST(req: NextRequest) {
         preview = records.slice(0, 10);
 
         for (const record of records) {
+          // Cross-company safety check
+          const collision = await prisma.employee.findUnique({
+            where: { employeeId_systemMode: { employeeId: record.employee_id, systemMode } },
+            select: { companyId: true },
+          });
+          if (collision && collision.companyId !== companyId) {
+            throw new HttpError(409, `Employee ID "${record.employee_id}" is already used by another company`);
+          }
           await prisma.employee.upsert({
             where: { employeeId_systemMode: { employeeId: record.employee_id, systemMode } },
             create: { employeeId: record.employee_id, name: record.employee_name || record.employee_id, systemMode, companyId },
             update: {
               name: record.employee_name && record.employee_name !== record.employee_id ? record.employee_name : undefined,
-              companyId,
+              // Do NOT change companyId on update — keep the record in its original company
             },
           });
 
@@ -166,10 +174,18 @@ export async function POST(req: NextRequest) {
         }
 
         for (const emp of emps) {
+          // Cross-company safety check
+          const collision = await prisma.employee.findUnique({
+            where: { employeeId_systemMode: { employeeId: emp.employee_id, systemMode } },
+            select: { companyId: true },
+          });
+          if (collision && collision.companyId !== companyId) {
+            throw new HttpError(409, `Employee ID "${emp.employee_id}" is already used by another company`);
+          }
           await prisma.employee.upsert({
             where: { employeeId_systemMode: { employeeId: emp.employee_id, systemMode } },
             create: { employeeId: emp.employee_id, name: emp.name, baseSalary: emp.base_salary, socialSecurity: emp.social_security, systemMode, companyId },
-            update: { name: emp.name, baseSalary: emp.base_salary, socialSecurity: emp.social_security, companyId },
+            update: { name: emp.name, baseSalary: emp.base_salary, socialSecurity: emp.social_security },
           });
         }
       }

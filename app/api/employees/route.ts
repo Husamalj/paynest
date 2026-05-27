@@ -50,6 +50,17 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { employee_id, name, email, phone, base_salary, social_security, religion, allowance, job_title } = body;
 
+    // Cross-company safety: if an Employee with this (employeeId, systemMode) already
+    // exists under a DIFFERENT company, reject — otherwise upsert would rebind their
+    // companyId and effectively steal/overwrite another company's record.
+    const collision = await prisma.employee.findUnique({
+      where: { employeeId_systemMode: { employeeId: employee_id, systemMode: mode } },
+      select: { id: true, companyId: true },
+    });
+    if (collision && collision.companyId !== session.companyId) {
+      throw new HttpError(409, "Employee ID already used by another company");
+    }
+
     // Enforce employee quota — block new employees if company is at max
     const company = await prisma.company.findUnique({
       where: { id: session.companyId },
