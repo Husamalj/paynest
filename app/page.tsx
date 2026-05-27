@@ -188,9 +188,12 @@ function Hero({ ar }: { ar: boolean }) {
             {ar ? "ابدأ مجاناً" : "Get Started Free"}
             <ArrowRight size={17} className={ar ? "rotate-180" : ""} />
           </button>
-          <button className="inline-flex items-center gap-2 bg-white text-slate-700 hover:text-slate-900 border border-slate-200 hover:border-slate-300 text-base font-semibold px-6 py-3 rounded-xl shadow-sm transition-all">
-            <PlayCircle size={17} />
-            {ar ? "شاهد العرض" : "Watch Demo"}
+          <button
+            onClick={() => router.push("/portal-select")}
+            className="inline-flex items-center gap-2 bg-white text-slate-700 hover:text-slate-900 border border-slate-200 hover:border-slate-300 text-base font-semibold px-6 py-3 rounded-xl shadow-sm transition-all"
+          >
+            <LogIn size={17} />
+            {ar ? "تسجيل الدخول" : "Log In"}
           </button>
         </div>
 
