@@ -93,6 +93,16 @@ export async function POST(req: NextRequest) {
             },
           });
 
+          // Prisma needs ISO DateTime for @db.Time columns — wrap "HH:mm" into a date
+          const toTimeISO = (t: string | null | undefined): Date | null => {
+            if (!t) return null;
+            const m = t.match(/^(\d{1,2}):(\d{2})/);
+            if (!m) return null;
+            const h = parseInt(m[1], 10);
+            const min = parseInt(m[2], 10);
+            return new Date(Date.UTC(1970, 0, 1, h, min, 0));
+          };
+
           const existing = await prisma.attendanceRecord.findFirst({
             where: { employeeId: record.employee_id, workDate: new Date(record.work_date), systemMode, companyId },
           });
@@ -101,8 +111,8 @@ export async function POST(req: NextRequest) {
             await prisma.attendanceRecord.update({
               where: { id: existing.id },
               data: {
-                clockIn: record.clock_in ?? null,
-                clockOut: record.clock_out ?? null,
+                clockIn: toTimeISO(record.clock_in),
+                clockOut: toTimeISO(record.clock_out),
                 hoursWorked: record.hours_worked,
                 uploadBatch: batchId,
               },
@@ -113,8 +123,8 @@ export async function POST(req: NextRequest) {
                 companyId,
                 employeeId: record.employee_id,
                 workDate: new Date(record.work_date),
-                clockIn: record.clock_in ?? null,
-                clockOut: record.clock_out ?? null,
+                clockIn: toTimeISO(record.clock_in),
+                clockOut: toTimeISO(record.clock_out),
                 hoursWorked: record.hours_worked,
                 uploadBatch: batchId,
                 systemMode,
