@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 import { parseAttendanceFile, parseSalaryFile } from "@/lib/excelParser";
+import { logAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -206,6 +207,12 @@ export async function POST(req: NextRequest) {
       results.push({ filename: file.name, row_count: rowCount, employee_count: employeeCount, type: fileType, preview });
     }
 
+    await logAudit(session, "upload", "upload", batchId, {
+      type: fileType,
+      filesCount: files.length,
+      totalRows: results.reduce((s, r) => s + (r.row_count || 0), 0),
+      totalEmployees: results.reduce((s, r) => s + (r.employee_count || 0), 0),
+    });
     return NextResponse.json({ success: true, batch_id: batchId, system_mode: systemMode, company_id: companyId, files: results });
   } catch (err) {
     return errorResponse(err);

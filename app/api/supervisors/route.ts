@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
@@ -136,6 +137,7 @@ export async function PUT(req: NextRequest) {
       )
     );
 
+    await logAudit(session, "update", "supervisor", null, { assignmentsCount: assignments.length, sample: normalised.slice(0, 5) });
     return NextResponse.json({ ok: true, updated: assignments.length });
   } catch (err) {
     return errorResponse(err);

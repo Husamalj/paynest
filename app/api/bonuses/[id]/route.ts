@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
@@ -15,6 +16,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       where: { id: Number(id), companyId: session.companyId },
     });
     if (result.count === 0) throw new HttpError(404, "Record not found");
+    await logAudit(session, "delete", "bonus", id);
     return NextResponse.json({ success: true });
   } catch (err) {
     return errorResponse(err);

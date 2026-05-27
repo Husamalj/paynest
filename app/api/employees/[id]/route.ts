@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { logAudit, diff } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
@@ -61,6 +62,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const mode = await getSystemMode(session.companyId);
     const body = await req.json();
+
+    // Snapshot before for audit diff
+    const before = await prisma.employee.findFirst({
+      where: { employeeId: id, companyId: session.companyId, systemMode: mode },
+    });
 
     const data: Record<string, unknown> = {};
     if (body.employee_id !== undefined) data.employeeId = body.employee_id;
@@ -135,6 +141,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const updated = await prisma.employee.findFirst({
       where: { employeeId: newId, companyId: session.companyId },
     });
+    await logAudit(session, "update", "employee", newId, diff(before, updated));
     return NextResponse.json(toSnake(updated));
   } catch (err) {
     return errorResponse(err);
@@ -151,6 +158,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { id } = await params;
     const mode = await getSystemMode(session.companyId);
 
+    // Snapshot before delete for audit
+    const before = await prisma.employee.findFirst({
+      where: { employeeId: id, companyId: session.companyId, systemMode: mode },
+      select: { name: true, email: true, baseSalary: true },
+    });
+
     await prisma.user.deleteMany({
       where: { employeeNumber: id, companyId: session.companyId, role: "employee" },
     });
@@ -162,6 +175,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       },
     });
 
+    await logAudit(session, "delete", "employee", id, before ?? null);
     return NextResponse.json({ success: true });
   } catch (err) {
     return errorResponse(err);

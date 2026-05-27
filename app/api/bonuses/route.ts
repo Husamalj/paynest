@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
@@ -63,6 +64,9 @@ export async function POST(req: NextRequest) {
         periodYear: body.period_year ?? now.getFullYear(),
         systemMode: mode,
       },
+    });
+    await logAudit(session, "create", "bonus", record.id, {
+      employeeId: record.employeeId, type: record.type, amount: record.amount, reason: record.reason,
     });
     return NextResponse.json(record);
   } catch (err) {

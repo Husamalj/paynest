@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
@@ -82,6 +83,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         });
       }
     }
+
+    // Audit: log the decision (approve / reject / status update)
+    const action = leave.status === "approved" ? "approve" : leave.status === "rejected" ? "reject" : "update";
+    await logAudit(session, action, "leave", leave.id, {
+      employeeId: leave.employeeId,
+      leaveType: leave.leaveType,
+      supervisorStatus: leave.supervisorStatus,
+      hrStatus: leave.hrStatus,
+      status: leave.status,
+    });
 
     return NextResponse.json(leave);
   } catch (err) {

@@ -32,8 +32,27 @@ model Company {
   announcements      Announcement[]
   employeeDocuments  EmployeeDocument[]
   evaluations        Evaluation[]
+  auditLogs          AuditLog[]
 
   @@map("companies")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  companyId Int      @map("company_id")
+  userId    Int      @map("user_id")
+  userName  String?  @map("user_name") @db.VarChar(255)
+  userRole  String?  @map("user_role") @db.VarChar(20)
+  action    String   @db.VarChar(50)
+  entity    String   @db.VarChar(50)
+  entityId  String?  @map("entity_id") @db.VarChar(100)
+  changes   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+  @@map("audit_logs")
 }
 
 model User {

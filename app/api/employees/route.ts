@@ -2,6 +2,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
@@ -147,6 +148,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    await logAudit(session, collision ? "update" : "create", "employee", employee.employeeId, {
+      name, email, baseSalary: Number(base_salary) || 0, allowance: Number(allowance) || 0,
+      jobTitle: job_title ?? null,
+    });
     return NextResponse.json(toSnake(employee));
   } catch (err) {
     return errorResponse(err);
