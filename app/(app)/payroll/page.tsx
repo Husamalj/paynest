@@ -103,7 +103,25 @@ export default function PayrollPage() {
             </select>
           </div>
         </div>
-        {payroll.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noData")}</div> : (
+        {payroll.length === 0 ? (
+          <div className="text-center py-16 px-6">
+            <Calculator size={36} className="mx-auto text-slate-300 mb-3" />
+            <p className="font-medium text-slate-700 mb-1">
+              {ar
+                ? `لا توجد بيانات رواتب لـ ${months[periodMonth - 1]} ${periodYear}`
+                : `No payroll data for ${months[periodMonth - 1]} ${periodYear}`}
+            </p>
+            <p className="text-sm text-slate-500 mb-5">
+              {ar
+                ? "اضغط الزر أدناه لاحتساب الرواتب لهذه الفترة (يجب رفع ملفات الحضور والرواتب أولاً)."
+                : "Click below to calculate payroll for this period (attendance & salary files must be uploaded first)."}
+            </p>
+            <button onClick={handleCalculate} disabled={calculating} className="btn btn-primary gap-2">
+              {calculating ? <span className="spinner" /> : <Zap size={15} />}
+              {ar ? `احتساب رواتب ${months[periodMonth - 1]} ${periodYear}` : `Calculate ${months[periodMonth - 1]} ${periodYear}`}
+            </button>
+          </div>
+        ) : (
           <div className="table-wrapper">
             <table>
               <thead>
