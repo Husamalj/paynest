@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 
@@ -82,16 +83,49 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const newId = (body.employee_id as string | undefined) ?? id;
 
-    // Sync user record
+    // Sync user record — UPDATE if exists, CREATE if missing (and email provided)
     if (body.email !== undefined || body.name !== undefined || body.employee_id !== undefined) {
-      await prisma.user.updateMany({
-        where: { employeeNumber: id, companyId: session.companyId, role: "employee" },
-        data: {
-          name: body.name ?? undefined,
-          email: body.email || undefined,
-          employeeNumber: newId,
+      // Look up existing user by employeeNumber OR by email
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          companyId: session.companyId,
+          OR: [
+            { employeeNumber: id },
+            ...(body.email ? [{ email: body.email as string }] : []),
+          ],
         },
       });
+
+      if (existingUser) {
+        // Update existing user — keep their role, just sync details
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            name: body.name ?? undefined,
+            email: body.email || undefined,
+            employeeNumber: newId,
+          },
+        });
+      } else if (body.email) {
+        // No user account yet — create one with default password (employee role)
+        // Find the employee record to use its current name if not in body
+        const empRec = await prisma.employee.findFirst({
+          where: { employeeId: newId, companyId: session.companyId },
+          select: { name: true },
+        });
+        const hash = await bcrypt.hash("123456", 10);
+        await prisma.user.create({
+          data: {
+            name: body.name ?? empRec?.name ?? newId,
+            email: body.email,
+            password: hash,
+            role: "employee",
+            companyId: session.companyId,
+            employeeNumber: newId,
+            mustChangePassword: true,
+          },
+        });
+      }
     }
 
     const updated = await prisma.employee.findFirst({
