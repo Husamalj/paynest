@@ -39,8 +39,12 @@ function FileDropZone({ label, icon: Icon, accent, onFiles, accept, uploading }:
   );
 }
 
+const MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
 export default function UploadPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const now = new Date();
   const [attendanceFiles, setAttendanceFiles] = useState<File[]>([]);
   const [salaryFiles, setSalaryFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState("");
@@ -51,6 +55,12 @@ export default function UploadPage() {
   const [preview, setPreview] = useState<any[]>([]);
   const [previewType, setPreviewType] = useState("");
   const [lastUpload, setLastUpload] = useState<any>(null);
+  const [periodMonth, setPeriodMonth] = useState(now.getMonth() + 1);
+  const [periodYear, setPeriodYear]   = useState(now.getFullYear());
+  const [calculating, setCalculating] = useState(false);
+  const ar = lang === "ar";
+  const months = ar ? MONTHS_AR : MONTHS_EN;
+  const yearOptions = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1];
 
   useEffect(() => { loadUploadedFiles(); }, []);
 
@@ -68,9 +78,24 @@ export default function UploadPage() {
     if (hadBoth) return;
     if (!nextFiles.some((f) => f.fileType === "attendance") || !nextFiles.some((f) => f.fileType === "salary")) return;
     try {
-      await api.post("/payroll/calculate", {});
+      await api.post("/payroll/calculate", { month: periodMonth, year: periodYear });
       setSuccess((p) => p ? `${p} - ${t("calculationDone")}` : t("calculationDone"));
     } catch (err: any) { setError(err.message); }
+  };
+
+  const runCalculate = async () => {
+    setCalculating(true); setError(""); setSuccess("");
+    try {
+      await api.post("/payroll/calculate", { month: periodMonth, year: periodYear });
+      setSuccess(`${t("calculationDone")} — ${months[periodMonth - 1]} ${periodYear}`);
+    } catch (err: any) {
+      const msg = err.response?.data?.error || err.message;
+      if (typeof msg === "string" && msg.startsWith("QUOTA_EXCEEDED")) {
+        setQuotaError(msg.replace("QUOTA_EXCEEDED: ", ""));
+      } else {
+        setError(msg);
+      }
+    } finally { setCalculating(false); }
   };
 
   const handleUpload = async (files: File[], type: string) => {
@@ -120,6 +145,31 @@ export default function UploadPage() {
 
       {error && <div className="alert alert-error"><AlertTriangle size={16} className="flex-shrink-0" /><span className="flex-1">{error}</span><button onClick={() => setError("")} className="ml-auto opacity-60 hover:opacity-100"><X size={14} /></button></div>}
       {success && <div className="alert alert-success"><CheckCircle2 size={16} className="flex-shrink-0" /><span className="flex-1">{success}</span><button onClick={() => setSuccess("")} className="ml-auto opacity-60 hover:opacity-100"><X size={14} /></button></div>}
+
+      {/* ── Period selector + Calculate button ─────────────────────── */}
+      <div className="card border-2 border-brand-200 bg-brand-50/30">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2 text-brand-700 font-semibold">
+            <Clock size={16} />
+            {ar ? "فترة الاحتساب:" : "Calculation period:"}
+          </div>
+          <select className="form-select w-36 text-sm" value={periodMonth} onChange={(e) => setPeriodMonth(+e.target.value)}>
+            {months.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+          </select>
+          <select className="form-select w-28 text-sm" value={periodYear} onChange={(e) => setPeriodYear(+e.target.value)}>
+            {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <button onClick={runCalculate} disabled={calculating} className="btn btn-primary gap-2 ms-auto">
+            {calculating ? <span className="spinner" /> : <Wallet size={15} />}
+            {ar ? "احتساب الرواتب" : "Calculate Payroll"}
+          </button>
+        </div>
+        <p className="text-xs text-slate-500 mt-2">
+          {ar
+            ? "اختر الشهر والسنة لكل من رفع الملفات واحتساب الرواتب. سيتم استخدام هذه القيم لتحديد الفترة المحاسبية."
+            : "Pick the month and year — used for both file uploads and payroll calculation."}
+        </p>
+      </div>
 
       {lastUpload && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
