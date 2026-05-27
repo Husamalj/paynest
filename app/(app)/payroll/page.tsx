@@ -36,10 +36,14 @@ export default function PayrollPage() {
 
   const loadPayroll = async (m: number, y: number) => {
     try {
-      // Always query the specific period — do NOT fall back to /payroll/latest,
-      // which ignores month/year and returns the most recent calculation regardless.
-      const res = await api.get(`/payroll/period?month=${m}&year=${y}`).catch(() => ({ data: [] as any[] }));
-      setPayroll(Array.isArray(res.data) ? res.data : []);
+      // Try period endpoint first (historical), fall back to latest if empty
+      const periodRes = await api.get(`/payroll/period?month=${m}&year=${y}`).catch(() => ({ data: [] as any[] }));
+      if (Array.isArray(periodRes.data) && periodRes.data.length > 0) {
+        setPayroll(periodRes.data);
+        return;
+      }
+      const latestRes = await api.get(`/payroll/latest?month=${m}&year=${y}`);
+      setPayroll(latestRes.data?.results || []);
     } catch (err: any) { setError(err.message); }
   };
 
