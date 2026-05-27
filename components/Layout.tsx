@@ -130,10 +130,10 @@ export default function Layout({ children, settings }: LayoutProps) {
   };
 
   // Owner sees everything. HR sees everything except owner-only items.
-  // supervisorAssignment is visible to both owner and HR.
+  // hrTeam stays owner-only; settings visible to owner + HR.
   const navItems = role === "owner"
     ? NAV_ITEMS
-    : NAV_ITEMS.filter((item) => item.key !== "settings" && item.key !== "hrTeam");
+    : NAV_ITEMS.filter((item) => item.key !== "hrTeam");
   const companyName = settings?.company_name || user.company_name || "PayNest";
 
   const currentNav = navItems.find((i) =>

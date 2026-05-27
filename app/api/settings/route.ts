@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const session = await requireAuth(req);
-    requireRole(session, ["owner"]);
+    requireRole(session, ["owner", "hr"]);
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
     const body = await req.json();
