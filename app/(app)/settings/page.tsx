@@ -71,15 +71,82 @@ export default function SettingsPage() {
       {success && <div className="alert alert-success"><CheckCircle2 size={16} /><span className="flex-1">{success}</span><button onClick={() => setSuccess("")} className="opacity-60 hover:opacity-100"><X size={14} /></button></div>}
 
       <form onSubmit={handleSave} className="space-y-5">
+        {/* ── System Mode (pay scale) — most prominent ───────────────── */}
+        <div className="card border-2 border-brand-200">
+          <div className="card-header"><div className="card-title"><Calculator size={16} className="text-brand-600" />
+            {lang === "ar" ? "نظام احتساب الراتب" : "Payroll System"}
+          </div></div>
+          <p className="text-sm text-slate-500 mb-3">
+            {lang === "ar"
+              ? "اختر طريقة احتساب الراتب: يومي (حسب أيام الدوام) أو ساعي (حسب ساعات الدوام)"
+              : "Choose how salaries are calculated — Daily (by workdays) or Hourly (by clocked hours)"}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button type="button"
+              onClick={() => setForm((f) => ({ ...f, system_mode: "daily" }))}
+              className={clsx(
+                "rounded-xl border-2 p-4 text-left transition-all",
+                form.system_mode === "daily"
+                  ? "border-brand-500 bg-brand-50"
+                  : "border-slate-200 hover:border-brand-300"
+              )}>
+              <div className="font-bold text-slate-900 mb-1">
+                {lang === "ar" ? "📅 يومي (Daily)" : "📅 Daily-based"}
+              </div>
+              <div className="text-xs text-slate-500">
+                {lang === "ar"
+                  ? "الراتب = الراتب الأساسي ÷ أيام الشهر × أيام الدوام"
+                  : "Salary = Base ÷ month days × days worked"}
+              </div>
+            </button>
+            <button type="button"
+              onClick={() => setForm((f) => ({ ...f, system_mode: "hourly" }))}
+              className={clsx(
+                "rounded-xl border-2 p-4 text-left transition-all",
+                form.system_mode === "hourly"
+                  ? "border-brand-500 bg-brand-50"
+                  : "border-slate-200 hover:border-brand-300"
+              )}>
+              <div className="font-bold text-slate-900 mb-1">
+                {lang === "ar" ? "⏱️ ساعي (Hourly)" : "⏱️ Hourly-based"}
+              </div>
+              <div className="text-xs text-slate-500">
+                {lang === "ar"
+                  ? "الراتب = الراتب الأساسي ÷ الساعات الشهرية × الساعات الفعلية"
+                  : "Salary = Base ÷ monthly hours × hours worked"}
+              </div>
+            </button>
+          </div>
+        </div>
+
         <div className="card">
           <div className="card-header"><div className="card-title"><Calculator size={16} className="text-brand-600" />{t("calculationSettings")}</div></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div><label className="form-label">{t("companyName")}</label><input className="form-input" value={form.company_name} onChange={(e) => setForm((f) => ({ ...f, company_name: e.target.value }))} /></div>
-            <div><label className="form-label">{t("reqHours")}</label><input type="number" className="form-input" value={form.req_hours} onChange={(e) => setForm((f) => ({ ...f, req_hours: parseFloat(e.target.value) || 8 }))} min={1} max={24} step={0.5} /></div>
-            <div><label className="form-label">{t("monthDays")}</label><input type="number" className="form-input" value={form.month_days} onChange={(e) => setForm((f) => ({ ...f, month_days: parseInt(e.target.value) || 26 }))} min={1} max={31} /></div>
-            <div><label className="form-label">{t("lateTolerance")}</label><input type="number" className="form-input" value={form.late_tolerance} onChange={(e) => setForm((f) => ({ ...f, late_tolerance: parseInt(e.target.value) || 0 }))} min={0} /></div>
-            <div><label className="form-label">{t("deductionRate")}</label><input type="number" step="0.01" className="form-input" value={form.deduction_rate} onChange={(e) => setForm((f) => ({ ...f, deduction_rate: parseFloat(e.target.value) || 1 }))} /></div>
-            <div><label className="form-label">{t("extraRate")}</label><input type="number" step="0.01" className="form-input" value={form.extra_rate} onChange={(e) => setForm((f) => ({ ...f, extra_rate: parseFloat(e.target.value) || 1 }))} /></div>
+            <div>
+              <label className="form-label">
+                {form.system_mode === "hourly"
+                  ? (lang === "ar" ? "ساعات الدوام يوميًا" : "Required hours / day")
+                  : (lang === "ar" ? "ساعات الدوام يوميًا" : "Hours per workday")}
+              </label>
+              <input type="number" className="form-input" value={form.req_hours} onChange={(e) => setForm((f) => ({ ...f, req_hours: parseFloat(e.target.value) || 8 }))} min={1} max={24} step={0.5} />
+            </div>
+            <div>
+              <label className="form-label">{lang === "ar" ? "أيام العمل في الشهر" : "Workdays / month"}</label>
+              <input type="number" className="form-input" value={form.month_days} onChange={(e) => setForm((f) => ({ ...f, month_days: parseInt(e.target.value) || 26 }))} min={1} max={31} />
+            </div>
+            <div>
+              <label className="form-label">{lang === "ar" ? "حد التأخير المسموح (دقائق)" : "Late tolerance (mins)"}</label>
+              <input type="number" className="form-input" value={form.late_tolerance} onChange={(e) => setForm((f) => ({ ...f, late_tolerance: parseInt(e.target.value) || 0 }))} min={0} />
+            </div>
+            <div>
+              <label className="form-label">{lang === "ar" ? "معدل خصم التأخير" : "Deduction rate"}</label>
+              <input type="number" step="0.01" className="form-input" value={form.deduction_rate} onChange={(e) => setForm((f) => ({ ...f, deduction_rate: parseFloat(e.target.value) || 1 }))} />
+            </div>
+            <div>
+              <label className="form-label">{lang === "ar" ? "معدل ساعات إضافية" : "Overtime rate"}</label>
+              <input type="number" step="0.01" className="form-input" value={form.extra_rate} onChange={(e) => setForm((f) => ({ ...f, extra_rate: parseFloat(e.target.value) || 1 }))} />
+            </div>
           </div>
         </div>
 

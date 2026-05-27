@@ -63,7 +63,7 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-const emptyForm = { employee_id: "", name: "", email: "", phone: "", base_salary: "", social_security: false, religion: "" };
+const emptyForm = { employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", social_security: false, religion: "" };
 
 export default function EmployeesPage() {
   const { t, lang } = useLanguage();
@@ -90,7 +90,7 @@ export default function EmployeesPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [editForm, setEditForm] = useState({ employee_id: "", name: "", email: "", phone: "", base_salary: "", social_security: false, religion: "" });
+  const [editForm, setEditForm] = useState({ employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", social_security: false, religion: "" });
 
   // Existing employee documents
   const [empDocs, setEmpDocs] = useState<any[]>([]);
@@ -141,7 +141,7 @@ export default function EmployeesPage() {
     e.preventDefault();
     if (!form.employee_id || !form.name || !form.email || !form.base_salary) { setError(t("fillRequired")); return; }
     try {
-      await api.post("/employees", { ...form, base_salary: parseFloat(form.base_salary) });
+      await api.post("/employees", { ...form, base_salary: parseFloat(form.base_salary), allowance: parseFloat(form.allowance || "0") });
       setCreatedEmpId(form.employee_id);
       setAddStep(2);
       setError("");
@@ -183,6 +183,7 @@ export default function EmployeesPage() {
       email: selectedEmployee.email || "",
       phone: selectedEmployee.phone || "",
       base_salary: selectedEmployee.base_salary || "",
+      allowance: selectedEmployee.allowance || "",
       social_security: !!selectedEmployee.social_security,
       religion: selectedEmployee.religion || "",
     });
@@ -195,7 +196,7 @@ export default function EmployeesPage() {
     if (!editForm.employee_id || !editForm.name || !editForm.email || !editForm.base_salary) { setError(t("fillRequired")); return; }
     setSavingEdit(true);
     try {
-      const res = await api.put(`/employees/${selectedEmployee.employee_id}`, { ...editForm, base_salary: parseFloat(editForm.base_salary) });
+      const res = await api.put(`/employees/${selectedEmployee.employee_id}`, { ...editForm, base_salary: parseFloat(editForm.base_salary), allowance: parseFloat(editForm.allowance || "0") });
       setEmployees((p) => p.map((emp) => emp.employee_id === selectedEmployee.employee_id ? res.data : emp));
       setSelectedId(res.data.employee_id);
       setSuccess(ar ? "تم تعديل بيانات الموظف" : "Employee updated successfully");
@@ -385,6 +386,7 @@ export default function EmployeesPage() {
                   <PhoneInput value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} />
                 </div>
                 <div><label className="form-label">{t("baseSalary")} *</label><input type="number" className="form-input" value={form.base_salary} onChange={(e) => setForm((f) => ({ ...f, base_salary: e.target.value }))} placeholder="0.00" /></div>
+                <div><label className="form-label">{ar ? "العلاوة (Allowance)" : "Allowance"}</label><input type="number" className="form-input" value={form.allowance} onChange={(e) => setForm((f) => ({ ...f, allowance: e.target.value }))} placeholder="0.00" /></div>
                 <div><label className="form-label">{religionTitle}</label><select className="form-input" value={form.religion} onChange={(e) => setForm((f) => ({ ...f, religion: e.target.value }))}><option value="">{ar ? "اختر الديانة" : "Select religion"}</option>{religionOptions.map((r) => <option key={r.value} value={r.value}>{(r as any)[lang] || r.en}</option>)}</select></div>
                 <div className="flex items-center justify-between"><div className="text-sm font-medium text-slate-700">{t("socialSecurity")}</div><label className="toggle"><input type="checkbox" checked={form.social_security} onChange={(e) => setForm((f) => ({ ...f, social_security: e.target.checked }))} /><span className="toggle-slider" /></label></div>
                 <div className="flex justify-end gap-2">
@@ -458,6 +460,7 @@ export default function EmployeesPage() {
               <div><label className="form-label">{emailTitle} *</label><input type="email" className="form-input" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} /></div>
               <div><label className="form-label">{phoneTitle}</label><PhoneInput value={editForm.phone} onChange={(v) => setEditForm((f) => ({ ...f, phone: v }))} /></div>
               <div><label className="form-label">{t("baseSalary")} *</label><input type="number" className="form-input" value={editForm.base_salary} onChange={(e) => setEditForm((f) => ({ ...f, base_salary: e.target.value }))} /></div>
+              <div><label className="form-label">{ar ? "العلاوة (Allowance)" : "Allowance"}</label><input type="number" className="form-input" value={editForm.allowance} onChange={(e) => setEditForm((f) => ({ ...f, allowance: e.target.value }))} placeholder="0.00" /></div>
               <div><label className="form-label">{religionTitle}</label><select className="form-input" value={editForm.religion} onChange={(e) => setEditForm((f) => ({ ...f, religion: e.target.value }))}><option value="">{ar ? "اختر الديانة" : "Select religion"}</option>{religionOptions.map((r) => <option key={r.value} value={r.value}>{(r as any)[lang] || r.en}</option>)}</select></div>
               <div className="flex items-center justify-between"><div className="text-sm font-medium text-slate-700">{t("socialSecurity")}</div><label className="toggle"><input type="checkbox" checked={editForm.social_security} onChange={(e) => setEditForm((f) => ({ ...f, social_security: e.target.checked }))} /><span className="toggle-slider" /></label></div>
               <div className="flex justify-end gap-2"><button type="button" className="btn btn-secondary" onClick={() => setShowEdit(false)}>{t("cancel")}</button><button type="submit" className="btn btn-primary" disabled={savingEdit}>{savingEdit ? <span className="spinner" /> : null}{t("save")}</button></div>

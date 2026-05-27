@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     const mode = await getSystemMode(session.companyId);
     const body = await req.json();
-    const { employee_id, name, email, phone, base_salary, social_security, religion } = body;
+    const { employee_id, name, email, phone, base_salary, social_security, religion, allowance } = body;
 
     const employee = await prisma.employee.upsert({
       where: { employeeId_systemMode: { employeeId: employee_id, systemMode: mode } },
@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
         email: email ?? "",
         phone: phone ?? "",
         baseSalary: Number(base_salary) || 0,
+        allowance: Number(allowance) || 0,
         socialSecurity: !!social_security,
         religion: religion ?? "",
         systemMode: mode,
@@ -68,6 +69,7 @@ export async function POST(req: NextRequest) {
         email: email ?? "",
         phone: phone ?? "",
         baseSalary: Number(base_salary) || 0,
+        allowance: Number(allowance) || 0,
         socialSecurity: !!social_security,
         religion: religion ?? "",
         companyId: session.companyId,
@@ -114,6 +116,7 @@ function toSnake(e: any) {
     phone: e.phone,
     religion: e.religion,
     base_salary: e.baseSalary,
+    allowance: e.allowance,
     social_security: e.socialSecurity,
     remote_days: e.remoteDays,
     system_mode: e.systemMode,
