@@ -30,6 +30,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ company: updated });
     }
 
+    // Update maxEmployees (subscription cap)
+    if (body.maxEmployees !== undefined) {
+      const parsed =
+        body.maxEmployees === null || body.maxEmployees === ""
+          ? null
+          : Math.max(0, parseInt(String(body.maxEmployees), 10) || 0);
+      const updated = await prisma.company.update({
+        where: { id: Number(id) },
+        data: { maxEmployees: parsed },
+      });
+      return NextResponse.json(updated);
+    }
+
     throw new HttpError(400, "Invalid request body");
   } catch (err) {
     return errorResponse(err);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  Building2, Plus, X, CheckCircle2, AlertTriangle,
+  Building2, Plus, X, CheckCircle2, AlertTriangle, Edit3,
   Trash2, LogOut, Power, Clock, Users, Ban, RefreshCw,
 } from "lucide-react";
 import api from "@/lib/api";
@@ -26,6 +26,7 @@ export default function SuperAdminPage() {
   const [success, setSuccess] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
   const [form, setForm] = useState({ companyName: "", slug: "", ownerName: "", email: "", password: "123456", maxEmployees: "" });
+  const [editMax, setEditMax] = useState<{ company: any; value: string } | null>(null);
 
   const signOut = () => {
     ["token", "paynest_logged_in", "role", "user", "paynest_employee_id"].forEach((k) => localStorage.removeItem(k));
@@ -75,6 +76,19 @@ export default function SuperAdminPage() {
         await api.patch(`/companies/${id}/${endpoint}`);
       }
       setSuccess(successMsg);
+      await load();
+    } catch (e: any) { setError(safeErr(e)); }
+    finally { setBusyId(null); }
+  };
+
+  const saveMaxEmployees = async () => {
+    if (!editMax) return;
+    setBusyId(editMax.company.id); setError(""); setSuccess("");
+    try {
+      await api.patch(`/companies/${editMax.company.id}`, { maxEmployees: editMax.value });
+      const newVal = editMax.value === "" ? "unlimited" : editMax.value;
+      setSuccess(`Max employees for "${editMax.company.name}" set to ${newVal}`);
+      setEditMax(null);
       await load();
     } catch (e: any) { setError(safeErr(e)); }
     finally { setBusyId(null); }
@@ -176,7 +190,7 @@ export default function SuperAdminPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>Company</th><th>Owner Email</th><th>Slug</th><th>Employees</th><th>Status</th><th>Registered</th><th className="text-right">Actions</th>
+                    <th>Company</th><th>Owner Email</th><th>Slug</th><th>Employees</th><th>Max</th><th>Status</th><th>Registered</th><th className="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -191,6 +205,16 @@ export default function SuperAdminPage() {
                         <td className="font-mono text-xs text-slate-500">{c.slug}</td>
                         <td><span className="flex items-center gap-1 text-slate-600"><Users size={13} /> {c.employee_count ?? "—"}</span></td>
                         <td>
+                          <span className={clsx(
+                            "text-xs font-medium",
+                            c.max_employees != null && c.employee_count >= c.max_employees ? "text-rose-600" :
+                            c.max_employees != null && c.employee_count >= (c.max_employees * 0.8) ? "text-amber-600" :
+                            "text-slate-500"
+                          )}>
+                            {c.max_employees == null ? "∞" : c.max_employees}
+                          </span>
+                        </td>
+                        <td>
                           {isPending && <span className="badge badge-yellow">Pending</span>}
                           {isActive && <span className="badge badge-green">Active</span>}
                           {isSuspended && <span className="badge badge-red">Suspended</span>}
@@ -198,6 +222,9 @@ export default function SuperAdminPage() {
                         <td className="text-slate-500 text-xs">{c.created_at ? new Date(c.created_at).toLocaleDateString() : "—"}</td>
                         <td>
                           <div className="flex justify-end gap-2">
+                            <button className="btn btn-sm btn-secondary" disabled={busyId === c.id} onClick={() => setEditMax({ company: c, value: c.max_employees == null ? "" : String(c.max_employees) })}>
+                              <Edit3 size={13} /> Limit
+                            </button>
                             {isPending && (
                               <>
                                 <button className="btn btn-sm btn-success" disabled={busyId === c.id} onClick={() => action(c.id, "approve", `"${c.name}" approved`)}><CheckCircle2 size={13} /> Approve</button>
@@ -252,6 +279,43 @@ export default function SuperAdminPage() {
               </div>
               <div className="flex justify-end gap-2"><button type="button" className="btn btn-secondary" onClick={() => setShowAdd(false)}>Cancel</button><button type="submit" className="btn btn-primary">Create Company</button></div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Max Employees Modal */}
+      {editMax && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setEditMax(null); }}>
+          <div className="modal">
+            <div className="modal-header">
+              <h3 className="modal-title">Edit Employee Limit — {editMax.company.name}</h3>
+              <button className="modal-close" onClick={() => setEditMax(null)}><X size={18} /></button>
+            </div>
+            <div className="space-y-4">
+              <div className="text-sm bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <div className="text-slate-500">Current employees: <strong className="text-slate-900">{editMax.company.employee_count ?? 0}</strong></div>
+                <div className="text-slate-500">Current limit: <strong className="text-slate-900">{editMax.company.max_employees == null ? "Unlimited" : editMax.company.max_employees}</strong></div>
+              </div>
+              <div>
+                <label className="form-label">New Max Employees</label>
+                <input
+                  type="number"
+                  min="0"
+                  className="form-input"
+                  value={editMax.value}
+                  onChange={(e) => setEditMax({ ...editMax, value: e.target.value })}
+                  placeholder="Leave empty for unlimited"
+                  autoFocus
+                />
+                <p className="text-xs text-slate-400 mt-1">Leave empty for unlimited employees.</p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" className="btn btn-secondary" onClick={() => setEditMax(null)}>Cancel</button>
+                <button type="button" className="btn btn-primary" onClick={saveMaxEmployees} disabled={busyId === editMax.company.id}>
+                  {busyId === editMax.company.id ? <span className="spinner" /> : <CheckCircle2 size={15} />} Save Limit
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
