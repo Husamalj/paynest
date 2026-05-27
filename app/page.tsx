@@ -27,9 +27,12 @@ function TopNav({ ar }: { ar: boolean }) {
           onClick={() => router.push("/")}
           className="flex items-center gap-2"
         >
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-            <Building2 size={17} className="text-white" strokeWidth={2.5} />
-          </div>
+          <img
+            src="/logo.png"
+            alt="PayNest"
+            className="h-9 w-9 object-contain"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+          />
           <span className="font-black text-lg text-slate-900 tracking-tight">
             Pay<span className="text-brand-600">Nest</span>
           </span>
