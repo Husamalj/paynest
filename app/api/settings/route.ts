@@ -28,8 +28,13 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     const existing = await prisma.companySettings.findFirst({ where: { companyId: session.companyId } });
 
+    // Only owner can change the company name
+    const newCompanyName = body.company_name ?? body.companyName;
+    const companyNameToSave =
+      session.role === "owner" ? newCompanyName : (existing?.companyName ?? undefined);
+
     const data = {
-      companyName: body.company_name ?? body.companyName,
+      companyName: companyNameToSave,
       systemMode: body.system_mode ?? body.systemMode,
       language: body.language,
       reqHours: body.req_hours != null ? Number(body.req_hours) : body.reqHours != null ? Number(body.reqHours) : undefined,

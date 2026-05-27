@@ -21,6 +21,8 @@ const defaultForm = { company_name: "PayNest", system_mode: "daily", language: "
 
 export default function SettingsPage() {
   const { t, lang } = useLanguage();
+  const role = typeof window !== "undefined" ? localStorage.getItem("role") : null;
+  const isOwner = role === "owner";
   const [form, setForm] = useState({ ...defaultForm });
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
@@ -122,7 +124,16 @@ export default function SettingsPage() {
         <div className="card">
           <div className="card-header"><div className="card-title"><Calculator size={16} className="text-brand-600" />{t("calculationSettings")}</div></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div><label className="form-label">{t("companyName")}</label><input className="form-input" value={form.company_name} onChange={(e) => setForm((f) => ({ ...f, company_name: e.target.value }))} /></div>
+            <div>
+              <label className="form-label">{t("companyName")} {!isOwner && <span className="text-xs text-slate-400 ms-1">({lang === "ar" ? "للمالك فقط" : "owner only"})</span>}</label>
+              <input
+                className="form-input"
+                value={form.company_name}
+                onChange={(e) => isOwner && setForm((f) => ({ ...f, company_name: e.target.value }))}
+                disabled={!isOwner}
+                readOnly={!isOwner}
+              />
+            </div>
             <div>
               <label className="form-label">
                 {form.system_mode === "hourly"
