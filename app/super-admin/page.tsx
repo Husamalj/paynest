@@ -25,7 +25,7 @@ export default function SuperAdminPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
-  const [form, setForm] = useState({ companyName: "", slug: "", ownerName: "", email: "", password: "123456" });
+  const [form, setForm] = useState({ companyName: "", slug: "", ownerName: "", email: "", password: "123456", maxEmployees: "" });
 
   const signOut = () => {
     ["token", "paynest_logged_in", "role", "user", "paynest_employee_id"].forEach((k) => localStorage.removeItem(k));
@@ -61,7 +61,7 @@ export default function SuperAdminPage() {
       }
       setSuccess("Company created and activated");
       setShowAdd(false);
-      setForm({ companyName: "", slug: "", ownerName: "", email: "", password: "123456" });
+      setForm({ companyName: "", slug: "", ownerName: "", email: "", password: "123456", maxEmployees: "" });
       await load();
     } catch (e: any) { setError(safeErr(e)); }
   };
@@ -238,6 +238,18 @@ export default function SuperAdminPage() {
               <div><label className="form-label">Owner Name *</label><input className="form-input" value={form.ownerName} onChange={(e) => setForm((f) => ({ ...f, ownerName: e.target.value }))} placeholder="Owner Name" required /></div>
               <div><label className="form-label">Owner Email *</label><input type="email" className="form-input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="owner@company.com" required /></div>
               <div><label className="form-label">Temporary Password</label><input className="form-input" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} /></div>
+              <div>
+                <label className="form-label">Max Employees</label>
+                <input
+                  type="number"
+                  min="0"
+                  className="form-input"
+                  value={form.maxEmployees}
+                  onChange={(e) => setForm((f) => ({ ...f, maxEmployees: e.target.value }))}
+                  placeholder="Leave empty for unlimited"
+                />
+                <p className="text-xs text-slate-400 mt-1">Set the maximum number of employees this company can have. Leave empty for unlimited.</p>
+              </div>
               <div className="flex justify-end gap-2"><button type="button" className="btn btn-secondary" onClick={() => setShowAdd(false)}>Cancel</button><button type="submit" className="btn btn-primary">Create Company</button></div>
             </form>
           </div>

@@ -10,16 +10,23 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { companyName, slug, ownerName, email, password } = body as {
+    const { companyName, slug, ownerName, email, password, maxEmployees } = body as {
       companyName?: string;
       slug?: string;
       ownerName?: string;
       email?: string;
       password?: string;
+      maxEmployees?: number | string;
     };
     if (!companyName || !slug || !ownerName || !email || !password) {
       throw new HttpError(400, "Missing required fields");
     }
+
+    // Parse maxEmployees — null/empty means unlimited
+    const parsedMaxEmp =
+      maxEmployees === undefined || maxEmployees === null || maxEmployees === ""
+        ? null
+        : Math.max(0, parseInt(String(maxEmployees), 10) || 0);
     if (!SLUG_RE.test(slug)) throw new HttpError(400, "Slug must be lowercase letters, digits, and dashes");
     if (password.length < 6) throw new HttpError(400, "Password must be at least 6 characters");
 
@@ -32,7 +39,7 @@ export async function POST(req: NextRequest) {
     const hash = await bcrypt.hash(password, 10);
 
     const company = await prisma.company.create({
-      data: { name: companyName, slug, status: "pending", isActive: false },
+      data: { name: companyName, slug, status: "pending", isActive: false, maxEmployees: parsedMaxEmp },
     });
 
     const ownerUser = await prisma.user.create({

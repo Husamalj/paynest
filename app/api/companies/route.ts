@@ -28,6 +28,8 @@ export async function GET(req: NextRequest) {
         createdAt: c.createdAt,
         created_at: c.createdAt,
         employee_count: c._count.employees,
+        max_employees: c.maxEmployees,
+        maxEmployees: c.maxEmployees,
         owner_email: c.users[0]?.email ?? null,
       }))
     );
