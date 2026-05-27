@@ -21,7 +21,7 @@ function TopNav({ ar }: { ar: boolean }) {
     </button>
   );
   return (
-    <header className="sticky top-0 z-40 bg-white/85 backdrop-blur border-b border-slate-200/70">
+    <header className="sticky top-0 z-40 bg-white/70 backdrop-blur-md border-b border-brand-100/70">
       <div className="max-w-7xl mx-auto h-16 flex items-center justify-between px-4 sm:px-6">
         <button
           onClick={() => router.push("/")}
@@ -231,7 +231,7 @@ function TrustStrip({ ar }: { ar: boolean }) {
     { name: "NextWave",     icon: Sparkles },
   ];
   return (
-    <section className="py-10 border-y border-slate-200 bg-white/50">
+    <section className="py-10 border-y border-brand-100/70 bg-white/40">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <p className="text-center text-xs font-semibold text-slate-500 mb-5 tracking-wide">
           {ar ? "موثوقة من شركات نامية" : "Trusted by growing businesses"}
@@ -342,7 +342,7 @@ function Footer({ ar }: { ar: boolean }) {
   const router = useRouter();
   const { toggleLanguage } = useLanguage();
   return (
-    <footer className="border-t border-slate-200 py-8 bg-slate-50/60">
+    <footer className="border-t border-brand-100/70 py-8 bg-white/40">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="text-sm text-slate-500">
           © 2026 PayNest — {ar ? "صُمم لشركات الشرق الأوسط" : "Built for MENA businesses"}
@@ -369,7 +369,7 @@ export default function Page() {
   const { lang } = useLanguage();
   const ar = lang === "ar";
   return (
-    <div dir={ar ? "rtl" : "ltr"} className="min-h-screen bg-white text-slate-900">
+    <div dir={ar ? "rtl" : "ltr"} className="min-h-screen bg-brand-50/60 text-slate-900">
       <TopNav ar={ar} />
       <Hero ar={ar} />
       <TrustStrip ar={ar} />
