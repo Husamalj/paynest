@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     // Exclude employee records that belong to owner/hr/super_admin accounts.
     // Show all employees EXCEPT those whose employeeId matches a non-employee user.
     const adminUsers = await prisma.user.findMany({
-      where: { companyId: session.companyId, role: { in: ["owner", "hr", "super_admin"] } },
+      where: { companyId: session.companyId, role: { in: ["owner", "super_admin"] } },
       select: { employeeNumber: true },
     });
     const adminNums = adminUsers.map((u) => u.employeeNumber).filter(Boolean) as string[];
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       if (!existing) {
         // Count only non-admin employees (matches what HR/Owner see in Employees page)
         const adminUsers = await prisma.user.findMany({
-          where: { companyId: session.companyId, role: { in: ["owner", "hr", "super_admin"] } },
+          where: { companyId: session.companyId, role: { in: ["owner", "super_admin"] } },
           select: { employeeNumber: true },
         });
         const adminNums = adminUsers.map((u) => u.employeeNumber).filter(Boolean) as string[];
