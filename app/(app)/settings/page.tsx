@@ -152,11 +152,17 @@ export default function SettingsPage() {
             </div>
             <div>
               <label className="form-label">{lang === "ar" ? "معدل خصم التأخير" : "Deduction rate"}</label>
-              <input type="number" step="0.01" className="form-input" value={form.deduction_rate} onChange={(e) => setForm((f) => ({ ...f, deduction_rate: parseFloat(e.target.value) || 1 }))} />
+              <input type="number" step="0.01" min="0" className="form-input" value={form.deduction_rate} onChange={(e) => {
+                const v = e.target.value;
+                setForm((f) => ({ ...f, deduction_rate: v === "" ? 0 : (parseFloat(v) || 0) }));
+              }} />
             </div>
             <div>
               <label className="form-label">{lang === "ar" ? "معدل ساعات إضافية" : "Overtime rate"}</label>
-              <input type="number" step="0.01" className="form-input" value={form.extra_rate} onChange={(e) => setForm((f) => ({ ...f, extra_rate: parseFloat(e.target.value) || 1 }))} />
+              <input type="number" step="0.01" min="0" className="form-input" value={form.extra_rate} onChange={(e) => {
+                const v = e.target.value;
+                setForm((f) => ({ ...f, extra_rate: v === "" ? 0 : (parseFloat(v) || 0) }));
+              }} />
             </div>
           </div>
         </div>
