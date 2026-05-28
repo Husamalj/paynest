@@ -115,7 +115,7 @@ model Employee {
   supervisor   Employee?  @relation("EmployeeSupervisor", fields: [supervisorId], references: [id], onDelete: SetNull)
   subordinates Employee[] @relation("EmployeeSupervisor")
 
-  @@unique([employeeId, systemMode], map: "employees_emp_mode_uidx")
+  @@unique([employeeId, systemMode, companyId], map: "employees_emp_mode_company_uidx")
   @@index([supervisorId])
   @@map("employees")
 }

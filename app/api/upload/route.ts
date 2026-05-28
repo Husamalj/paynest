@@ -94,23 +94,7 @@ export async function POST(req: NextRequest) {
         if (records.length > 0) {
           const uniqueEmpIds = [...new Set(records.map((r) => r.employee_id))];
 
-          // 1. Batch collision check — one query for all employee IDs
-          const collisions = await prisma.employee.findMany({
-            where: {
-              employeeId: { in: uniqueEmpIds },
-              systemMode,
-              NOT: { companyId },
-            },
-            select: { employeeId: true },
-          });
-          if (collisions.length > 0) {
-            throw new HttpError(
-              409,
-              `Employee ID "${collisions[0].employeeId}" is already used by another company`
-            );
-          }
-
-          // 2. Batch upsert employees — one transaction
+          // 1. Batch upsert employees — one transaction
           const empNameMap = new Map<string, string>();
           for (const r of records) {
             if (!empNameMap.has(r.employee_id)) empNameMap.set(r.employee_id, r.employee_name);
@@ -118,7 +102,7 @@ export async function POST(req: NextRequest) {
           await prisma.$transaction(
             uniqueEmpIds.map((id) =>
               prisma.employee.upsert({
-                where: { employeeId_systemMode: { employeeId: id, systemMode } },
+                where: { employeeId_systemMode_companyId: { employeeId: id, systemMode, companyId } },
                 create: { employeeId: id, name: empNameMap.get(id) || id, systemMode, companyId },
                 update: {
                   name:
@@ -197,23 +181,7 @@ export async function POST(req: NextRequest) {
         if (emps.length > 0) {
           const empIds = emps.map((e) => e.employee_id);
 
-          // 1. Batch collision check — one query
-          const collisions = await prisma.employee.findMany({
-            where: {
-              employeeId: { in: empIds },
-              systemMode,
-              NOT: { companyId },
-            },
-            select: { employeeId: true },
-          });
-          if (collisions.length > 0) {
-            throw new HttpError(
-              409,
-              `Employee ID "${collisions[0].employeeId}" is already used by another company`
-            );
-          }
-
-          // 2. Quota enforcement (unchanged logic)
+          // 1. Quota enforcement
           const company = await prisma.company.findUnique({
             where: { id: companyId },
             select: { maxEmployees: true },
@@ -250,11 +218,11 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // 3. Batch upsert all employees — one transaction
+          // 2. Batch upsert all employees — one transaction
           await prisma.$transaction(
             emps.map((emp) =>
               prisma.employee.upsert({
-                where: { employeeId_systemMode: { employeeId: emp.employee_id, systemMode } },
+                where: { employeeId_systemMode_companyId: { employeeId: emp.employee_id, systemMode, companyId } },
                 create: {
                   employeeId: emp.employee_id,
                   name: emp.name,
