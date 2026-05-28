@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, HttpError } from "@/lib/auth";
+import { sendEmailVerification } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -76,6 +78,19 @@ export async function POST(req: NextRequest) {
     await prisma.companySettings.create({
       data: { companyId: company.id, companyName },
     });
+
+    // Send email verification
+    try {
+      const verifyToken = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      await prisma.passwordResetToken.create({
+        data: { userId: ownerUser.id, token: verifyToken, expiresAt },
+      });
+      const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://paynest.app"}/verify-email?token=${verifyToken}`;
+      sendEmailVerification(email, verifyUrl);
+    } catch (e) {
+      console.error("[verify email]", e);
+    }
 
     return NextResponse.json({
       pending: true,
