@@ -58,9 +58,12 @@ export default function PortalSelectPage() {
           <Back size={16} />
           {ar ? "الرئيسية" : "Home"}
         </button>
-        <div className="font-bold text-slate-900 text-[15px]">
+        <button
+          onClick={() => router.push("/")}
+          className="font-bold text-slate-900 text-[15px] hover:opacity-70 transition-opacity"
+        >
           Pay<span className="text-brand-600">Nest</span>
-        </div>
+        </button>
         <LangToggle />
       </header>
 

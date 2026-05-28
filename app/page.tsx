@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import {
   ArrowRight, Wallet, Clock, UserCircle, BarChart3, ShieldCheck, TrendingUp,
-  Globe, LogIn, PlayCircle, CheckCircle2, ChevronDown, Sparkles, Building2,
+  Globe, LogIn, PlayCircle, CheckCircle2, Sparkles, Building2,
   Flower2, Sun, Sparkle, Diamond, Hexagon,
 } from "lucide-react";
 import clsx from "clsx";
@@ -14,12 +14,6 @@ import { useInView } from "@/lib/useInView";
 function TopNav({ ar }: { ar: boolean }) {
   const router = useRouter();
   const { lang, toggleLanguage } = useLanguage();
-  const NavItem = ({ label }: { label: string }) => (
-    <button className="hidden md:inline-flex items-center gap-1 text-slate-600 hover:text-slate-900 text-sm font-medium transition-colors px-3 py-2">
-      {label}
-      <ChevronDown size={13} />
-    </button>
-  );
   return (
     <header className="sticky top-0 z-40 bg-white/70 backdrop-blur-md border-b border-brand-100/70">
       <div className="max-w-7xl mx-auto h-16 flex items-center justify-between px-4 sm:px-6">
@@ -39,13 +33,18 @@ function TopNav({ ar }: { ar: boolean }) {
         </button>
 
         <nav className="flex items-center">
-          <NavItem label={ar ? "المنتج" : "Product"} />
-          <NavItem label={ar ? "المميزات" : "Features"} />
-          <button className="hidden md:inline-flex text-slate-600 hover:text-slate-900 text-sm font-medium px-3 py-2">
+          <button
+            onClick={() => router.push("/pricing")}
+            className="hidden md:inline-flex text-slate-600 hover:text-slate-900 text-sm font-medium px-3 py-2 transition-colors"
+          >
             {ar ? "الأسعار" : "Pricing"}
           </button>
-          <NavItem label={ar ? "الموارد" : "Resources"} />
-          <NavItem label={ar ? "الشركة" : "Company"} />
+          <button
+            onClick={() => router.push("/privacy")}
+            className="hidden md:inline-flex text-slate-600 hover:text-slate-900 text-sm font-medium px-3 py-2 transition-colors"
+          >
+            {ar ? "الخصوصية" : "Privacy"}
+          </button>
         </nav>
 
         <div className="flex items-center gap-2">
@@ -55,7 +54,6 @@ function TopNav({ ar }: { ar: boolean }) {
           >
             <Globe size={14} />
             {lang === "ar" ? "EN" : "AR"}
-            <ChevronDown size={11} />
           </button>
           <button
             onClick={() => router.push("/portal-select")}
@@ -348,6 +346,12 @@ function Footer({ ar }: { ar: boolean }) {
           © 2026 PayNest — {ar ? "صُمم لشركات الشرق الأوسط" : "Built for MENA businesses"}
         </div>
         <div className="flex items-center gap-5 text-sm text-slate-500">
+          <button onClick={() => router.push("/pricing")} className="hover:text-slate-900 transition-colors">
+            {ar ? "الأسعار" : "Pricing"}
+          </button>
+          <button onClick={() => router.push("/privacy")} className="hover:text-slate-900 transition-colors">
+            {ar ? "الخصوصية" : "Privacy"}
+          </button>
           <button onClick={() => router.push("/portal-select")} className="hover:text-slate-900 transition-colors">
             {ar ? "تسجيل الدخول" : "Log In"}
           </button>

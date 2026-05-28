@@ -37,8 +37,12 @@ api.interceptors.response.use(
     console.error("API Error:", status, message);
 
     if (status === 401) {
-      logoutUser();
-      return Promise.reject(new Error("Session expired. Please login again."));
+      const url: string = error.config?.url || "";
+      if (!url.includes("/auth/login")) {
+        logoutUser();
+        return Promise.reject(new Error("Session expired. Please login again."));
+      }
+      return Promise.reject(new Error(message));
     }
     if (status === 403) {
       if (message.toLowerCase().includes("inactive") || message.toLowerCase().includes("forbidden")) {
