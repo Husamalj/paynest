@@ -119,6 +119,17 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       } catch (e) {
         console.error("[leave email]", e);
       }
+
+      // Create notification for HR/owner
+      const empName = leave.employeeName || "Employee";
+      prisma.notification.create({
+        data: {
+          companyId: session.companyId!,
+          type: "leave_decision",
+          message: `Leave request for ${empName} has been ${leave.status}.`,
+          link: "/leaves",
+        },
+      }).catch((e: any) => console.error("[notification]", e));
     }
 
     return NextResponse.json(leave);
