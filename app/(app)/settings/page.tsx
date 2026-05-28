@@ -349,7 +349,7 @@ export default function SettingsPage() {
         )}
 
         {/* ── Overtime Pay ─────────────────────────────────── */}
-        <div className="card border-2 border-amber-200">
+        <div className="card">
           <div className="card-header">
             <div className="card-title">
               <span className="text-lg">⚡</span>
@@ -408,25 +408,6 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Live preview example */}
-            {form.extra_rate > 0 && (
-              <div className="flex-1 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm">
-                <p className="font-semibold text-amber-800 mb-1">
-                  {ar ? "مثال توضيحي" : "Example preview"}
-                </p>
-                <p className="text-slate-600">
-                  {isDaily ? (
-                    ar
-                      ? <>إذا كان معدل ساعة العمل <strong>10.00</strong> → ساعة إضافية = <strong className="text-amber-700">{(10 * form.extra_rate).toFixed(2)}</strong></>
-                      : <>If base hourly rate is <strong>$10.00</strong> → 1 overtime hour = <strong className="text-amber-700">${(10 * form.extra_rate).toFixed(2)}</strong></>
-                  ) : (
-                    ar
-                      ? <>موظف راتبه <strong>3,000</strong> ÷ <strong>{form.month_days}</strong> ساعة = <strong>{(3000 / (form.month_days || 176)).toFixed(2)}</strong>/ساعة → الإضافي = <strong className="text-amber-700">{(3000 / (form.month_days || 176) * form.extra_rate).toFixed(2)}</strong>/ساعة</>
-                      : <>Employee salary <strong>3,000</strong> ÷ <strong>{form.month_days}</strong>h = <strong>{(3000 / (form.month_days || 176)).toFixed(2)}</strong>/hr → overtime = <strong className="text-amber-700">${(3000 / (form.month_days || 176) * form.extra_rate).toFixed(2)}</strong>/hr</>
-                  )}
-                </p>
-              </div>
-            )}
           </div>
         </div>
 
