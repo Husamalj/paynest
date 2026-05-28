@@ -70,6 +70,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     init();
   }, [router]);
 
+  useEffect(() => {
+    const role = typeof window !== "undefined" ? localStorage.getItem("role") : null;
+    if (role !== "owner") return;
+    api.get("/companies/onboarding-status")
+      .then((res: any) => {
+        if (res.data?.needsOnboarding) router.replace("/onboarding");
+      })
+      .catch(() => {});
+  }, [router]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50">
