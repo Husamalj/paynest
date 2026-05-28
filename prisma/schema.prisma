@@ -14,8 +14,9 @@ model Company {
   slug          String   @unique @db.VarChar(100)
   status        String   @default("active") @db.VarChar(20)
   isActive      Boolean  @default(true) @map("is_active")
-  maxEmployees  Int?     @map("max_employees")
-  createdAt     DateTime @default(now()) @map("created_at")
+  maxEmployees        Int?     @map("max_employees")
+  createdAt           DateTime @default(now()) @map("created_at")
+  onboardingCompleted Boolean  @default(false) @map("onboarding_completed")
 
   users             User[]
   employees         Employee[]
@@ -33,6 +34,7 @@ model Company {
   employeeDocuments  EmployeeDocument[]
   evaluations        Evaluation[]
   auditLogs          AuditLog[]
+  notifications      Notification[]
 
   @@map("companies")
 }
@@ -352,4 +354,20 @@ model PasswordResetToken {
 
   @@index([token])
   @@map("password_reset_tokens")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  companyId Int      @map("company_id")
+  userId    Int?     @map("user_id")
+  type      String   @db.VarChar(50)
+  message   String
+  link      String?  @db.VarChar(255)
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, read, createdAt])
+  @@map("notifications")
 }
