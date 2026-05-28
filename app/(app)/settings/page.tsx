@@ -228,15 +228,6 @@ export default function SettingsPage() {
                 />
               </div>
 
-              {/* Overtime rate */}
-              <div>
-                <label className="form-label">{ar ? "معدل ساعات إضافية" : "Overtime rate"}</label>
-                <input
-                  type="number" step="0.01" min="0" className="form-input"
-                  value={form.extra_rate}
-                  onChange={(e) => setForm((f) => ({ ...f, extra_rate: parseFloat(e.target.value) || 0 }))}
-                />
-              </div>
             </div>
           )}
 
@@ -289,15 +280,6 @@ export default function SettingsPage() {
                 </p>
               </div>
 
-              {/* Overtime rate */}
-              <div>
-                <label className="form-label">{ar ? "معدل الساعات الإضافية" : "Overtime rate"}</label>
-                <input
-                  type="number" step="0.01" min="0" className="form-input"
-                  value={form.extra_rate}
-                  onChange={(e) => setForm((f) => ({ ...f, extra_rate: parseFloat(e.target.value) || 0 }))}
-                />
-              </div>
             </div>
           )}
         </div>
@@ -365,6 +347,88 @@ export default function SettingsPage() {
             </div>
           </>
         )}
+
+        {/* ── Overtime Pay ─────────────────────────────────── */}
+        <div className="card border-2 border-amber-200">
+          <div className="card-header">
+            <div className="card-title">
+              <span className="text-lg">⚡</span>
+              {ar ? "معدل الساعات الإضافية (Overtime)" : "Overtime Pay Rate"}
+            </div>
+          </div>
+          <p className="text-sm text-slate-500 mb-4">
+            {ar
+              ? "كل ساعة عمل إضافية تُحتسب بمعدل مضاعف من معدل الساعة الأساسية."
+              : "Every extra hour worked is paid at a multiplier of the base hourly rate."}
+          </p>
+
+          {/* Quick-select preset buttons */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {[1.0, 1.25, 1.5, 2.0].map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, extra_rate: preset }))}
+                className={clsx(
+                  "px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all",
+                  form.extra_rate === preset
+                    ? "border-amber-500 bg-amber-50 text-amber-700"
+                    : "border-slate-200 text-slate-600 hover:border-amber-300 hover:bg-amber-50"
+                )}
+              >
+                ×{preset.toFixed(2)}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, extra_rate: 0 }))}
+              className={clsx(
+                "px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all",
+                form.extra_rate === 0
+                  ? "border-slate-400 bg-slate-100 text-slate-700"
+                  : "border-slate-200 text-slate-500 hover:border-slate-300"
+              )}
+            >
+              {ar ? "بدون إضافي" : "No overtime"}
+            </button>
+          </div>
+
+          {/* Custom input + live preview */}
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="w-40">
+              <label className="form-label">{ar ? "معدل مخصص (×)" : "Custom multiplier (×)"}</label>
+              <div className="relative">
+                <span className="absolute inset-y-0 start-3 flex items-center text-slate-400 font-bold pointer-events-none">×</span>
+                <input
+                  type="number" step="0.05" min="0" max="10"
+                  className="form-input ps-7"
+                  value={form.extra_rate}
+                  onChange={(e) => setForm((f) => ({ ...f, extra_rate: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+            </div>
+
+            {/* Live preview example */}
+            {form.extra_rate > 0 && (
+              <div className="flex-1 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm">
+                <p className="font-semibold text-amber-800 mb-1">
+                  {ar ? "مثال توضيحي" : "Example preview"}
+                </p>
+                <p className="text-slate-600">
+                  {isDaily ? (
+                    ar
+                      ? <>إذا كان معدل ساعة العمل <strong>10.00</strong> → ساعة إضافية = <strong className="text-amber-700">{(10 * form.extra_rate).toFixed(2)}</strong></>
+                      : <>If base hourly rate is <strong>$10.00</strong> → 1 overtime hour = <strong className="text-amber-700">${(10 * form.extra_rate).toFixed(2)}</strong></>
+                  ) : (
+                    ar
+                      ? <>موظف راتبه <strong>3,000</strong> ÷ <strong>{form.month_days}</strong> ساعة = <strong>{(3000 / (form.month_days || 176)).toFixed(2)}</strong>/ساعة → الإضافي = <strong className="text-amber-700">{(3000 / (form.month_days || 176) * form.extra_rate).toFixed(2)}</strong>/ساعة</>
+                      : <>Employee salary <strong>3,000</strong> ÷ <strong>{form.month_days}</strong>h = <strong>{(3000 / (form.month_days || 176)).toFixed(2)}</strong>/hr → overtime = <strong className="text-amber-700">${(3000 / (form.month_days || 176) * form.extra_rate).toFixed(2)}</strong>/hr</>
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="flex justify-end">
           <button type="submit" className="btn btn-primary" disabled={saving}>
