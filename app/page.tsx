@@ -333,6 +333,15 @@ function Footer({ ar }: { ar: boolean }) {
           © 2026 PayNest — {ar ? "صُمم لشركات الشرق الأوسط" : "Built for MENA businesses"}
         </div>
         <div className="flex items-center gap-5 text-sm text-slate-500">
+          <button onClick={() => router.push("/terms")} className="hover:text-slate-900 transition-colors">
+            {ar ? "الشروط" : "Terms"}
+          </button>
+          <button onClick={() => router.push("/contact")} className="hover:text-slate-900 transition-colors">
+            {ar ? "تواصل معنا" : "Contact"}
+          </button>
+          <button onClick={() => router.push("/about")} className="hover:text-slate-900 transition-colors">
+            {ar ? "من نحن" : "About"}
+          </button>
           <button onClick={() => router.push("/privacy")} className="hover:text-slate-900 transition-colors">
             {ar ? "الخصوصية" : "Privacy"}
           </button>

@@ -271,7 +271,14 @@ export default function SignupPage() {
                 : "Create Account"}
             </button>
 
-            <p className="text-center text-slate-400 text-xs">
+            <p className="text-xs text-slate-400 text-center mt-3">
+              {ar
+                ? <span>بالتسجيل، أنت توافق على <button type="button" onClick={() => router.push("/terms")} className="underline hover:text-slate-600">شروط الاستخدام</button> و<button type="button" onClick={() => router.push("/privacy")} className="underline hover:text-slate-600">سياسة الخصوصية</button></span>
+                : <span>By registering, you agree to our <button type="button" onClick={() => router.push("/terms")} className="underline hover:text-slate-600">Terms of Service</button> and <button type="button" onClick={() => router.push("/privacy")} className="underline hover:text-slate-600">Privacy Policy</button></span>
+              }
+            </p>
+
+            <p className="text-center text-slate-400 text-xs mt-4">
               {ar ? "لديك حساب؟ " : "Already have an account? "}
               <button
                 type="button"
