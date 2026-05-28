@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { sendLeaveDecision } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -93,6 +94,32 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       hrStatus: leave.hrStatus,
       status: leave.status,
     });
+
+    // Send email notification to employee
+    if (leave.status === "approved" || leave.status === "rejected") {
+      try {
+        const empUser = await prisma.user.findFirst({
+          where: {
+            employeeNumber: leave.employeeId ?? undefined,
+            companyId: session.companyId,
+          },
+          select: { email: true },
+        });
+        if (empUser?.email && leave.employeeName) {
+          sendLeaveDecision(
+            empUser.email,
+            leave.employeeName,
+            leave.status as "approved" | "rejected",
+            leave.leaveType ?? "Leave",
+            leave.startDate?.toISOString().split("T")[0] ?? "",
+            leave.endDate?.toISOString().split("T")[0] ?? "",
+            body.admin_note ?? null
+          );
+        }
+      } catch (e) {
+        console.error("[leave email]", e);
+      }
+    }
 
     return NextResponse.json(leave);
   } catch (err) {
