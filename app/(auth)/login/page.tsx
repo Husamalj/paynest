@@ -161,6 +161,16 @@ export default function StaffLoginPage() {
               </button>
             </div>
 
+            <div className="flex justify-end mt-1">
+              <button
+                type="button"
+                onClick={() => router.push("/forgot-password")}
+                className="text-xs text-brand-600 hover:text-brand-800 hover:underline transition-colors"
+              >
+                {ar ? "هل نسيت كلمة السر؟" : "Forgot password?"}
+              </button>
+            </div>
+
             {error && (
               <div className="text-red-600 text-sm mb-4 text-center bg-red-50 border border-red-100 rounded-xl px-4 py-3">
                 {error}
