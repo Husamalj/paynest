@@ -8,9 +8,11 @@ const DownloadPayslipButton = dynamic(
   { ssr: false }
 );
 import {
-  AlertTriangle, Bell, Calendar, CheckCircle2, CheckSquare,
-  ClipboardList, Clock, LogOut, Palmtree, Paperclip, Send, ThumbsDown, ThumbsUp, User, UserCheck, Users, X,
+  AlertTriangle, Bell, Calendar, CheckCircle2, CheckSquare, ChevronDown,
+  ClipboardList, Clock, KeyRound, Languages, LogOut, Palmtree, Paperclip, Send,
+  ThumbsDown, ThumbsUp, User, UserCheck, Users, X,
 } from "lucide-react";
+import { useRef } from "react";
 import api from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import clsx from "clsx";
@@ -62,9 +64,49 @@ function StatusBadge({ status, isRTL }: { status: string; isRTL: boolean }) {
 }
 
 export default function EmployeePortalPage() {
-  const { lang } = useLanguage();
+  const { lang, toggleLanguage } = useLanguage();
   const isRTL = lang === "ar";
   const savedUser = JSON.parse(typeof window !== "undefined" ? localStorage.getItem("user") || "{}" : "{}");
+
+  // Profile dropdown + change password modal
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const [showPwdModal, setShowPwdModal] = useState(false);
+  const [pwdCurrent, setPwdCurrent] = useState("");
+  const [pwdNew, setPwdNew] = useState("");
+  const [pwdConfirm, setPwdConfirm] = useState("");
+  const [pwdSaving, setPwdSaving] = useState(false);
+  const [pwdError, setPwdError] = useState("");
+  const [pwdSuccess, setPwdSuccess] = useState("");
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  const changePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwdError(""); setPwdSuccess("");
+    if (!pwdNew || pwdNew.length < 6) {
+      setPwdError(isRTL ? "كلمة السر الجديدة لازم تكون 6 أحرف على الأقل" : "New password must be at least 6 characters");
+      return;
+    }
+    if (pwdNew !== pwdConfirm) {
+      setPwdError(isRTL ? "تأكيد كلمة السر غير مطابق" : "Confirmation does not match");
+      return;
+    }
+    setPwdSaving(true);
+    try {
+      await api.put("/auth/change-password", { currentPassword: pwdCurrent, newPassword: pwdNew });
+      setPwdSuccess(isRTL ? "تم تغيير كلمة السر" : "Password changed");
+      setPwdCurrent(""); setPwdNew(""); setPwdConfirm("");
+      setTimeout(() => { setShowPwdModal(false); setPwdSuccess(""); }, 1500);
+    } catch (err: any) { setPwdError(err.message); }
+    finally { setPwdSaving(false); }
+  };
 
   const [employees, setEmployees] = useState<any[]>([]);
   const [employeeId, setEmployeeId] = useState(savedUser.employeeNumber || savedUser.employee_number || (typeof window !== "undefined" ? localStorage.getItem("paynest_employee_id") : "") || "");
@@ -386,7 +428,58 @@ export default function EmployeePortalPage() {
                 ))}
               </select>
             )}
-            <button className="btn btn-danger" onClick={signOut}><LogOut size={15} />{isRTL ? "تسجيل خروج" : "Sign Out"}</button>
+
+            {/* Profile dropdown (same shape as HR Layout) */}
+            <div className="relative" ref={profileRef}>
+              <button
+                onClick={() => setProfileOpen((o) => !o)}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                  {(savedUser.name || employee?.name || "U")[0]?.toUpperCase()}
+                </div>
+                <div className="hidden sm:block text-left min-w-0">
+                  <div className="text-sm font-semibold text-slate-800 truncate max-w-[140px]">{savedUser.name || employee?.name || "Employee"}</div>
+                  <div className="text-[11px] text-slate-400 uppercase font-medium">{role}</div>
+                </div>
+                <ChevronDown size={14} className={clsx("text-slate-400 transition-transform flex-shrink-0", profileOpen && "rotate-180")} />
+              </button>
+
+              {profileOpen && (
+                <div className={clsx("absolute top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50", isRTL ? "left-0" : "right-0")}>
+                  <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
+                    <div className="font-semibold text-slate-900 truncate">{savedUser.name || employee?.name || "Employee"}</div>
+                    <div className="text-xs text-slate-500 truncate mt-0.5">{savedUser.email || employee?.email || "-"}</div>
+                    <div className="mt-1.5 inline-flex px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 text-[10px] font-bold uppercase">{role}</div>
+                  </div>
+                  <div className="p-2 space-y-0.5">
+                    <button
+                      onClick={() => { toggleLanguage(); setProfileOpen(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <Languages size={16} className="text-slate-400" />
+                      <span>{lang === "en" ? "العربية" : "English"}</span>
+                      <span className="ms-auto text-[11px] font-bold text-slate-400 uppercase">{lang === "en" ? "AR" : "EN"}</span>
+                    </button>
+                    <button
+                      onClick={() => { setShowPwdModal(true); setProfileOpen(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <KeyRound size={16} className="text-slate-400" />
+                      {isRTL ? "تغيير كلمة السر" : "Change Password"}
+                    </button>
+                    <div className="border-t border-slate-100 my-1" />
+                    <button
+                      onClick={signOut}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-rose-600 hover:bg-rose-50 transition-colors"
+                    >
+                      <LogOut size={16} />
+                      {isRTL ? "تسجيل خروج" : "Sign Out"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -1006,6 +1099,44 @@ export default function EmployeePortalPage() {
                     ? <><span className="spinner" />{isRTL ? "جاري الإضافة..." : "Saving..."}</>
                     : <><CheckSquare size={15} />{isRTL ? "إضافة المهمة" : "Assign Task"}</>
                   }
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {showPwdModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={(e) => { if (e.target === e.currentTarget) setShowPwdModal(false); }} dir={isRTL ? "rtl" : "ltr"}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <KeyRound size={17} className="text-brand-600" />
+                <h3 className="font-bold text-slate-900">{isRTL ? "تغيير كلمة السر" : "Change Password"}</h3>
+              </div>
+              <button onClick={() => setShowPwdModal(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
+            </div>
+            <form onSubmit={changePassword} className="px-5 py-5 space-y-3">
+              <div>
+                <label className="form-label">{isRTL ? "كلمة السر الحالية" : "Current Password"}</label>
+                <input type="password" required className="form-input" value={pwdCurrent} onChange={(e) => setPwdCurrent(e.target.value)} />
+              </div>
+              <div>
+                <label className="form-label">{isRTL ? "كلمة السر الجديدة" : "New Password"}</label>
+                <input type="password" required className="form-input" value={pwdNew} onChange={(e) => setPwdNew(e.target.value)} />
+              </div>
+              <div>
+                <label className="form-label">{isRTL ? "تأكيد كلمة السر" : "Confirm Password"}</label>
+                <input type="password" required className="form-input" value={pwdConfirm} onChange={(e) => setPwdConfirm(e.target.value)} />
+              </div>
+              {pwdError && <div className="text-rose-600 text-sm bg-rose-50 rounded-lg px-3 py-2">{pwdError}</div>}
+              {pwdSuccess && <div className="text-emerald-700 text-sm bg-emerald-50 rounded-lg px-3 py-2 flex items-center gap-2"><CheckCircle2 size={14} /> {pwdSuccess}</div>}
+              <div className="flex justify-end gap-2 pt-1">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowPwdModal(false)}>{isRTL ? "إلغاء" : "Cancel"}</button>
+                <button type="submit" className="btn btn-primary" disabled={pwdSaving}>
+                  {pwdSaving ? <span className="spinner" /> : <KeyRound size={14} />}
+                  {isRTL ? "حفظ" : "Save"}
                 </button>
               </div>
             </form>
