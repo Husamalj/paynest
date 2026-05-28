@@ -76,9 +76,10 @@ const NAV_ITEMS: NavItem[] = [
 interface LayoutProps {
   children: React.ReactNode;
   settings?: { company_name?: string } | null;
+  NotificationBell?: React.ComponentType<any>;
 }
 
-export default function Layout({ children, settings }: LayoutProps) {
+export default function Layout({ children, settings, NotificationBell }: LayoutProps) {
   const { t, lang, toggleLanguage, isRTL } = useLanguage();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -253,6 +254,9 @@ export default function Layout({ children, settings }: LayoutProps) {
               </h1>
             </div>
           </div>
+
+          {/* Notification Bell */}
+          {NotificationBell && <NotificationBell />}
 
           {/* Profile dropdown */}
           <div className="relative" ref={profileRef}>
