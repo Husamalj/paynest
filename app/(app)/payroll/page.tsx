@@ -43,14 +43,8 @@ export default function PayrollPage() {
 
   const loadPayroll = async (m: number, y: number) => {
     try {
-      // Try period endpoint first (historical), fall back to latest if empty
-      const periodRes = await api.get(`/payroll/period?month=${m}&year=${y}`).catch(() => ({ data: [] as any[] }));
-      if (Array.isArray(periodRes.data) && periodRes.data.length > 0) {
-        setPayroll(periodRes.data);
-        return;
-      }
-      const latestRes = await api.get(`/payroll/latest?month=${m}&year=${y}`);
-      setPayroll(latestRes.data?.results || []);
+      const periodRes = await api.get(`/payroll/period?month=${m}&year=${y}`).catch(() => ({ data: { results: [] } }));
+      setPayroll(periodRes.data?.results || []);
     } catch (err: any) { setError(err.message); }
   };
 
@@ -144,7 +138,7 @@ export default function PayrollPage() {
                   <th className="text-right">{t("socialSecurityDeduct")}</th>
                   <th className="text-right">{t("netSalary")}</th>
                   <th>{t("status")}</th>
-                  <th>PDF</th>
+                  <th className="min-w-[60px]">PDF</th>
                 </tr>
               </thead>
               <tbody>
@@ -164,7 +158,7 @@ export default function PayrollPage() {
                       <td className="text-right font-mono text-rose-600">{formatCurrency(row.socialSecurityDeduct || row.social_security_deduct)}</td>
                       <td className="text-right font-mono font-bold text-brand-700">{formatCurrency(row.netSalary || row.net_salary)}</td>
                       <td>{getStatusBadge(row.status, t)}</td>
-                      <td onClick={(e) => e.stopPropagation()}>
+                      <td onClick={(e) => e.stopPropagation()} style={{overflow: "visible"}}>
                         <DownloadPayslipButton
                           data={{
                             employeeName: row.name || row.employeeName || "",
