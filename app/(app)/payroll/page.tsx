@@ -1,6 +1,12 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
+
+const DownloadPayslipButton = dynamic(
+  () => import("@/components/PayslipPDF").then((m) => m.DownloadPayslipButton),
+  { ssr: false }
+);
 import { Zap, Download, ChevronRight, ChevronDown, CheckCircle2, AlertTriangle, X, Calendar, Clock, Calculator } from "lucide-react";
 
 const MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
@@ -24,6 +30,7 @@ export default function PayrollPage() {
   const now = new Date();
   const ar = lang === "ar";
   const months = ar ? MONTHS_AR : MONTHS_EN;
+  const companyName = typeof window !== "undefined" ? localStorage.getItem("companyName") || "PayNest" : "PayNest";
   const [payroll, setPayroll] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
@@ -137,6 +144,7 @@ export default function PayrollPage() {
                   <th className="text-right">{t("socialSecurityDeduct")}</th>
                   <th className="text-right">{t("netSalary")}</th>
                   <th>{t("status")}</th>
+                  <th>PDF</th>
                 </tr>
               </thead>
               <tbody>
@@ -156,6 +164,25 @@ export default function PayrollPage() {
                       <td className="text-right font-mono text-rose-600">{formatCurrency(row.socialSecurityDeduct || row.social_security_deduct)}</td>
                       <td className="text-right font-mono font-bold text-brand-700">{formatCurrency(row.netSalary || row.net_salary)}</td>
                       <td>{getStatusBadge(row.status, t)}</td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <DownloadPayslipButton
+                          data={{
+                            employeeName: row.name || row.employeeName || "",
+                            employeeId: row.employeeId || "",
+                            companyName,
+                            month: periodMonth,
+                            year: periodYear,
+                            baseSalary: row.baseSalary || row.base_salary,
+                            totalHours: row.totalHours || row.total_hours,
+                            adjustment: row.adjustment,
+                            bonusTotal: row.bonusTotal || row.bonus_total,
+                            deductionTotal: row.deductionTotal || row.deduction_total,
+                            socialSecurityDeduct: row.socialSecurityDeduct || row.social_security_deduct,
+                            netSalary: row.netSalary || row.net_salary,
+                          }}
+                          filename={`payslip-${periodMonth}-${periodYear}-${row.employeeId || "emp"}.pdf`}
+                        />
+                      </td>
                     </tr>,
                     isExp && breakdown?.length > 0 && (
                       <tr key={`${row.id}-breakdown`}>
