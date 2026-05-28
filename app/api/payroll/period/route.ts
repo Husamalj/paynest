@@ -38,8 +38,22 @@ export async function GET(req: NextRequest) {
 
     const results = records.map((r) => ({
       ...r,
-      name: empMap[r.employeeId ?? ""]?.name ?? r.employeeId,
-      social_security: empMap[r.employeeId ?? ""]?.socialSecurity ?? false,
+      // snake_case mirrors for legacy UI code (dashboard, reports, etc.)
+      base_salary:             r.baseSalary,
+      total_hours:             r.totalHours,
+      required_hours:          r.requiredHours,
+      hour_diff:               r.hourDiff,
+      adjustment:              r.adjustment,
+      bonus_total:             r.bonusTotal,
+      deduction_total:         r.deductionTotal,
+      social_security_deduct:  r.socialSecurityDeduct,
+      net_salary:              r.netSalary,
+      period_month:            r.periodMonth,
+      period_year:             r.periodYear,
+      daily_breakdown:         r.dailyBreakdown,
+      employee_id:             r.employeeId,
+      name:                    empMap[r.employeeId ?? ""]?.name ?? r.employeeId,
+      social_security:         empMap[r.employeeId ?? ""]?.socialSecurity ?? false,
     }));
 
     return NextResponse.json({ period_month: periodMonth, period_year: periodYear, system_mode: mode, results });
