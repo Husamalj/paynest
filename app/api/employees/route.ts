@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    await logAudit(session, "upsert", "employee", employee.employeeId, {
+    await logAudit(session, "update", "employee", employee.employeeId, {
       name, email, baseSalary: Number(base_salary) || 0, allowance: Number(allowance) || 0,
       jobTitle: job_title ?? null,
     });
