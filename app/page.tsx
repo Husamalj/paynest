@@ -32,20 +32,7 @@ function TopNav({ ar }: { ar: boolean }) {
           </span>
         </button>
 
-        <nav className="flex items-center">
-          <button
-            onClick={() => router.push("/pricing")}
-            className="hidden md:inline-flex text-slate-600 hover:text-slate-900 text-sm font-medium px-3 py-2 transition-colors"
-          >
-            {ar ? "الأسعار" : "Pricing"}
-          </button>
-          <button
-            onClick={() => router.push("/privacy")}
-            className="hidden md:inline-flex text-slate-600 hover:text-slate-900 text-sm font-medium px-3 py-2 transition-colors"
-          >
-            {ar ? "الخصوصية" : "Privacy"}
-          </button>
-        </nav>
+        <nav className="flex items-center" />
 
         <div className="flex items-center gap-2">
           <button
@@ -66,7 +53,7 @@ function TopNav({ ar }: { ar: boolean }) {
             onClick={() => router.push("/signup")}
             className="inline-flex items-center gap-1.5 bg-gradient-to-br from-brand-500 to-brand-700 hover:from-brand-600 hover:to-brand-800 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-all"
           >
-            {ar ? "ابدأ مجاناً" : "Get Started Free"}
+            {ar ? "ابدأ الآن" : "Get Started"}
             <ArrowRight size={14} className={ar ? "rotate-180" : ""} />
           </button>
         </div>
@@ -186,7 +173,7 @@ function Hero({ ar }: { ar: boolean }) {
             onClick={() => router.push("/signup")}
             className="inline-flex items-center gap-2 bg-gradient-to-br from-brand-500 to-brand-700 hover:from-brand-600 hover:to-brand-800 text-white text-base font-semibold px-6 py-3 rounded-xl shadow-elevated transition-all"
           >
-            {ar ? "ابدأ مجاناً" : "Get Started Free"}
+            {ar ? "ابدأ الآن" : "Get Started"}
             <ArrowRight size={17} className={ar ? "rotate-180" : ""} />
           </button>
           <button
@@ -346,9 +333,6 @@ function Footer({ ar }: { ar: boolean }) {
           © 2026 PayNest — {ar ? "صُمم لشركات الشرق الأوسط" : "Built for MENA businesses"}
         </div>
         <div className="flex items-center gap-5 text-sm text-slate-500">
-          <button onClick={() => router.push("/pricing")} className="hover:text-slate-900 transition-colors">
-            {ar ? "الأسعار" : "Pricing"}
-          </button>
           <button onClick={() => router.push("/privacy")} className="hover:text-slate-900 transition-colors">
             {ar ? "الخصوصية" : "Privacy"}
           </button>

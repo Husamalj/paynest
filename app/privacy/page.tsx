@@ -128,7 +128,7 @@ export default function PrivacyPage() {
               <section>
                 <h2 className="text-lg font-bold text-slate-900 mb-3">١٠. التواصل معنا</h2>
                 <p className="text-slate-600 leading-relaxed">
-                  للاستفسارات: <strong>privacy@paynest.app</strong>
+                  للاستفسارات: <strong>Maen.hadayed@gmail.com</strong>
                 </p>
               </section>
             </>
@@ -213,7 +213,7 @@ export default function PrivacyPage() {
               <section>
                 <h2 className="text-lg font-bold text-slate-900 mb-3">10. Contact Us</h2>
                 <p className="text-slate-600 leading-relaxed">
-                  For any questions: <strong>privacy@paynest.app</strong>
+                  For any questions: <strong>Maen.hadayed@gmail.com</strong>
                 </p>
               </section>
             </>
