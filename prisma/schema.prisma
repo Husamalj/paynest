@@ -66,6 +66,7 @@ model User {
   mustChangePassword Boolean  @default(false) @map("must_change_password")
   companyId          Int?     @map("company_id")
   createdAt          DateTime @default(now()) @map("created_at")
+  emailVerifiedAt    DateTime? @map("email_verified_at")
 
   company     Company?     @relation(fields: [companyId], references: [id])
   evaluations Evaluation[] @relation("EvaluatorEvaluations")
@@ -339,4 +340,16 @@ model Announcement {
   company Company @relation(fields: [companyId], references: [id])
 
   @@map("announcements")
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  token     String   @unique @db.VarChar(64)
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([token])
+  @@map("password_reset_tokens")
 }
