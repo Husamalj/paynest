@@ -187,6 +187,16 @@ export async function POST(req: NextRequest) {
       console.error("[payslip email]", e);
     }
 
+    // Create payroll run notification
+    prisma.notification.create({
+      data: {
+        companyId: session.companyId!,
+        type: "payroll_completed",
+        message: `Payroll run for ${periodMonth}/${periodYear} has been completed.`,
+        link: "/payroll",
+      },
+    }).catch((e: any) => console.error("[notification]", e));
+
     return NextResponse.json({
       period_month: periodMonth,
       period_year: periodYear,
