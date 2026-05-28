@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, errorResponse } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const session = await requireAuth(req);
     const { searchParams } = new URL(req.url);
@@ -11,7 +11,7 @@ export async function GET(req: Request) {
     const notifications = await prisma.notification.findMany({
       where: {
         companyId: session.companyId!,
-        OR: [{ userId: null }, { userId: session.userId }],
+        OR: [{ userId: null }, { userId: session.id }],
       },
       orderBy: { createdAt: "desc" },
       take: limit,
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
       where: {
         companyId: session.companyId!,
         read: false,
-        OR: [{ userId: null }, { userId: session.userId }],
+        OR: [{ userId: null }, { userId: session.id }],
       },
     });
 

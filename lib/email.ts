@@ -1,11 +1,12 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.FROM_EMAIL ?? "noreply@paynest.app";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://paynest.app";
 
 function send(to: string, subject: string, html: string) {
-  if (!process.env.RESEND_API_KEY) return;
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return;
+  const resend = new Resend(key);
   resend.emails
     .send({ from: FROM, to, subject, html })
     .catch((err) => console.error("[email]", subject, err));
