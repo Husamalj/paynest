@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 import { parseAttendanceFile, parseSalaryFile } from "@/lib/excelParser";
@@ -54,6 +54,13 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
+const toTimeISO = (t: string | null | undefined): Date | null => {
+  if (!t) return null;
+  const m = t.match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  return new Date(Date.UTC(1970, 0, 1, parseInt(m[1], 10), parseInt(m[2], 10), 0));
+};
+
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth(req);
@@ -84,51 +91,85 @@ export async function POST(req: NextRequest) {
         employeeCount = (records as any).employeeCount ?? new Set(records.map((r) => r.employee_id)).size;
         preview = records.slice(0, 10);
 
-        for (const record of records) {
-          // Cross-company safety check
-          const collision = await prisma.employee.findUnique({
-            where: { employeeId_systemMode: { employeeId: record.employee_id, systemMode } },
-            select: { companyId: true },
-          });
-          if (collision && collision.companyId !== companyId) {
-            throw new HttpError(409, `Employee ID "${record.employee_id}" is already used by another company`);
-          }
-          await prisma.employee.upsert({
-            where: { employeeId_systemMode: { employeeId: record.employee_id, systemMode } },
-            create: { employeeId: record.employee_id, name: record.employee_name || record.employee_id, systemMode, companyId },
-            update: {
-              name: record.employee_name && record.employee_name !== record.employee_id ? record.employee_name : undefined,
-              // Do NOT change companyId on update — keep the record in its original company
+        if (records.length > 0) {
+          const uniqueEmpIds = [...new Set(records.map((r) => r.employee_id))];
+
+          // 1. Batch collision check — one query for all employee IDs
+          const collisions = await prisma.employee.findMany({
+            where: {
+              employeeId: { in: uniqueEmpIds },
+              systemMode,
+              NOT: { companyId },
             },
+            select: { employeeId: true },
           });
+          if (collisions.length > 0) {
+            throw new HttpError(
+              409,
+              `Employee ID "${collisions[0].employeeId}" is already used by another company`
+            );
+          }
 
-          // Prisma needs ISO DateTime for @db.Time columns — wrap "HH:mm" into a date
-          const toTimeISO = (t: string | null | undefined): Date | null => {
-            if (!t) return null;
-            const m = t.match(/^(\d{1,2}):(\d{2})/);
-            if (!m) return null;
-            const h = parseInt(m[1], 10);
-            const min = parseInt(m[2], 10);
-            return new Date(Date.UTC(1970, 0, 1, h, min, 0));
-          };
+          // 2. Batch upsert employees — one transaction
+          const empNameMap = new Map<string, string>();
+          for (const r of records) {
+            if (!empNameMap.has(r.employee_id)) empNameMap.set(r.employee_id, r.employee_name);
+          }
+          await prisma.$transaction(
+            uniqueEmpIds.map((id) =>
+              prisma.employee.upsert({
+                where: { employeeId_systemMode: { employeeId: id, systemMode } },
+                create: { employeeId: id, name: empNameMap.get(id) || id, systemMode, companyId },
+                update: {
+                  name:
+                    empNameMap.get(id) && empNameMap.get(id) !== id
+                      ? empNameMap.get(id)
+                      : undefined,
+                },
+              })
+            )
+          );
 
-          const existing = await prisma.attendanceRecord.findFirst({
-            where: { employeeId: record.employee_id, workDate: new Date(record.work_date), systemMode, companyId },
+          // 3. Batch fetch existing attendance records — one query
+          const uniqueDates = [...new Set(records.map((r) => r.work_date))].map(
+            (d) => new Date(d)
+          );
+          const existingRows = await prisma.attendanceRecord.findMany({
+            where: {
+              companyId,
+              systemMode,
+              employeeId: { in: uniqueEmpIds },
+              workDate: { in: uniqueDates },
+            },
+            select: { id: true, employeeId: true, workDate: true },
           });
+          const existingMap = new Map<string, number>();
+          for (const row of existingRows) {
+            const key = `${row.employeeId}:${row.workDate.toISOString().slice(0, 10)}`;
+            existingMap.set(key, row.id);
+          }
 
-          if (existing) {
-            await prisma.attendanceRecord.update({
-              where: { id: existing.id },
-              data: {
-                clockIn: toTimeISO(record.clock_in),
-                clockOut: toTimeISO(record.clock_out),
-                hoursWorked: record.hours_worked,
-                uploadBatch: batchId,
-              },
-            });
-          } else {
-            await prisma.attendanceRecord.create({
-              data: {
+          // 4. Split records into creates and updates, then run one transaction
+          const creates: Parameters<typeof prisma.attendanceRecord.createMany>[0]["data"] = [];
+          const updates: ReturnType<typeof prisma.attendanceRecord.update>[] = [];
+
+          for (const record of records) {
+            const key = `${record.employee_id}:${record.work_date}`;
+            const existingId = existingMap.get(key);
+            if (existingId != null) {
+              updates.push(
+                prisma.attendanceRecord.update({
+                  where: { id: existingId },
+                  data: {
+                    clockIn: toTimeISO(record.clock_in),
+                    clockOut: toTimeISO(record.clock_out),
+                    hoursWorked: record.hours_worked,
+                    uploadBatch: batchId,
+                  },
+                })
+              );
+            } else {
+              creates.push({
                 companyId,
                 employeeId: record.employee_id,
                 workDate: new Date(record.work_date),
@@ -137,9 +178,14 @@ export async function POST(req: NextRequest) {
                 hoursWorked: record.hours_worked,
                 uploadBatch: batchId,
                 systemMode,
-              },
-            });
+              });
+            }
           }
+
+          await prisma.$transaction([
+            prisma.attendanceRecord.createMany({ data: creates, skipDuplicates: true }),
+            ...updates,
+          ]);
         }
       } else if (fileType === "salary") {
         const emps = parseSalaryFile(buf);
@@ -147,47 +193,83 @@ export async function POST(req: NextRequest) {
         employeeCount = emps.length;
         preview = emps.slice(0, 10);
 
-        // Enforce quota: count new employees that would be added vs the cap
-        const company = await prisma.company.findUnique({
-          where: { id: companyId },
-          select: { maxEmployees: true },
-        });
-        if (company?.maxEmployees != null) {
-          const adminUsers = await prisma.user.findMany({
-            where: { companyId, role: { in: ["owner", "hr", "super_admin"] } },
-            select: { employeeNumber: true },
+        if (emps.length > 0) {
+          const empIds = emps.map((e) => e.employee_id);
+
+          // 1. Batch collision check — one query
+          const collisions = await prisma.employee.findMany({
+            where: {
+              employeeId: { in: empIds },
+              systemMode,
+              NOT: { companyId },
+            },
+            select: { employeeId: true },
           });
-          const adminNums = adminUsers.map((u) => u.employeeNumber).filter(Boolean) as string[];
-          const existingIds = new Set(
-            (await prisma.employee.findMany({
-              where: { companyId, systemMode, ...(adminNums.length > 0 ? { NOT: { employeeId: { in: adminNums } } } : {}) },
-              select: { employeeId: true },
-            })).map((e) => e.employeeId).filter(Boolean) as string[]
-          );
-          const currentCount = existingIds.size;
-          const newIds = emps.filter((e) => !existingIds.has(e.employee_id) && !adminNums.includes(e.employee_id));
-          if (currentCount + newIds.length > company.maxEmployees) {
+          if (collisions.length > 0) {
             throw new HttpError(
-              403,
-              `QUOTA_EXCEEDED: Your plan allows up to ${company.maxEmployees} employees. You have ${currentCount}, the file adds ${newIds.length} new ones (total ${currentCount + newIds.length}). Please upgrade your plan.`
+              409,
+              `Employee ID "${collisions[0].employeeId}" is already used by another company`
             );
           }
-        }
 
-        for (const emp of emps) {
-          // Cross-company safety check
-          const collision = await prisma.employee.findUnique({
-            where: { employeeId_systemMode: { employeeId: emp.employee_id, systemMode } },
-            select: { companyId: true },
+          // 2. Quota enforcement (unchanged logic)
+          const company = await prisma.company.findUnique({
+            where: { id: companyId },
+            select: { maxEmployees: true },
           });
-          if (collision && collision.companyId !== companyId) {
-            throw new HttpError(409, `Employee ID "${emp.employee_id}" is already used by another company`);
+          if (company?.maxEmployees != null) {
+            const adminUsers = await prisma.user.findMany({
+              where: { companyId, role: { in: ["owner", "hr", "super_admin"] } },
+              select: { employeeNumber: true },
+            });
+            const adminNums = adminUsers.map((u) => u.employeeNumber).filter(Boolean) as string[];
+            const existingIds = new Set(
+              (
+                await prisma.employee.findMany({
+                  where: {
+                    companyId,
+                    systemMode,
+                    ...(adminNums.length > 0 ? { NOT: { employeeId: { in: adminNums } } } : {}),
+                  },
+                  select: { employeeId: true },
+                })
+              )
+                .map((e) => e.employeeId)
+                .filter(Boolean) as string[]
+            );
+            const currentCount = existingIds.size;
+            const newIds = emps.filter(
+              (e) => !existingIds.has(e.employee_id) && !adminNums.includes(e.employee_id)
+            );
+            if (currentCount + newIds.length > company.maxEmployees) {
+              throw new HttpError(
+                403,
+                `QUOTA_EXCEEDED: Your plan allows up to ${company.maxEmployees} employees. You have ${currentCount}, the file adds ${newIds.length} new ones (total ${currentCount + newIds.length}). Please upgrade your plan.`
+              );
+            }
           }
-          await prisma.employee.upsert({
-            where: { employeeId_systemMode: { employeeId: emp.employee_id, systemMode } },
-            create: { employeeId: emp.employee_id, name: emp.name, baseSalary: emp.base_salary, socialSecurity: emp.social_security, systemMode, companyId },
-            update: { name: emp.name, baseSalary: emp.base_salary, socialSecurity: emp.social_security },
-          });
+
+          // 3. Batch upsert all employees — one transaction
+          await prisma.$transaction(
+            emps.map((emp) =>
+              prisma.employee.upsert({
+                where: { employeeId_systemMode: { employeeId: emp.employee_id, systemMode } },
+                create: {
+                  employeeId: emp.employee_id,
+                  name: emp.name,
+                  baseSalary: emp.base_salary,
+                  socialSecurity: emp.social_security,
+                  systemMode,
+                  companyId,
+                },
+                update: {
+                  name: emp.name,
+                  baseSalary: emp.base_salary,
+                  socialSecurity: emp.social_security,
+                },
+              })
+            )
+          );
         }
       }
 
@@ -204,7 +286,13 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      results.push({ filename: file.name, row_count: rowCount, employee_count: employeeCount, type: fileType, preview });
+      results.push({
+        filename: file.name,
+        row_count: rowCount,
+        employee_count: employeeCount,
+        type: fileType,
+        preview,
+      });
     }
 
     await logAudit(session, "upload", "upload", batchId, {
@@ -213,7 +301,13 @@ export async function POST(req: NextRequest) {
       totalRows: results.reduce((s, r) => s + (r.row_count || 0), 0),
       totalEmployees: results.reduce((s, r) => s + (r.employee_count || 0), 0),
     });
-    return NextResponse.json({ success: true, batch_id: batchId, system_mode: systemMode, company_id: companyId, files: results });
+    return NextResponse.json({
+      success: true,
+      batch_id: batchId,
+      system_mode: systemMode,
+      company_id: companyId,
+      files: results,
+    });
   } catch (err) {
     return errorResponse(err);
   }
