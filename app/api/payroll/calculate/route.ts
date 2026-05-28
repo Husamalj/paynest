@@ -127,6 +127,7 @@ export async function POST(req: NextRequest) {
       deduction_rate: settings.deductionRate,
       extra_rate: settings.extraRate,
       workdays: settings.workdays,
+      work_start_time: (settings as any).workStartTime ?? "09:00",
     };
 
     const empPlain = employees.map((e) => ({

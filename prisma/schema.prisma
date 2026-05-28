@@ -88,6 +88,7 @@ model CompanySettings {
   workdays      String   @default("Sun,Mon,Tue,Wed,Thu") @db.VarChar(50)
   deductionRate Decimal  @default(1.0) @map("deduction_rate")
   extraRate     Decimal  @default(1.0) @map("extra_rate")
+  workStartTime String   @default("09:00") @map("work_start_time") @db.VarChar(5)
   createdAt     DateTime @default(now()) @map("created_at")
 
   company Company @relation(fields: [companyId], references: [id])

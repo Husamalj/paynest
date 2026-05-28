@@ -1,26 +1,44 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calculator, Shield, Save, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { Calculator, Shield, Save, CheckCircle2, AlertTriangle, X, Clock } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 import clsx from "clsx";
 
 const WORKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WORKDAY_LABELS: Record<string, { ar: string; en: string }> = {
-  Sun: { ar: "الأحد", en: "Sunday" },
-  Mon: { ar: "الإثنين", en: "Monday" },
-  Tue: { ar: "الثلاثاء", en: "Tuesday" },
+  Sun: { ar: "الأحد",    en: "Sunday"    },
+  Mon: { ar: "الإثنين",  en: "Monday"    },
+  Tue: { ar: "الثلاثاء", en: "Tuesday"   },
   Wed: { ar: "الأربعاء", en: "Wednesday" },
-  Thu: { ar: "الخميس", en: "Thursday" },
-  Fri: { ar: "الجمعة", en: "Friday" },
-  Sat: { ar: "السبت", en: "Saturday" },
+  Thu: { ar: "الخميس",   en: "Thursday"  },
+  Fri: { ar: "الجمعة",   en: "Friday"    },
+  Sat: { ar: "السبت",    en: "Saturday"  },
 };
 
-const defaultForm = { company_name: "PayNest", system_mode: "daily", language: "ar", req_hours: 8, month_days: 26, late_tolerance: 0, workdays: "Sun,Mon,Tue,Wed,Thu", deduction_rate: 1.0, extra_rate: 1.0 };
+// Generate HH:00 options 00:00 – 23:00
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
+  const h = String(i).padStart(2, "0");
+  return { value: `${h}:00`, label: `${h}:00` };
+});
+
+const defaultForm = {
+  company_name: "PayNest",
+  system_mode: "daily",
+  language: "ar",
+  req_hours: 9,
+  month_days: 176,          // hourly mode: req hours/month | daily mode: workdays/month (26)
+  late_tolerance: 0,
+  workdays: "Sun,Mon,Tue,Wed,Thu",
+  deduction_rate: 1.0,
+  extra_rate: 1.0,
+  work_start_time: "09:00", // daily mode only
+};
 
 export default function SettingsPage() {
   const { t, lang } = useLanguage();
+  const ar = lang === "ar";
   const role = typeof window !== "undefined" ? localStorage.getItem("role") : null;
   const isOwner = role === "owner";
   const [form, setForm] = useState({ ...defaultForm });
@@ -34,10 +52,23 @@ export default function SettingsPage() {
     Promise.all([api.get("/settings"), api.get("/employees")])
       .then(([sRes, eRes]) => {
         const s = sRes.data;
-        if (s) setForm({ company_name: s.company_name || "PayNest", system_mode: s.system_mode || "daily", language: s.language || "ar", req_hours: s.req_hours || 8, month_days: s.month_days || 26, late_tolerance: s.late_tolerance || 0, workdays: s.workdays || "Sun,Mon,Tue,Wed,Thu", deduction_rate: s.deduction_rate || 1.0, extra_rate: s.extra_rate || 1.0 });
+        if (s) {
+          setForm({
+            company_name:    s.company_name    || "PayNest",
+            system_mode:     s.system_mode     || "daily",
+            language:        s.language        || "ar",
+            req_hours:       s.req_hours       ?? 9,
+            month_days:      s.month_days      ?? (s.system_mode === "hourly" ? 176 : 26),
+            late_tolerance:  s.late_tolerance  ?? 0,
+            workdays:        s.workdays        || "Sun,Mon,Tue,Wed,Thu",
+            deduction_rate:  s.deduction_rate  ?? 1.0,
+            extra_rate:      s.extra_rate      ?? 1.0,
+            work_start_time: s.work_start_time || "09:00",
+          });
+        }
         setEmployees(eRes.data || []);
       })
-      .catch(() => { });
+      .catch(() => {});
   }, []);
 
   const selectedWorkdays = form.workdays ? form.workdays.split(",") : [];
@@ -51,7 +82,7 @@ export default function SettingsPage() {
     e.preventDefault(); setSaving(true); setError(""); setSuccess("");
     try {
       await api.put("/settings", form);
-      setSuccess(lang === "ar" ? "تم حفظ الإعدادات بنجاح" : "Settings saved successfully");
+      setSuccess(ar ? "تم حفظ الإعدادات بنجاح" : "Settings saved successfully");
     } catch (err: any) { setError(err.message); }
     finally { setSaving(false); }
   };
@@ -65,144 +96,313 @@ export default function SettingsPage() {
     finally { setSavingEmp((p) => ({ ...p, [emp.employee_id]: false })); }
   };
 
+  const isDaily  = form.system_mode === "daily";
+  const isHourly = form.system_mode === "hourly";
+
   return (
     <div className="space-y-6">
-      <div className="page-header"><div><h2 className="page-title">{t("settings")}</h2><p className="page-subtitle">{t("payrollSystemDesc")}</p></div></div>
+      <div className="page-header">
+        <div>
+          <h2 className="page-title">{t("settings")}</h2>
+          <p className="page-subtitle">{t("payrollSystemDesc")}</p>
+        </div>
+      </div>
 
-      {error && <div className="alert alert-error"><AlertTriangle size={16} /><span className="flex-1">{error}</span><button onClick={() => setError("")} className="opacity-60 hover:opacity-100"><X size={14} /></button></div>}
-      {success && <div className="alert alert-success"><CheckCircle2 size={16} /><span className="flex-1">{success}</span><button onClick={() => setSuccess("")} className="opacity-60 hover:opacity-100"><X size={14} /></button></div>}
+      {error   && <div className="alert alert-error">  <AlertTriangle size={16}/><span className="flex-1">{error}</span>  <button onClick={() => setError("")}   className="opacity-60 hover:opacity-100"><X size={14}/></button></div>}
+      {success && <div className="alert alert-success"><CheckCircle2 size={16}/><span className="flex-1">{success}</span><button onClick={() => setSuccess("")} className="opacity-60 hover:opacity-100"><X size={14}/></button></div>}
 
       <form onSubmit={handleSave} className="space-y-5">
-        {/* ── System Mode (pay scale) — most prominent ───────────────── */}
+
+        {/* ── Payroll Mode ─────────────────────────────────── */}
         <div className="card border-2 border-brand-200">
-          <div className="card-header"><div className="card-title"><Calculator size={16} className="text-brand-600" />
-            {lang === "ar" ? "نظام احتساب الراتب" : "Payroll System"}
-          </div></div>
+          <div className="card-header">
+            <div className="card-title"><Calculator size={16} className="text-brand-600"/>
+              {ar ? "نظام احتساب الراتب" : "Payroll System"}
+            </div>
+          </div>
           <p className="text-sm text-slate-500 mb-3">
-            {lang === "ar"
+            {ar
               ? "اختر طريقة احتساب الراتب: يومي (حسب أيام الدوام) أو ساعي (حسب ساعات الدوام)"
               : "Choose how salaries are calculated — Daily (by workdays) or Hourly (by clocked hours)"}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button type="button"
-              onClick={() => setForm((f) => ({ ...f, system_mode: "daily" }))}
-              className={clsx(
-                "rounded-xl border-2 p-4 text-left transition-all",
-                form.system_mode === "daily"
-                  ? "border-brand-500 bg-brand-50"
-                  : "border-slate-200 hover:border-brand-300"
-              )}>
-              <div className="font-bold text-slate-900 mb-1">
-                {lang === "ar" ? "📅 يومي (Daily)" : "📅 Daily-based"}
-              </div>
-              <div className="text-xs text-slate-500">
-                {lang === "ar"
-                  ? "الراتب = الراتب الأساسي ÷ أيام الشهر × أيام الدوام"
-                  : "Salary = Base ÷ month days × days worked"}
-              </div>
-            </button>
-            <button type="button"
-              onClick={() => setForm((f) => ({ ...f, system_mode: "hourly" }))}
-              className={clsx(
-                "rounded-xl border-2 p-4 text-left transition-all",
-                form.system_mode === "hourly"
-                  ? "border-brand-500 bg-brand-50"
-                  : "border-slate-200 hover:border-brand-300"
-              )}>
-              <div className="font-bold text-slate-900 mb-1">
-                {lang === "ar" ? "⏱️ ساعي (Hourly)" : "⏱️ Hourly-based"}
-              </div>
-              <div className="text-xs text-slate-500">
-                {lang === "ar"
-                  ? "الراتب = الراتب الأساسي ÷ الساعات الشهرية × الساعات الفعلية"
-                  : "Salary = Base ÷ monthly hours × hours worked"}
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-header"><div className="card-title"><Calculator size={16} className="text-brand-600" />{t("calculationSettings")}</div></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="form-label">{t("companyName")} {!isOwner && <span className="text-xs text-slate-400 ms-1">({lang === "ar" ? "للمالك فقط" : "owner only"})</span>}</label>
-              <input
-                className="form-input"
-                value={form.company_name}
-                onChange={(e) => isOwner && setForm((f) => ({ ...f, company_name: e.target.value }))}
-                disabled={!isOwner}
-                readOnly={!isOwner}
-              />
-            </div>
-            <div>
-              <label className="form-label">
-                {form.system_mode === "hourly"
-                  ? (lang === "ar" ? "ساعات الدوام يوميًا" : "Required hours / day")
-                  : (lang === "ar" ? "ساعات الدوام يوميًا" : "Hours per workday")}
-              </label>
-              <input type="number" className="form-input" value={form.req_hours} onChange={(e) => setForm((f) => ({ ...f, req_hours: parseFloat(e.target.value) || 8 }))} min={1} max={24} step={0.5} />
-            </div>
-            <div>
-              <label className="form-label">{lang === "ar" ? "أيام العمل في الشهر" : "Workdays / month"}</label>
-              <input type="number" className="form-input" value={form.month_days} onChange={(e) => setForm((f) => ({ ...f, month_days: parseInt(e.target.value) || 26 }))} min={1} max={31} />
-            </div>
-            <div>
-              <label className="form-label">{lang === "ar" ? "حد التأخير المسموح (دقائق)" : "Late tolerance (mins)"}</label>
-              <input type="number" className="form-input" value={form.late_tolerance} onChange={(e) => setForm((f) => ({ ...f, late_tolerance: parseInt(e.target.value) || 0 }))} min={0} />
-            </div>
-            <div>
-              <label className="form-label">{lang === "ar" ? "معدل خصم التأخير" : "Deduction rate"}</label>
-              <input type="number" step="0.01" min="0" className="form-input" value={form.deduction_rate} onChange={(e) => {
-                const v = e.target.value;
-                setForm((f) => ({ ...f, deduction_rate: v === "" ? 0 : (parseFloat(v) || 0) }));
-              }} />
-            </div>
-            <div>
-              <label className="form-label">{lang === "ar" ? "معدل ساعات إضافية" : "Overtime rate"}</label>
-              <input type="number" step="0.01" min="0" className="form-input" value={form.extra_rate} onChange={(e) => {
-                const v = e.target.value;
-                setForm((f) => ({ ...f, extra_rate: v === "" ? 0 : (parseFloat(v) || 0) }));
-              }} />
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-header"><div className="card-title">{t("workdays")}</div></div>
-          <div className="flex flex-wrap gap-2">
-            {WORKDAYS.map((day) => (
-              <button key={day} type="button"
-                className={clsx("px-4 py-2 rounded-lg text-sm font-medium border transition-all", selectedWorkdays.includes(day) ? "bg-brand-600 text-white border-brand-600" : "bg-white text-slate-700 border-slate-200 hover:border-brand-400")}
-                onClick={() => toggleWorkday(day)}
+            {[
+              {
+                value: "daily",
+                icon: "📅",
+                label:    ar ? "يومي (Daily)"   : "Daily-based",
+                sublabel: ar
+                  ? "الراتب = الأساسي ÷ أيام الشهر × أيام الدوام"
+                  : "Salary = Base ÷ month days × days worked",
+              },
+              {
+                value: "hourly",
+                icon: "⏱️",
+                label:    ar ? "ساعي (Hourly)"  : "Hourly-based",
+                sublabel: ar
+                  ? "الراتب = الأساسي ÷ ساعات الشهر المطلوبة × الساعات الفعلية"
+                  : "Salary = Base ÷ required monthly hours × hours worked",
+              },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, system_mode: opt.value }))}
+                className={clsx(
+                  "rounded-xl border-2 p-4 text-left transition-all",
+                  form.system_mode === opt.value
+                    ? "border-brand-500 bg-brand-50"
+                    : "border-slate-200 hover:border-brand-300"
+                )}
               >
-                {WORKDAY_LABELS[day]?.[lang as "ar" | "en"] || day}
+                <div className="font-bold text-slate-900 mb-1">{opt.icon} {opt.label}</div>
+                <div className="text-xs text-slate-500">{opt.sublabel}</div>
               </button>
             ))}
           </div>
         </div>
 
+        {/* ── Calculation Settings ─────────────────────────── */}
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title"><Calculator size={16} className="text-brand-600"/>{t("calculationSettings")}</div>
+          </div>
+
+          {isDaily && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Company Name */}
+              <div>
+                <label className="form-label">
+                  {t("companyName")}{" "}
+                  {!isOwner && <span className="text-xs text-slate-400 ms-1">({ar ? "للمالك فقط" : "owner only"})</span>}
+                </label>
+                <input
+                  className="form-input"
+                  value={form.company_name}
+                  onChange={(e) => isOwner && setForm((f) => ({ ...f, company_name: e.target.value }))}
+                  disabled={!isOwner}
+                  readOnly={!isOwner}
+                />
+              </div>
+
+              {/* Hours per workday */}
+              <div>
+                <label className="form-label">{ar ? "ساعات الدوام يوميًا" : "Hours per workday"}</label>
+                <input
+                  type="number" className="form-input"
+                  value={form.req_hours}
+                  onChange={(e) => setForm((f) => ({ ...f, req_hours: parseFloat(e.target.value) || 9 }))}
+                  min={1} max={24} step={0.5}
+                />
+              </div>
+
+              {/* Workdays / month */}
+              <div>
+                <label className="form-label">{ar ? "أيام العمل في الشهر" : "Workdays / month"}</label>
+                <input
+                  type="number" className="form-input"
+                  value={form.month_days}
+                  onChange={(e) => setForm((f) => ({ ...f, month_days: parseInt(e.target.value) || 26 }))}
+                  min={1} max={31}
+                />
+              </div>
+
+              {/* Late tolerance */}
+              <div>
+                <label className="form-label">{ar ? "حد التأخير المسموح (دقائق)" : "Late tolerance (mins)"}</label>
+                <input
+                  type="number" className="form-input"
+                  value={form.late_tolerance}
+                  onChange={(e) => setForm((f) => ({ ...f, late_tolerance: parseInt(e.target.value) || 0 }))}
+                  min={0}
+                />
+              </div>
+
+              {/* Deduction rate */}
+              <div>
+                <label className="form-label">{ar ? "معدل خصم التأخير" : "Deduction rate"}</label>
+                <input
+                  type="number" step="0.01" min="0" className="form-input"
+                  value={form.deduction_rate}
+                  onChange={(e) => setForm((f) => ({ ...f, deduction_rate: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+
+              {/* Overtime rate */}
+              <div>
+                <label className="form-label">{ar ? "معدل ساعات إضافية" : "Overtime rate"}</label>
+                <input
+                  type="number" step="0.01" min="0" className="form-input"
+                  value={form.extra_rate}
+                  onChange={(e) => setForm((f) => ({ ...f, extra_rate: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+            </div>
+          )}
+
+          {isHourly && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Company Name */}
+              <div>
+                <label className="form-label">
+                  {t("companyName")}{" "}
+                  {!isOwner && <span className="text-xs text-slate-400 ms-1">({ar ? "للمالك فقط" : "owner only"})</span>}
+                </label>
+                <input
+                  className="form-input"
+                  value={form.company_name}
+                  onChange={(e) => isOwner && setForm((f) => ({ ...f, company_name: e.target.value }))}
+                  disabled={!isOwner}
+                  readOnly={!isOwner}
+                />
+              </div>
+
+              {/* Required hours / month */}
+              <div>
+                <label className="form-label">
+                  {ar ? "الساعات المطلوبة في الشهر" : "Required hours / month"}
+                  <span className="ms-1 text-xs text-slate-400">{ar ? "(مثال: 176)" : "(e.g. 176)"}</span>
+                </label>
+                <input
+                  type="number" className="form-input"
+                  value={form.month_days}
+                  onChange={(e) => setForm((f) => ({ ...f, month_days: parseInt(e.target.value) || 176 }))}
+                  min={1} max={744} step={1}
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {ar
+                    ? `معدل الساعة = الراتب الأساسي ÷ ${form.month_days} ساعة`
+                    : `Hourly rate = Base salary ÷ ${form.month_days} hrs`}
+                </p>
+              </div>
+
+              {/* Deduction rate */}
+              <div>
+                <label className="form-label">{ar ? "معدل خصم الساعات الناقصة" : "Deduction rate (for missing hours)"}</label>
+                <input
+                  type="number" step="0.01" min="0" className="form-input"
+                  value={form.deduction_rate}
+                  onChange={(e) => setForm((f) => ({ ...f, deduction_rate: parseFloat(e.target.value) || 0 }))}
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {ar ? "خصم = ساعات ناقصة × معدل الساعة × هذا المعدل" : "Deduction = missing hrs × hourly rate × this rate"}
+                </p>
+              </div>
+
+              {/* Overtime rate */}
+              <div>
+                <label className="form-label">{ar ? "معدل الساعات الإضافية" : "Overtime rate"}</label>
+                <input
+                  type="number" step="0.01" min="0" className="form-input"
+                  value={form.extra_rate}
+                  onChange={(e) => setForm((f) => ({ ...f, extra_rate: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Work Days (daily mode only) ───────────────────── */}
+        {isDaily && (
+          <>
+            <div className="card">
+              <div className="card-header"><div className="card-title">{t("workdays")}</div></div>
+              <div className="flex flex-wrap gap-2">
+                {WORKDAYS.map((day) => (
+                  <button
+                    key={day} type="button"
+                    className={clsx(
+                      "px-4 py-2 rounded-lg text-sm font-medium border transition-all",
+                      selectedWorkdays.includes(day)
+                        ? "bg-brand-600 text-white border-brand-600"
+                        : "bg-white text-slate-700 border-slate-200 hover:border-brand-400"
+                    )}
+                    onClick={() => toggleWorkday(day)}
+                  >
+                    {WORKDAY_LABELS[day]?.[lang as "ar" | "en"] || day}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Work Start Time */}
+            <div className="card">
+              <div className="card-header">
+                <div className="card-title"><Clock size={16} className="text-brand-600"/>
+                  {ar ? "وقت بدء الدوام" : "Work Start Time"}
+                </div>
+              </div>
+              <p className="text-sm text-slate-500 mb-4">
+                {ar
+                  ? `يجب على الموظف الحضور في هذا الوقت. مدة الدوام ${form.req_hours} ساعة يوميًا.`
+                  : `Employees must clock in at this time. Shift duration is ${form.req_hours} hours per day.`}
+              </p>
+              <div className="flex items-center gap-4">
+                <div className="w-40">
+                  <label className="form-label">{ar ? "وقت البداية" : "Start time"}</label>
+                  <select
+                    className="form-select"
+                    value={form.work_start_time}
+                    onChange={(e) => setForm((f) => ({ ...f, work_start_time: e.target.value }))}
+                  >
+                    {HOUR_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mt-5 flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-lg px-4 py-2 border border-slate-200">
+                  <Clock size={14} className="text-brand-500"/>
+                  <span>
+                    {ar
+                      ? `${form.work_start_time} → ${addHours(form.work_start_time, form.req_hours)}`
+                      : `${form.work_start_time} → ${addHours(form.work_start_time, form.req_hours)}`}
+                    <span className="text-slate-400 ms-2 text-xs">
+                      ({ar ? `${form.req_hours} ساعة` : `${form.req_hours}h shift`})
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
         <div className="flex justify-end">
           <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? <span className="spinner" /> : <Save size={15} />}
+            {saving ? <span className="spinner"/> : <Save size={15}/>}
             {saving ? t("saving") : t("save")}
           </button>
         </div>
       </form>
 
+      {/* ── Social Security ───────────────────────────────── */}
       <div className="card">
-        <div className="card-header"><div className="card-title"><Shield size={16} className="text-brand-600" />{t("employeeSettings")} — {t("socialSecurity")}</div></div>
+        <div className="card-header">
+          <div className="card-title"><Shield size={16} className="text-brand-600"/>{t("employeeSettings")} — {t("socialSecurity")}</div>
+        </div>
         <div className="table-wrapper">
           <table>
-            <thead><tr><th>{t("name")}</th><th>{t("employeeId")}</th><th className="text-right">{t("socialSecurity")}</th></tr></thead>
+            <thead>
+              <tr>
+                <th>{t("name")}</th>
+                <th>{t("employeeId")}</th>
+                <th className="text-right">{t("socialSecurity")}</th>
+              </tr>
+            </thead>
             <tbody>
               {employees.map((emp) => (
                 <tr key={emp.employee_id}>
                   <td className="font-medium">{emp.name}</td>
                   <td className="font-mono text-xs text-slate-500">{emp.employee_id}</td>
                   <td className="text-right">
-                    <label className="toggle">{savingEmp[emp.employee_id] && <span className="spinner spinner-sm mr-2" />}
-                      <input type="checkbox" checked={!!emp.social_security} onChange={(e) => handleSSToggle(emp, e.target.checked)} disabled={!!savingEmp[emp.employee_id]} />
-                      <span className="toggle-slider" />
+                    <label className="toggle">
+                      {savingEmp[emp.employee_id] && <span className="spinner spinner-sm mr-2"/>}
+                      <input
+                        type="checkbox"
+                        checked={!!emp.social_security}
+                        onChange={(e) => handleSSToggle(emp, e.target.checked)}
+                        disabled={!!savingEmp[emp.employee_id]}
+                      />
+                      <span className="toggle-slider"/>
                     </label>
                   </td>
                 </tr>
@@ -213,4 +413,11 @@ export default function SettingsPage() {
       </div>
     </div>
   );
+}
+
+/** Add N hours to a "HH:00" string, returns "HH:00" (wraps at 24) */
+function addHours(startTime: string, hours: number): string {
+  const [h] = startTime.split(":").map(Number);
+  const end = (h + Math.floor(hours)) % 24;
+  return `${String(end).padStart(2, "0")}:00`;
 }

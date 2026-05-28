@@ -44,6 +44,7 @@ export async function PUT(req: NextRequest) {
       workdays: body.workdays,
       deductionRate: body.deduction_rate != null ? Number(body.deduction_rate) : body.deductionRate != null ? Number(body.deductionRate) : undefined,
       extraRate: body.extra_rate != null ? Number(body.extra_rate) : body.extraRate != null ? Number(body.extraRate) : undefined,
+      workStartTime: body.work_start_time ?? body.workStartTime,
     };
     // Remove undefined keys
     const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
@@ -74,6 +75,7 @@ function toSnake(s: any) {
     workdays: s.workdays,
     deduction_rate: s.deductionRate,
     extra_rate: s.extraRate,
+    work_start_time: s.workStartTime ?? "09:00",
     created_at: s.createdAt,
     // also camel for newer code
     companyId: s.companyId,
@@ -84,5 +86,6 @@ function toSnake(s: any) {
     lateTolerance: s.lateTolerance,
     deductionRate: s.deductionRate,
     extraRate: s.extraRate,
+    workStartTime: s.workStartTime ?? "09:00",
   };
 }

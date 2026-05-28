@@ -200,11 +200,12 @@ export function calculateHoursPayroll(
   leaveMap: Record<string, Record<string, string>>,
   period: { month: number; year: number }
 ) {
-  const reqHours = parseFloat(settings.req_hours ?? settings.reqHours) || 8;
-  const monthDays = parseFloat(settings.month_days ?? settings.monthDays) || 26;
+  // In hourly mode, month_days stores the total required hours per month (e.g. 176)
+  // hourlyRate = baseSalary / requiredMonthlyHours
+  // deduction  = missingHours × hourlyRate × deductionRate
+  const baseRequiredHours = parseFloat(settings.month_days ?? settings.monthDays) || 176;
   const deductionRate = parseFloat(settings.deduction_rate ?? settings.deductionRate) || 1.0;
   const extraRate = parseFloat(settings.extra_rate ?? settings.extraRate) || 1.0;
-  const baseRequiredHours = monthDays * reqHours;
   const { month, year } = period;
 
   return employees.map((emp) => {
@@ -223,7 +224,9 @@ export function calculateHoursPayroll(
       return count + 1;
     }, 0);
 
-    const requiredHours = Math.max(0, baseRequiredHours - paidLeaveDays * reqHours);
+    // Estimate hours per day from monthly target (divide by ~26 working days)
+    const estHoursPerDay = baseRequiredHours / 26;
+    const requiredHours = Math.max(0, baseRequiredHours - paidLeaveDays * estHoursPerDay);
     let totalHours = 0;
 
     for (const [dateKey, record] of Object.entries(empAttendance)) {
