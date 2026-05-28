@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { sendPayslipReady } from "@/lib/email";
 import {
   buildLeaveMap,
   calculateDailyPayroll,
@@ -169,6 +170,21 @@ export async function POST(req: NextRequest) {
           systemMode: mode,
         },
       });
+    }
+
+    // Fire payslip-ready emails (non-blocking)
+    try {
+      const empUsers = await prisma.user.findMany({
+        where: { companyId: session.companyId, role: "employee" },
+        select: { email: true, name: true, employeeNumber: true },
+      });
+      for (const u of empUsers) {
+        if (u.email) {
+          sendPayslipReady(u.email, u.name || "Employee", periodMonth, periodYear);
+        }
+      }
+    } catch (e) {
+      console.error("[payslip email]", e);
     }
 
     return NextResponse.json({
