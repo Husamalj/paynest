@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Users, Plus, AlertTriangle, CheckCircle2, X, Shield, Edit2, Trash2,
-  Calendar, Phone, Mail, Hash, Upload, FileText, CheckCircle, ChevronRight, Crown,
+  Calendar, Phone, Mail, Hash, Upload, FileText, CheckCircle, ChevronRight, Crown, Eye,
 } from "lucide-react";
 import clsx from "clsx";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -341,20 +341,76 @@ export default function EmployeesPage() {
                     <Calendar size={11} />{selectedBalance?.annual_remaining ?? 14} {ar ? "يوم" : "days"}
                   </span>
                 </div>
-                {/* Documents */}
+                {/* Documents — view / replace / delete each one */}
                 <div className="py-3">
                   <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">{ar ? "الوثائق المرفوعة" : "Uploaded Documents"}</div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {DOC_TYPES.map((dt) => {
                       const uploaded = empDocs.find((d) => d.documentType === dt.key);
+                      const empIdParam = selectedEmployee.employee_id;
+                      const inputId = `replace-${dt.key}`;
+                      const downloadUrl = `/api/employees/${empIdParam}/documents/${dt.key}`;
+                      const openDoc = async () => {
+                        try {
+                          const token = localStorage.getItem("token");
+                          const res = await fetch(downloadUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                          if (!res.ok) throw new Error("Failed to load");
+                          const blob = await res.blob();
+                          const url = URL.createObjectURL(blob);
+                          window.open(url, "_blank");
+                          setTimeout(() => URL.revokeObjectURL(url), 60_000);
+                        } catch (e: any) { setError(e.message); }
+                      };
+                      const replaceDoc = async (file: File) => {
+                        try {
+                          const fd = new FormData();
+                          fd.append("file", file);
+                          fd.append("documentType", dt.key);
+                          await apiPostForm(`/employees/${empIdParam}/documents`, fd);
+                          await loadDocs(empIdParam);
+                          setSuccess(ar ? "تم التحديث" : "Updated");
+                        } catch (e: any) { setError(e.message); }
+                      };
+                      const deleteDoc = async () => {
+                        if (!window.confirm(ar ? "تأكيد حذف هذه الوثيقة؟" : "Delete this document?")) return;
+                        try {
+                          const token = localStorage.getItem("token");
+                          const res = await fetch(downloadUrl, { method: "DELETE", headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                          if (!res.ok) throw new Error("Delete failed");
+                          await loadDocs(empIdParam);
+                          setSuccess(ar ? "تم الحذف" : "Deleted");
+                        } catch (e: any) { setError(e.message); }
+                      };
                       return (
-                        <div key={dt.key} className="flex items-center gap-2">
+                        <div key={dt.key} className="flex items-center gap-2 py-1.5 border-b border-slate-50 last:border-0">
                           {uploaded
                             ? <CheckCircle size={13} className="text-emerald-500 flex-shrink-0" />
                             : <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-200 flex-shrink-0" />}
-                          <span className={clsx("text-xs", uploaded ? "text-slate-700 font-medium" : "text-slate-400")}>
+                          <span className={clsx("text-xs flex-1 min-w-0 truncate", uploaded ? "text-slate-700 font-medium" : "text-slate-400")}>
                             {ar ? dt.ar : dt.en}
+                            {uploaded?.fileName && <span className="text-slate-400 ms-1">— {uploaded.fileName}</span>}
                           </span>
+                          {uploaded ? (
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button onClick={openDoc} title={ar ? "عرض" : "View"} className="p-1 rounded hover:bg-brand-50 text-brand-600">
+                                <Eye size={13} />
+                              </button>
+                              <label htmlFor={inputId} title={ar ? "استبدال" : "Replace"} className="p-1 rounded hover:bg-slate-100 text-slate-600 cursor-pointer">
+                                <Upload size={13} />
+                                <input id={inputId} type="file" accept=".pdf,.doc,.docx,image/*" className="hidden"
+                                  onChange={(e) => { const f = e.target.files?.[0]; if (f) replaceDoc(f); e.target.value = ""; }} />
+                              </label>
+                              <button onClick={deleteDoc} title={ar ? "حذف" : "Delete"} className="p-1 rounded hover:bg-rose-50 text-rose-500">
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          ) : (
+                            <label htmlFor={inputId} title={ar ? "رفع" : "Upload"} className="p-1 rounded hover:bg-brand-50 text-brand-600 cursor-pointer shrink-0">
+                              <Upload size={13} />
+                              <input id={inputId} type="file" accept=".pdf,.doc,.docx,image/*" className="hidden"
+                                onChange={(e) => { const f = e.target.files?.[0]; if (f) replaceDoc(f); e.target.value = ""; }} />
+                            </label>
+                          )}
                         </div>
                       );
                     })}
