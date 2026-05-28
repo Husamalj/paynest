@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { BarChart3, Download, AlertTriangle } from "lucide-react";
+import * as XLSX from "xlsx";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 
@@ -9,14 +10,12 @@ function formatCurrency(val: unknown) {
   return (parseFloat(String(val)) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function downloadCSV(rows: any[], filename: string) {
+function downloadExcel(rows: any[], filename: string) {
   if (!rows.length) return;
-  const headers = Object.keys(rows[0]);
-  const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => JSON.stringify(r[h] ?? "")).join(","))].join("\n");
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-  a.download = filename;
-  a.click();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Payroll");
+  XLSX.writeFile(wb, filename);
 }
 
 export default function ReportsPage() {
@@ -59,7 +58,7 @@ export default function ReportsPage() {
       <div className="page-header">
         <div><h2 className="page-title">{t("reports")}</h2></div>
         {payroll.length > 0 && (
-          <button className="btn btn-secondary" onClick={() => downloadCSV(payroll, `payroll-${selected?.month}-${selected?.year}.csv`)}><Download size={15} /> {t("exportCSV")}</button>
+          <button className="btn btn-secondary" onClick={() => downloadExcel(payroll, `payroll-${selected?.month}-${selected?.year}.xlsx`)}><Download size={15} /> {t("exportCSV")}</button>
         )}
       </div>
 
