@@ -1,6 +1,12 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
+
+const DownloadPayslipButton = dynamic(
+  () => import("@/components/PayslipPDF").then((m) => m.DownloadPayslipButton),
+  { ssr: false }
+);
 import { Zap, Download, ChevronRight, ChevronDown, CheckCircle2, AlertTriangle, X, Calendar, Clock, Calculator } from "lucide-react";
 
 const MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
@@ -24,6 +30,7 @@ export default function PayrollPage() {
   const now = new Date();
   const ar = lang === "ar";
   const months = ar ? MONTHS_AR : MONTHS_EN;
+  const companyName = typeof window !== "undefined" ? localStorage.getItem("companyName") || "PayNest" : "PayNest";
   const [payroll, setPayroll] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
@@ -36,17 +43,12 @@ export default function PayrollPage() {
 
   const loadPayroll = async (m: number, y: number) => {
     try {
-      // Period endpoint returns { period_month, ..., results }
+      // /payroll/period returns { period_month, period_year, system_mode, results }
       const periodRes = await api.get(`/payroll/period?month=${m}&year=${y}`).catch(() => ({ data: { results: [] as any[] } }));
-      const periodList = Array.isArray(periodRes.data?.results)
+      const list = Array.isArray(periodRes.data?.results)
         ? periodRes.data.results
         : Array.isArray(periodRes.data) ? periodRes.data : [];
-      if (periodList.length > 0) {
-        setPayroll(periodList);
-        return;
-      }
-      const latestRes = await api.get(`/payroll/latest?month=${m}&year=${y}`);
-      setPayroll(latestRes.data?.results || []);
+      setPayroll(list);
     } catch (err: any) { setError(err.message); }
   };
 
@@ -61,7 +63,16 @@ export default function PayrollPage() {
       await api.post("/payroll/calculate", { month: periodMonth, year: periodYear });
       setSuccess(`${t("calculationDone")} — ${months[periodMonth - 1]} ${periodYear}`);
       await loadPayroll(periodMonth, periodYear);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) {
+      const msg: string = err?.response?.data?.error || err.message || "";
+      if (msg.includes("NO_ATTENDANCE")) {
+        setError(ar
+          ? `لا توجد بيانات حضور لـ ${months[periodMonth - 1]} ${periodYear}. يرجى رفع ملف الحضور لهذه الفترة أولاً.`
+          : `No attendance data for ${months[periodMonth - 1]} ${periodYear}. Please upload an attendance file for this period first.`);
+      } else {
+        setError(msg);
+      }
+    }
     finally { setCalculating(false); }
   };
 
@@ -140,6 +151,7 @@ export default function PayrollPage() {
                   <th className="text-right">{t("socialSecurityDeduct")}</th>
                   <th className="text-right">{t("netSalary")}</th>
                   <th>{t("status")}</th>
+                  <th className="min-w-[60px]">PDF</th>
                 </tr>
               </thead>
               <tbody>
@@ -159,10 +171,29 @@ export default function PayrollPage() {
                       <td className="text-right font-mono text-rose-600">{formatCurrency(row.socialSecurityDeduct || row.social_security_deduct)}</td>
                       <td className="text-right font-mono font-bold text-brand-700">{formatCurrency(row.netSalary || row.net_salary)}</td>
                       <td>{getStatusBadge(row.status, t)}</td>
+                      <td onClick={(e) => e.stopPropagation()} style={{overflow: "visible"}}>
+                        <DownloadPayslipButton
+                          data={{
+                            employeeName: row.name || row.employeeName || "",
+                            employeeId: row.employeeId || "",
+                            companyName,
+                            month: periodMonth,
+                            year: periodYear,
+                            baseSalary: row.baseSalary || row.base_salary,
+                            totalHours: row.totalHours || row.total_hours,
+                            adjustment: row.adjustment,
+                            bonusTotal: row.bonusTotal || row.bonus_total,
+                            deductionTotal: row.deductionTotal || row.deduction_total,
+                            socialSecurityDeduct: row.socialSecurityDeduct || row.social_security_deduct,
+                            netSalary: row.netSalary || row.net_salary,
+                          }}
+                          filename={`payslip-${periodMonth}-${periodYear}-${row.employeeId || "emp"}.pdf`}
+                        />
+                      </td>
                     </tr>,
                     isExp && breakdown?.length > 0 && (
                       <tr key={`${row.id}-breakdown`}>
-                        <td colSpan={11} className="bg-slate-50 p-0">
+                        <td colSpan={12} className="bg-slate-50 p-0">
                           <div className="p-4">
                             <p className="font-semibold text-[13px] mb-2 text-slate-700 flex items-center gap-1"><Calendar size={13} /> {t("dailyBreakdown")}</p>
                             <div className="rounded-lg border border-slate-200 overflow-x-auto bg-white">

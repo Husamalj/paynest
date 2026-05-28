@@ -125,6 +125,17 @@ export async function POST(req: NextRequest) {
         status: "pending",
       },
     });
+
+    // Notify HR/owner of new leave request
+    prisma.notification.create({
+      data: {
+        companyId: session.companyId,
+        type: "leave_submitted",
+        message: `${finalEmployeeName || "An employee"} submitted a ${body.leave_type || "leave"} request.`,
+        link: "/leaves",
+      },
+    }).catch((e: any) => console.error("[notification]", e));
+
     return NextResponse.json(leave);
   } catch (err) {
     return errorResponse(err);

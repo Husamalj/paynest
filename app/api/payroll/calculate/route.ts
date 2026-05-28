@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { sendPayslipReady } from "@/lib/email";
 import {
   buildLeaveMap,
   calculateDailyPayroll,
@@ -47,6 +48,10 @@ export async function POST(req: NextRequest) {
         },
       },
     });
+
+    if (attendanceRecords.length === 0) {
+      throw new HttpError(400, `NO_ATTENDANCE: No attendance data found for ${periodMonth}/${periodYear}. Please upload an attendance file for this period first.`);
+    }
 
     const periodStart = new Date(periodYear, periodMonth - 1, 1);
     const periodEnd = new Date(periodYear, periodMonth, 0);
@@ -122,6 +127,7 @@ export async function POST(req: NextRequest) {
       deduction_rate: settings.deductionRate,
       extra_rate: settings.extraRate,
       workdays: settings.workdays,
+      work_start_time: (settings as any).workStartTime ?? "09:00",
     };
 
     const empPlain = employees.map((e) => ({
@@ -148,28 +154,55 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    for (const pr of payrollResults) {
-      await prisma.payrollRecord.create({
-        data: {
-          companyId,
-          employeeId: pr.employee_id,
-          periodMonth,
-          periodYear,
-          baseSalary: pr.base_salary,
-          totalHours: pr.total_hours,
-          requiredHours: pr.required_hours,
-          hourDiff: pr.hour_diff,
-          adjustment: pr.adjustment,
-          socialSecurityDeduct: pr.social_security_deduct,
-          bonusTotal: pr.bonus_total,
-          deductionTotal: pr.deduction_total,
-          netSalary: pr.net_salary,
-          status: pr.status,
-          dailyBreakdown: pr.daily_breakdown ?? undefined,
-          systemMode: mode,
-        },
+    await prisma.$transaction(
+      payrollResults.map((pr) =>
+        prisma.payrollRecord.create({
+          data: {
+            companyId,
+            employeeId: pr.employee_id,
+            periodMonth,
+            periodYear,
+            baseSalary: pr.base_salary,
+            totalHours: pr.total_hours,
+            requiredHours: pr.required_hours,
+            hourDiff: pr.hour_diff,
+            adjustment: pr.adjustment,
+            socialSecurityDeduct: pr.social_security_deduct,
+            bonusTotal: pr.bonus_total,
+            deductionTotal: pr.deduction_total,
+            netSalary: pr.net_salary,
+            status: pr.status,
+            dailyBreakdown: pr.daily_breakdown ?? undefined,
+            systemMode: mode,
+          },
+        })
+      )
+    );
+
+    // Fire payslip-ready emails (non-blocking)
+    try {
+      const empUsers = await prisma.user.findMany({
+        where: { companyId: session.companyId, role: "employee" },
+        select: { email: true, name: true, employeeNumber: true },
       });
+      for (const u of empUsers) {
+        if (u.email) {
+          sendPayslipReady(u.email, u.name || "Employee", periodMonth, periodYear);
+        }
+      }
+    } catch (e) {
+      console.error("[payslip email]", e);
     }
+
+    // Create payroll run notification
+    prisma.notification.create({
+      data: {
+        companyId: session.companyId!,
+        type: "payroll_completed",
+        message: `Payroll run for ${periodMonth}/${periodYear} has been completed.`,
+        link: "/payroll",
+      },
+    }).catch((e: any) => console.error("[notification]", e));
 
     return NextResponse.json({
       period_month: periodMonth,

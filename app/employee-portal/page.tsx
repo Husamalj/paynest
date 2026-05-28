@@ -1,6 +1,12 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
+
+const DownloadPayslipButton = dynamic(
+  () => import("@/components/PayslipPDF").then((m) => m.DownloadPayslipButton),
+  { ssr: false }
+);
 import {
   AlertTriangle, Bell, Calendar, CheckCircle2, CheckSquare,
   ClipboardList, Clock, LogOut, Palmtree, Paperclip, Send, ThumbsDown, ThumbsUp, User, UserCheck, Users, X,
@@ -616,6 +622,28 @@ export default function EmployeePortalPage() {
               <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.deductions}</div><div className="text-xl font-bold text-rose-700">{formatCurrency(Math.max(0, -(parseFloat(myPayroll?.adjustment) || 0)) + (parseFloat(myPayroll?.deductionTotal || myPayroll?.deduction_total) || 0) + (parseFloat(myPayroll?.socialSecurityDeduct || myPayroll?.social_security_deduct) || 0))}</div></div>
               <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.hoursDiff}</div><div className={clsx("text-xl font-bold", parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff || 0) < 0 ? "text-rose-700" : "text-emerald-700")}>{(parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff) || 0).toFixed(2)}</div></div>
             </div>
+
+            {myPayroll && (
+              <div className="flex justify-end">
+                <DownloadPayslipButton
+                  data={{
+                    employeeName: employee?.name || "",
+                    employeeId: String(employeeId),
+                    companyName: typeof window !== "undefined" ? localStorage.getItem("companyName") || "PayNest" : "PayNest",
+                    month: myPayroll.periodMonth || myPayroll.period_month,
+                    year: myPayroll.periodYear || myPayroll.period_year,
+                    baseSalary: myPayroll.baseSalary || myPayroll.base_salary,
+                    totalHours: myPayroll.totalHours || myPayroll.total_hours,
+                    adjustment: myPayroll.adjustment,
+                    bonusTotal: myPayroll.bonusTotal || myPayroll.bonus_total,
+                    deductionTotal: myPayroll.deductionTotal || myPayroll.deduction_total,
+                    socialSecurityDeduct: myPayroll.socialSecurityDeduct || myPayroll.social_security_deduct,
+                    netSalary: myPayroll.netSalary || myPayroll.net_salary,
+                  }}
+                  filename={`payslip-${myPayroll.periodMonth || myPayroll.period_month}-${myPayroll.periodYear || myPayroll.period_year}.pdf`}
+                />
+              </div>
+            )}
 
             {/* ── Announcements full width ───────────────────────────────── */}
             <div className="card">

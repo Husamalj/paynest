@@ -110,7 +110,7 @@
            tracking-wider border-b border-slate-200 whitespace-nowrap;
   }
   html[dir='rtl'] .table-wrapper thead th {
-    @apply text-right;
+    text-align: right;
   }
   .table-wrapper tbody tr {
     @apply border-b border-slate-100 last:border-b-0 transition-colors hover:bg-slate-50/70;
@@ -138,6 +138,7 @@
 
   .table-fixed td.font-mono { text-align: right; }
   .table-fixed thead th.text-right { text-align: right; }
+  .table-wrapper thead th.text-right { text-align: right; }
 
   .table-wrapper::-webkit-scrollbar { height: 0; }
 

@@ -97,9 +97,12 @@ export default function StaffLoginPage() {
           <Back size={16} />
           {ar ? "رجوع" : "Back"}
         </button>
-        <div className="font-bold text-slate-900 text-[15px]">
+        <button
+          onClick={() => router.push("/")}
+          className="font-bold text-slate-900 text-[15px] hover:opacity-70 transition-opacity"
+        >
           Pay<span className="text-brand-600">Nest</span>
-        </div>
+        </button>
         <LangToggle />
       </header>
 
@@ -155,6 +158,16 @@ export default function StaffLoginPage() {
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
               >
                 {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+
+            <div className="flex justify-end mt-1">
+              <button
+                type="button"
+                onClick={() => router.push("/forgot-password")}
+                className="text-xs text-brand-600 hover:text-brand-800 hover:underline transition-colors"
+              >
+                {ar ? "هل نسيت كلمة السر؟" : "Forgot password?"}
               </button>
             </div>
 

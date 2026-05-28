@@ -14,8 +14,9 @@ model Company {
   slug          String   @unique @db.VarChar(100)
   status        String   @default("active") @db.VarChar(20)
   isActive      Boolean  @default(true) @map("is_active")
-  maxEmployees  Int?     @map("max_employees")
-  createdAt     DateTime @default(now()) @map("created_at")
+  maxEmployees        Int?     @map("max_employees")
+  createdAt           DateTime @default(now()) @map("created_at")
+  onboardingCompleted Boolean  @default(false) @map("onboarding_completed")
 
   users             User[]
   employees         Employee[]
@@ -33,6 +34,7 @@ model Company {
   employeeDocuments  EmployeeDocument[]
   evaluations        Evaluation[]
   auditLogs          AuditLog[]
+  notifications      Notification[]
 
   @@map("companies")
 }
@@ -66,6 +68,7 @@ model User {
   mustChangePassword Boolean  @default(false) @map("must_change_password")
   companyId          Int?     @map("company_id")
   createdAt          DateTime @default(now()) @map("created_at")
+  emailVerifiedAt    DateTime? @map("email_verified_at")
 
   company     Company?     @relation(fields: [companyId], references: [id])
   evaluations Evaluation[] @relation("EvaluatorEvaluations")
@@ -85,6 +88,7 @@ model CompanySettings {
   workdays      String   @default("Sun,Mon,Tue,Wed,Thu") @db.VarChar(50)
   deductionRate Decimal  @default(1.0) @map("deduction_rate")
   extraRate     Decimal  @default(1.0) @map("extra_rate")
+  workStartTime String   @default("09:00") @map("work_start_time") @db.VarChar(5)
   createdAt     DateTime @default(now()) @map("created_at")
 
   company Company @relation(fields: [companyId], references: [id])
@@ -115,7 +119,7 @@ model Employee {
   supervisor   Employee?  @relation("EmployeeSupervisor", fields: [supervisorId], references: [id], onDelete: SetNull)
   subordinates Employee[] @relation("EmployeeSupervisor")
 
-  @@unique([employeeId, systemMode], map: "employees_emp_mode_uidx")
+  @@unique([employeeId, systemMode, companyId], map: "employees_emp_mode_company_uidx")
   @@index([supervisorId])
   @@map("employees")
 }
@@ -339,4 +343,32 @@ model Announcement {
   company Company @relation(fields: [companyId], references: [id])
 
   @@map("announcements")
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  token     String   @unique @db.VarChar(64)
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([token])
+  @@map("password_reset_tokens")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  companyId Int      @map("company_id")
+  userId    Int?     @map("user_id")
+  type      String   @db.VarChar(50)
+  message   String
+  link      String?  @db.VarChar(255)
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, read, createdAt])
+  @@map("notifications")
 }

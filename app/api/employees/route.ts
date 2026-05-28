@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { sendNewEmployeeCredentials } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -51,17 +52,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { employee_id, name, email, phone, base_salary, social_security, religion, allowance, job_title } = body;
 
-    // Cross-company safety: if an Employee with this (employeeId, systemMode) already
-    // exists under a DIFFERENT company, reject — otherwise upsert would rebind their
-    // companyId and effectively steal/overwrite another company's record.
-    const collision = await prisma.employee.findUnique({
-      where: { employeeId_systemMode: { employeeId: employee_id, systemMode: mode } },
-      select: { id: true, companyId: true },
-    });
-    if (collision && collision.companyId !== session.companyId) {
-      throw new HttpError(409, "Employee ID already used by another company");
-    }
-
     // Enforce employee quota — block new employees if company is at max
     const company = await prisma.company.findUnique({
       where: { id: session.companyId },
@@ -70,7 +60,7 @@ export async function POST(req: NextRequest) {
     if (company?.maxEmployees != null) {
       // Check if this is a NEW employee (not updating existing)
       const existing = await prisma.employee.findUnique({
-        where: { employeeId_systemMode: { employeeId: employee_id, systemMode: mode } },
+        where: { employeeId_systemMode_companyId: { employeeId: employee_id, systemMode: mode, companyId: session.companyId } },
         select: { id: true },
       });
       if (!existing) {
@@ -97,7 +87,7 @@ export async function POST(req: NextRequest) {
     }
 
     const employee = await prisma.employee.upsert({
-      where: { employeeId_systemMode: { employeeId: employee_id, systemMode: mode } },
+      where: { employeeId_systemMode_companyId: { employeeId: employee_id, systemMode: mode, companyId: session.companyId } },
       create: {
         employeeId: employee_id,
         name,
@@ -128,8 +118,9 @@ export async function POST(req: NextRequest) {
     if (email) {
       const existingUser = await prisma.user.findFirst({ where: { email } });
       if (!existingUser) {
-        const hash = await bcrypt.hash("123456", 10);
-        await prisma.user.create({
+        const tempPassword = "123456";
+        const hash = await bcrypt.hash(tempPassword, 10);
+        const newUser = await prisma.user.create({
           data: {
             name,
             email,
@@ -140,6 +131,15 @@ export async function POST(req: NextRequest) {
             mustChangePassword: true,
           },
         });
+
+        if (newUser.email && tempPassword) {
+          sendNewEmployeeCredentials(
+            newUser.email,
+            name,
+            tempPassword,
+            `${process.env.NEXT_PUBLIC_APP_URL ?? "https://paynest.app"}/employee-login`
+          );
+        }
       } else {
         await prisma.user.update({
           where: { id: existingUser.id },
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    await logAudit(session, collision ? "update" : "create", "employee", employee.employeeId, {
+    await logAudit(session, "update", "employee", employee.employeeId, {
       name, email, baseSalary: Number(base_salary) || 0, allowance: Number(allowance) || 0,
       jobTitle: job_title ?? null,
     });
