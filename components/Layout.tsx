@@ -275,7 +275,7 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
             </button>
 
             {profileOpen && (
-              <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-elevated border border-slate-200 overflow-hidden z-50">
+              <div className={clsx("absolute top-full mt-2 w-64 bg-white rounded-xl shadow-elevated border border-slate-200 overflow-hidden z-50", isRTL ? "left-0" : "right-0")}>
                 {/* User info */}
                 <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
                   <div className="font-semibold text-slate-900 truncate">{user.name || "User"}</div>

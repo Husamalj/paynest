@@ -186,7 +186,7 @@ export default function PayrollPage() {
                     </tr>,
                     isExp && breakdown?.length > 0 && (
                       <tr key={`${row.id}-breakdown`}>
-                        <td colSpan={11} className="bg-slate-50 p-0">
+                        <td colSpan={12} className="bg-slate-50 p-0">
                           <div className="p-4">
                             <p className="font-semibold text-[13px] mb-2 text-slate-700 flex items-center gap-1"><Calendar size={13} /> {t("dailyBreakdown")}</p>
                             <div className="rounded-lg border border-slate-200 overflow-x-auto bg-white">

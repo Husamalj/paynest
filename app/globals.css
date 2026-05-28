@@ -138,6 +138,7 @@
 
   .table-fixed td.font-mono { text-align: right; }
   .table-fixed thead th.text-right { text-align: right; }
+  .table-wrapper thead th.text-right { text-align: right; }
 
   .table-wrapper::-webkit-scrollbar { height: 0; }
 
