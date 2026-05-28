@@ -145,6 +145,7 @@ export async function POST(req: NextRequest) {
           });
           const existingMap = new Map<string, number>();
           for (const row of existingRows) {
+            if (!row.workDate) continue;
             const key = `${row.employeeId}:${row.workDate.toISOString().slice(0, 10)}`;
             existingMap.set(key, row.id);
           }
