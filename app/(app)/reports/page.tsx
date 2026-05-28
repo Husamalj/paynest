@@ -40,7 +40,10 @@ export default function ReportsPage() {
     setSelected({ month: m, year: y });
     try {
       const res = await api.get(`/payroll/period?month=${m}&year=${y}`);
-      setPayroll(res.data || []);
+      // Endpoint returns { period_month, period_year, system_mode, results } — pull the array
+      const data = res.data;
+      const list = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
+      setPayroll(list);
     } catch (err: any) { setError(err.message); }
   };
 

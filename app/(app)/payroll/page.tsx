@@ -36,10 +36,13 @@ export default function PayrollPage() {
 
   const loadPayroll = async (m: number, y: number) => {
     try {
-      // Try period endpoint first (historical), fall back to latest if empty
-      const periodRes = await api.get(`/payroll/period?month=${m}&year=${y}`).catch(() => ({ data: [] as any[] }));
-      if (Array.isArray(periodRes.data) && periodRes.data.length > 0) {
-        setPayroll(periodRes.data);
+      // Period endpoint returns { period_month, ..., results }
+      const periodRes = await api.get(`/payroll/period?month=${m}&year=${y}`).catch(() => ({ data: { results: [] as any[] } }));
+      const periodList = Array.isArray(periodRes.data?.results)
+        ? periodRes.data.results
+        : Array.isArray(periodRes.data) ? periodRes.data : [];
+      if (periodList.length > 0) {
+        setPayroll(periodList);
         return;
       }
       const latestRes = await api.get(`/payroll/latest?month=${m}&year=${y}`);
