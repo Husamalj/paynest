@@ -118,7 +118,6 @@ export default function DashboardPage() {
         <StatCard title={t("totalBonuses")} value={formatCurrency(totals.totalBonuses)} icon={Gift} color="orange" />
         <StatCard title={t("ssDeductions")} value={formatCurrency(totals.totalSS)} icon={Shield} color="purple" />
         <StatCard title={isRTL ? "إجازات معلقة" : "Pending Leaves"} value={pendingLeaves} icon={Calendar} color="orange" />
-        <StatCard title={isRTL ? "مهام مفتوحة" : "Open Tasks"} value={openTasks} icon={CheckSquare} color="blue" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

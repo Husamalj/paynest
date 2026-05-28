@@ -255,6 +255,8 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
             </div>
           </div>
 
+          {/* Right side: bell + profile, tightly grouped */}
+          <div className="flex items-center gap-2">
           {/* Notification Bell */}
           {NotificationBell && <NotificationBell />}
 
@@ -310,6 +312,7 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
                 </div>
               </div>
             )}
+          </div>
           </div>
         </header>
 
