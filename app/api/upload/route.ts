@@ -151,8 +151,8 @@ export async function POST(req: NextRequest) {
           }
 
           // 4. Split records into creates and updates, then run one transaction
-          const creates: Parameters<typeof prisma.attendanceRecord.createMany>[0]["data"] = [];
-          const updates: ReturnType<typeof prisma.attendanceRecord.update>[] = [];
+          const creates: any[] = [];
+          const updates: any[] = [];
 
           for (const record of records) {
             const key = `${record.employee_id}:${record.work_date}`;
