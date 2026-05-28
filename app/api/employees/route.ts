@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { sendNewEmployeeCredentials } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -117,8 +118,9 @@ export async function POST(req: NextRequest) {
     if (email) {
       const existingUser = await prisma.user.findFirst({ where: { email } });
       if (!existingUser) {
-        const hash = await bcrypt.hash("123456", 10);
-        await prisma.user.create({
+        const tempPassword = "123456";
+        const hash = await bcrypt.hash(tempPassword, 10);
+        const newUser = await prisma.user.create({
           data: {
             name,
             email,
@@ -129,6 +131,15 @@ export async function POST(req: NextRequest) {
             mustChangePassword: true,
           },
         });
+
+        if (newUser.email && tempPassword) {
+          sendNewEmployeeCredentials(
+            newUser.email,
+            name,
+            tempPassword,
+            `${process.env.NEXT_PUBLIC_APP_URL ?? "https://paynest.app"}/employee-login`
+          );
+        }
       } else {
         await prisma.user.update({
           where: { id: existingUser.id },
