@@ -49,6 +49,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    if (attendanceRecords.length === 0) {
+      throw new HttpError(400, `NO_ATTENDANCE: No attendance data found for ${periodMonth}/${periodYear}. Please upload an attendance file for this period first.`);
+    }
+
     const periodStart = new Date(periodYear, periodMonth - 1, 1);
     const periodEnd = new Date(periodYear, periodMonth, 0);
     const yearStart = new Date(periodYear, 0, 1);
@@ -149,28 +153,30 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    for (const pr of payrollResults) {
-      await prisma.payrollRecord.create({
-        data: {
-          companyId,
-          employeeId: pr.employee_id,
-          periodMonth,
-          periodYear,
-          baseSalary: pr.base_salary,
-          totalHours: pr.total_hours,
-          requiredHours: pr.required_hours,
-          hourDiff: pr.hour_diff,
-          adjustment: pr.adjustment,
-          socialSecurityDeduct: pr.social_security_deduct,
-          bonusTotal: pr.bonus_total,
-          deductionTotal: pr.deduction_total,
-          netSalary: pr.net_salary,
-          status: pr.status,
-          dailyBreakdown: pr.daily_breakdown ?? undefined,
-          systemMode: mode,
-        },
-      });
-    }
+    await prisma.$transaction(
+      payrollResults.map((pr) =>
+        prisma.payrollRecord.create({
+          data: {
+            companyId,
+            employeeId: pr.employee_id,
+            periodMonth,
+            periodYear,
+            baseSalary: pr.base_salary,
+            totalHours: pr.total_hours,
+            requiredHours: pr.required_hours,
+            hourDiff: pr.hour_diff,
+            adjustment: pr.adjustment,
+            socialSecurityDeduct: pr.social_security_deduct,
+            bonusTotal: pr.bonus_total,
+            deductionTotal: pr.deduction_total,
+            netSalary: pr.net_salary,
+            status: pr.status,
+            dailyBreakdown: pr.daily_breakdown ?? undefined,
+            systemMode: mode,
+          },
+        })
+      )
+    );
 
     // Fire payslip-ready emails (non-blocking)
     try {

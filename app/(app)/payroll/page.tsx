@@ -59,7 +59,16 @@ export default function PayrollPage() {
       await api.post("/payroll/calculate", { month: periodMonth, year: periodYear });
       setSuccess(`${t("calculationDone")} — ${months[periodMonth - 1]} ${periodYear}`);
       await loadPayroll(periodMonth, periodYear);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) {
+      const msg: string = err?.response?.data?.error || err.message || "";
+      if (msg.includes("NO_ATTENDANCE")) {
+        setError(ar
+          ? `لا توجد بيانات حضور لـ ${months[periodMonth - 1]} ${periodYear}. يرجى رفع ملف الحضور لهذه الفترة أولاً.`
+          : `No attendance data for ${months[periodMonth - 1]} ${periodYear}. Please upload an attendance file for this period first.`);
+      } else {
+        setError(msg);
+      }
+    }
     finally { setCalculating(false); }
   };
 
