@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, ClipboardList, Plus, Star, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardList, Plus, Star, X, Trash2 } from "lucide-react";
 import api from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
@@ -126,6 +126,16 @@ export default function EvaluationsPage() {
     finally { setLoading(false); }
   };
 
+  const deleteEval = async (id: number) => {
+    if (!confirm(ar ? "حذف هذا التقييم؟" : "Delete this evaluation?")) return;
+    try {
+      await api.delete(`/evaluations?id=${id}`);
+      setSuccess(ar ? "تم حذف التقييم" : "Evaluation deleted");
+      setTimeout(() => setSuccess(""), 2500);
+      load();
+    } catch (e: any) { setError(e.message); }
+  };
+
   const loadEmployees = async () => {
     try {
       // Use supervisors endpoint — returns all employees except owner/super_admin (HR included)
@@ -247,8 +257,9 @@ export default function EvaluationsPage() {
               const isExpanded = expandedId === ev.id;
               return (
                 <div key={ev.id} className="hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center">
                   <button
-                    className="w-full px-5 py-4 flex flex-wrap items-center gap-4 text-left"
+                    className="flex-1 px-5 py-4 flex flex-wrap items-center gap-4 text-left"
                     onClick={() => setExpandedId(isExpanded ? null : ev.id)}
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -276,6 +287,16 @@ export default function EvaluationsPage() {
                     }
                     <span className="text-slate-400 text-xs shrink-0">{isExpanded ? "▲" : "▼"}</span>
                   </button>
+                  {(role === "owner" || role === "hr") && (
+                    <button
+                      onClick={() => deleteEval(ev.id)}
+                      title={ar ? "حذف" : "Delete"}
+                      className="px-4 text-slate-300 hover:text-rose-500 shrink-0"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                  </div>
 
                   {isExpanded && (
                     <div className="px-5 pb-5 bg-slate-50 border-t border-slate-100">

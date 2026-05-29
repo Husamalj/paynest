@@ -159,3 +159,39 @@ export async function POST(req: NextRequest) {
     return errorResponse(err);
   }
 }
+
+/**
+ * DELETE /api/evaluations?id=...
+ * Removes an evaluation. Owner/HR can delete any in the company;
+ * employees can delete only their own.
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await requireAuth(req);
+    requireRole(session, ["owner", "hr", "employee"]);
+    if (session.companyId == null) throw new HttpError(403, "No company scope");
+
+    const id = parseInt(new URL(req.url).searchParams.get("id") || "0", 10);
+    if (!id) throw new HttpError(400, "Missing evaluation id");
+
+    let rows: any[];
+    if (session.role === "owner" || session.role === "hr") {
+      rows = await prisma.$queryRaw<any[]>`
+        DELETE FROM evaluations
+        WHERE id = ${id} AND company_id = ${session.companyId}
+        RETURNING id
+      `;
+    } else {
+      rows = await prisma.$queryRaw<any[]>`
+        DELETE FROM evaluations
+        WHERE id = ${id} AND company_id = ${session.companyId}
+          AND evaluator_id = ${session.id}
+        RETURNING id
+      `;
+    }
+    if (rows.length === 0) throw new HttpError(404, "Evaluation not found");
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    return errorResponse(err);
+  }
+}

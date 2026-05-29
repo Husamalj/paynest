@@ -104,6 +104,14 @@
       "namedRegex": "^/api/employees/(?<nxtPid>[^/]+?)/remote\\-assignments/(?<nxtPrid>[^/]+?)(?:/)?$"
     },
     {
+      "page": "/api/job-offers/[id]",
+      "regex": "^/api/job\\-offers/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/job\\-offers/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
       "page": "/api/leaves/holidays/[id]",
       "regex": "^/api/leaves/holidays/([^/]+?)(?:/)?$",
       "routeKeys": {
@@ -118,6 +126,14 @@
         "nxtPid": "nxtPid"
       },
       "namedRegex": "^/api/leaves/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/notifications/[id]/read",
+      "regex": "^/api/notifications/([^/]+?)/read(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/notifications/(?<nxtPid>[^/]+?)/read(?:/)?$"
     },
     {
       "page": "/api/tasks/[id]",
@@ -148,6 +164,12 @@
       "namedRegex": "^/_not\\-found(?:/)?$"
     },
     {
+      "page": "/about",
+      "regex": "^/about(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/about(?:/)?$"
+    },
+    {
       "page": "/announcements",
       "regex": "^/announcements(?:/)?$",
       "routeKeys": {},
@@ -158,6 +180,18 @@
       "regex": "^/api/announcements(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/announcements(?:/)?$"
+    },
+    {
+      "page": "/api/attendance",
+      "regex": "^/api/attendance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/attendance(?:/)?$"
+    },
+    {
+      "page": "/api/audit-log",
+      "regex": "^/api/audit\\-log(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/audit\\-log(?:/)?$"
     },
     {
       "page": "/api/auth/change-password",
@@ -178,6 +212,12 @@
       "namedRegex": "^/api/auth/create\\-hr(?:/)?$"
     },
     {
+      "page": "/api/auth/forgot-password",
+      "regex": "^/api/auth/forgot\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/forgot\\-password(?:/)?$"
+    },
+    {
       "page": "/api/auth/login",
       "regex": "^/api/auth/login(?:/)?$",
       "routeKeys": {},
@@ -196,6 +236,24 @@
       "namedRegex": "^/api/auth/register\\-company(?:/)?$"
     },
     {
+      "page": "/api/auth/reset-password",
+      "regex": "^/api/auth/reset\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/reset\\-password(?:/)?$"
+    },
+    {
+      "page": "/api/auth/verify-email",
+      "regex": "^/api/auth/verify\\-email(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/verify\\-email(?:/)?$"
+    },
+    {
+      "page": "/api/bonus-tiers",
+      "regex": "^/api/bonus\\-tiers(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/bonus\\-tiers(?:/)?$"
+    },
+    {
       "page": "/api/bonuses",
       "regex": "^/api/bonuses(?:/)?$",
       "routeKeys": {},
@@ -206,6 +264,18 @@
       "regex": "^/api/companies(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/companies(?:/)?$"
+    },
+    {
+      "page": "/api/companies/onboarding-complete",
+      "regex": "^/api/companies/onboarding\\-complete(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/companies/onboarding\\-complete(?:/)?$"
+    },
+    {
+      "page": "/api/companies/onboarding-status",
+      "regex": "^/api/companies/onboarding\\-status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/companies/onboarding\\-status(?:/)?$"
     },
     {
       "page": "/api/copilot/ask",
@@ -238,6 +308,12 @@
       "namedRegex": "^/api/health(?:/)?$"
     },
     {
+      "page": "/api/job-offers",
+      "regex": "^/api/job\\-offers(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/job\\-offers(?:/)?$"
+    },
+    {
       "page": "/api/leaves",
       "regex": "^/api/leaves(?:/)?$",
       "routeKeys": {},
@@ -254,6 +330,18 @@
       "regex": "^/api/leaves/holidays(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/leaves/holidays(?:/)?$"
+    },
+    {
+      "page": "/api/notifications",
+      "regex": "^/api/notifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/notifications(?:/)?$"
+    },
+    {
+      "page": "/api/notifications/read-all",
+      "regex": "^/api/notifications/read\\-all(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/notifications/read\\-all(?:/)?$"
     },
     {
       "page": "/api/payroll/calculate",
@@ -322,10 +410,28 @@
       "namedRegex": "^/api/upload(?:/)?$"
     },
     {
+      "page": "/attendance",
+      "regex": "^/attendance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/attendance(?:/)?$"
+    },
+    {
+      "page": "/audit-log",
+      "regex": "^/audit\\-log(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/audit\\-log(?:/)?$"
+    },
+    {
       "page": "/bonuses",
       "regex": "^/bonuses(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/bonuses(?:/)?$"
+    },
+    {
+      "page": "/contact",
+      "regex": "^/contact(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/contact(?:/)?$"
     },
     {
       "page": "/dashboard",
@@ -370,6 +476,12 @@
       "namedRegex": "^/force\\-change\\-password(?:/)?$"
     },
     {
+      "page": "/forgot-password",
+      "regex": "^/forgot\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/forgot\\-password(?:/)?$"
+    },
+    {
       "page": "/hr-login",
       "regex": "^/hr\\-login(?:/)?$",
       "routeKeys": {},
@@ -388,6 +500,12 @@
       "namedRegex": "^/hr\\-team(?:/)?$"
     },
     {
+      "page": "/job-offer",
+      "regex": "^/job\\-offer(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/job\\-offer(?:/)?$"
+    },
+    {
       "page": "/leaves",
       "regex": "^/leaves(?:/)?$",
       "routeKeys": {},
@@ -398,6 +516,12 @@
       "regex": "^/login(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/onboarding",
+      "regex": "^/onboarding(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/onboarding(?:/)?$"
     },
     {
       "page": "/owner-login",
@@ -424,10 +548,28 @@
       "namedRegex": "^/portal\\-select(?:/)?$"
     },
     {
+      "page": "/pricing",
+      "regex": "^/pricing(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/pricing(?:/)?$"
+    },
+    {
+      "page": "/privacy",
+      "regex": "^/privacy(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/privacy(?:/)?$"
+    },
+    {
       "page": "/reports",
       "regex": "^/reports(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/reports(?:/)?$"
+    },
+    {
+      "page": "/reset-password",
+      "regex": "^/reset\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reset\\-password(?:/)?$"
     },
     {
       "page": "/settings",
@@ -466,10 +608,22 @@
       "namedRegex": "^/tasks(?:/)?$"
     },
     {
+      "page": "/terms",
+      "regex": "^/terms(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/terms(?:/)?$"
+    },
+    {
       "page": "/upload",
       "regex": "^/upload(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/upload(?:/)?$"
+    },
+    {
+      "page": "/verify-email",
+      "regex": "^/verify\\-email(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/verify\\-email(?:/)?$"
     }
   ],
   "dataRoutes": [],

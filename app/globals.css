@@ -288,19 +288,35 @@
 }
 
 /* Print: show only the document inside #print-area (used by the Job Offer page) */
+@page {
+  size: A4 portrait;
+  margin: 6mm;
+}
 @media print {
+  html, body { width: 210mm; height: auto; }
   body * { visibility: hidden; }
   #print-area, #print-area * { visibility: visible; }
   #print-area {
     position: absolute;
-    inset: 0;
-    width: 100%;
+    top: 0;
+    left: 0;
+    width: 198mm;          /* A4 width minus @page margins */
     margin: 0;
     padding: 0;
+    /* Shrink the whole document so it always fits on one page */
+    transform: scale(0.92);
+    transform-origin: top center;
   }
+  /* Compact the table rows so the offer fits one A4 page */
+  #print-area table { font-size: 10px !important; }
+  #print-area td { padding-top: 2px !important; padding-bottom: 2px !important; }
   #print-area input {
     border: none !important;
     background: transparent !important;
+    font-size: 10px !important;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
   }
+  #print-area, #print-area * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .no-print { display: none !important; }
 }
