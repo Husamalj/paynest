@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
       score_quality_check, score_prioritization, score_independence,
       score_deadlines, score_teamwork, score_communication,
       score_knowledge_sharing, score_feedback, score_compliance,
-      bonus_worthy, recommendations,
+      bonus_amount, recommendations,
     } = body;
 
     if (!employee_id || !period_month || !period_year) {
@@ -112,6 +112,8 @@ export async function POST(req: NextRequest) {
     }
 
     const clamp = (v: any) => { const n = parseInt(v, 10); return n >= 1 && n <= 5 ? n : 3; };
+    const bonusAmt = Math.max(0, parseInt(bonus_amount, 10) || 0);
+    const bonusWorthy = bonusAmt > 0;
 
     const result = await prisma.$queryRaw<any[]>`
       INSERT INTO evaluations (
@@ -120,7 +122,7 @@ export async function POST(req: NextRequest) {
         score_quality_check, score_prioritization, score_independence,
         score_deadlines, score_teamwork, score_communication,
         score_knowledge_sharing, score_feedback, score_compliance,
-        bonus_worthy, recommendations, updated_at
+        bonus_worthy, bonus_amount, recommendations, updated_at
       ) VALUES (
         ${session.companyId}, ${session.id}, ${employee_id},
         ${period_month}, ${period_year},
@@ -129,7 +131,7 @@ export async function POST(req: NextRequest) {
         ${clamp(score_independence)}, ${clamp(score_deadlines)}, ${clamp(score_teamwork)},
         ${clamp(score_communication)}, ${clamp(score_knowledge_sharing)}, ${clamp(score_feedback)},
         ${clamp(score_compliance)},
-        ${bonus_worthy ?? false}, ${recommendations ?? null}, NOW()
+        ${bonusWorthy}, ${bonusAmt}, ${recommendations ?? null}, NOW()
       )
       ON CONFLICT (company_id, evaluator_id, employee_id, period_month, period_year) DO UPDATE SET
         score_accuracy          = EXCLUDED.score_accuracy,
@@ -146,6 +148,7 @@ export async function POST(req: NextRequest) {
         score_feedback          = EXCLUDED.score_feedback,
         score_compliance        = EXCLUDED.score_compliance,
         bonus_worthy            = EXCLUDED.bonus_worthy,
+        bonus_amount            = EXCLUDED.bonus_amount,
         recommendations         = EXCLUDED.recommendations,
         updated_at              = NOW()
       RETURNING *

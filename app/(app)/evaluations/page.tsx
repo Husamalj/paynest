@@ -26,21 +26,35 @@ const MONTHS_EN = ["January","February","March","April","May","June","July","Aug
 
 const defaultScores = () => Object.fromEntries(EVAL_CRITERIA.map((c) => [c.key, 3]));
 
+const MAX_TOTAL = EVAL_CRITERIA.length * 5; // 65
+
 function totalScore(ev: any) {
   return EVAL_CRITERIA.reduce((sum, c) => sum + (parseInt(ev[c.key]) || 0), 0);
 }
-function avgScore(ev: any) {
-  return (totalScore(ev) / EVAL_CRITERIA.length).toFixed(1);
+// Each star = 20% of its criterion; the grade is the average of the 13
+// criterion percentages, which simplifies to (totalScore / 65) * 100.
+function grade100(ev: any) {
+  return ((totalScore(ev) / MAX_TOTAL) * 100).toFixed(1);
 }
-function ScoreBar({ value, max = 65 }: { value: number; max?: number }) {
-  const pct = Math.round((value / max) * 100);
+function gradeFromScores(scores: Record<string, number>) {
+  const sum = Object.values(scores).reduce((a: number, b: number) => a + (b || 0), 0);
+  return (sum / MAX_TOTAL) * 100;
+}
+type BonusTier = { minGrade: number; maxGrade: number; amount: number };
+// Auto-bonus: amount of the first tier whose [min, max] range contains the grade.
+function bonusForGrade(grade: number, tiers: BonusTier[]) {
+  const t = tiers.find((x) => grade >= x.minGrade && grade <= x.maxGrade);
+  return t ? t.amount : 0;
+}
+function ScoreBar({ grade }: { grade: number }) {
+  const pct = Math.round(grade);
   const color = pct >= 80 ? "bg-emerald-500" : pct >= 60 ? "bg-brand-500" : pct >= 40 ? "bg-amber-400" : "bg-rose-400";
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 h-1.5 rounded-full bg-slate-100">
         <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs font-semibold text-slate-700 w-12 text-right">{value} / {max}</span>
+      <span className="text-xs font-semibold text-slate-700 w-14 text-right">{grade.toFixed(1)} / 100</span>
     </div>
   );
 }
@@ -64,13 +78,44 @@ export default function EvaluationsPage() {
   const [showModal, setShowModal]       = useState(false);
   const [modalEmpId, setModalEmpId]     = useState("");
   const [modalScores, setModalScores]   = useState<Record<string, number>>(defaultScores());
-  const [modalBonus, setModalBonus]     = useState(false);
   const [modalRecs, setModalRecs]       = useState("");
   const [modalSaving, setModalSaving]   = useState(false);
   const [modalError, setModalError]     = useState("");
 
+  // ── Bonus tiers (grade range → amount) ───────────────────────────────────
+  const [tiers, setTiers]             = useState<BonusTier[]>([]);
+  const [tiersSaving, setTiersSaving] = useState(false);
+  const [tiersMsg, setTiersMsg]       = useState("");
+
   useEffect(() => { load(); }, [month, year]);
-  useEffect(() => { loadEmployees(); }, []);
+  useEffect(() => { loadEmployees(); loadTiers(); }, []);
+
+  const loadTiers = async () => {
+    try {
+      const res = await api.get("/bonus-tiers");
+      setTiers((res.data || []).map((t: any) => ({
+        minGrade: t.minGrade, maxGrade: t.maxGrade, amount: t.amount,
+      })));
+    } catch { /* ignore */ }
+  };
+
+  const saveTiers = async () => {
+    setTiersSaving(true); setTiersMsg("");
+    try {
+      const res = await api.put("/bonus-tiers", { tiers });
+      setTiers((res.data || []).map((t: any) => ({
+        minGrade: t.minGrade, maxGrade: t.maxGrade, amount: t.amount,
+      })));
+      setTiersMsg(ar ? "تم حفظ الشرائح" : "Tiers saved");
+      setTimeout(() => setTiersMsg(""), 2500);
+    } catch (e: any) { setTiersMsg(e.message); }
+    finally { setTiersSaving(false); }
+  };
+
+  const setTier = (i: number, field: keyof BonusTier, val: number) =>
+    setTiers((arr) => arr.map((t, idx) => (idx === i ? { ...t, [field]: val } : t)));
+  const addTier    = () => setTiers((arr) => [...arr, { minGrade: 0, maxGrade: 0, amount: 0 }]);
+  const removeTier = (i: number) => setTiers((arr) => arr.filter((_, idx) => idx !== i));
 
   const load = async () => {
     setLoading(true); setError("");
@@ -92,7 +137,6 @@ export default function EvaluationsPage() {
   const openModal = (empId = "") => {
     setModalEmpId(empId);
     setModalScores(defaultScores());
-    setModalBonus(false);
     setModalRecs("");
     setModalError("");
     setShowModal(true);
@@ -108,7 +152,7 @@ export default function EvaluationsPage() {
         period_month: month,
         period_year: year,
         ...modalScores,
-        bonus_worthy: modalBonus,
+        bonus_amount: bonusForGrade(gradeFromScores(modalScores), tiers),
         recommendations: modalRecs,
       });
       setSuccess(ar ? "تم حفظ التقييم بنجاح" : "Evaluation saved successfully");
@@ -125,7 +169,7 @@ export default function EvaluationsPage() {
   const totalEvaluated = evaluations.length;
   const withBonus = evaluations.filter((e) => e.bonus_worthy).length;
   const overallAvg = totalEvaluated
-    ? (evaluations.reduce((s, e) => s + totalScore(e), 0) / totalEvaluated / EVAL_CRITERIA.length).toFixed(1)
+    ? (evaluations.reduce((s, e) => s + parseFloat(grade100(e)), 0) / totalEvaluated).toFixed(1)
     : "—";
 
   return (
@@ -168,7 +212,7 @@ export default function EvaluationsPage() {
           <div className="text-xs text-slate-500 mt-1">{ar ? "تقييمات مقدمة" : "Evaluations Submitted"}</div>
         </div>
         <div className="card text-center py-5">
-          <div className="text-2xl font-bold text-brand-600">{overallAvg}</div>
+          <div className="text-2xl font-bold text-brand-600">{overallAvg}{totalEvaluated ? <span className="text-sm font-medium text-slate-400"> / 100</span> : null}</div>
           <div className="text-xs text-slate-500 mt-1">{ar ? "متوسط الأداء" : "Avg Performance"}</div>
         </div>
         <div className="card text-center py-5">
@@ -199,8 +243,7 @@ export default function EvaluationsPage() {
         ) : (
           <div className="divide-y divide-slate-100">
             {evaluations.map((ev) => {
-              const total = totalScore(ev);
-              const avg = avgScore(ev);
+              const grade = parseFloat(grade100(ev));
               const isExpanded = expandedId === ev.id;
               return (
                 <div key={ev.id} className="hover:bg-slate-50 transition-colors">
@@ -221,14 +264,14 @@ export default function EvaluationsPage() {
                         )}
                       </div>
                     </div>
-                    <div className="w-44 hidden sm:block"><ScoreBar value={total} /></div>
+                    <div className="w-44 hidden sm:block"><ScoreBar grade={grade} /></div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <Star size={13} className="text-amber-400 fill-amber-400" />
-                      <span className="text-sm font-bold text-slate-700">{avg}</span>
-                      <span className="text-xs text-slate-400">/ 5</span>
+                      <span className="text-sm font-bold text-slate-700">{grade.toFixed(1)}</span>
+                      <span className="text-xs text-slate-400">/ 100</span>
                     </div>
-                    {ev.bonus_worthy
-                      ? <span className="badge badge-green text-[10px] shrink-0">{ar ? "مكافأة ✓" : "Bonus ✓"}</span>
+                    {ev.bonus_worthy || ev.bonus_amount > 0
+                      ? <span className="badge badge-green text-[10px] shrink-0">{ar ? `مكافأة ${ev.bonus_amount ? `${ev.bonus_amount} د.أ` : "✓"}` : `Bonus ${ev.bonus_amount ? `${ev.bonus_amount} JD` : "✓"}`}</span>
                       : <span className="badge badge-gray text-[10px] shrink-0">{ar ? "بدون مكافأة" : "No bonus"}</span>
                     }
                     <span className="text-slate-400 text-xs shrink-0">{isExpanded ? "▲" : "▼"}</span>
@@ -323,15 +366,51 @@ export default function EvaluationsPage() {
                 ))}
               </div>
 
-              {/* Bonus toggle */}
-              <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-                <span className="text-sm text-slate-700 flex-1">
-                  {ar ? "هل يستحق مكافأة (100–125 دينار)؟" : "Deserves a bonus (100–125 JD)?"}
-                </span>
-                <button type="button" onClick={() => setModalBonus((b) => !b)}
-                  className={`relative w-12 h-6 rounded-full transition-all shrink-0 ${modalBonus ? "bg-brand-600" : "bg-slate-200"}`}>
-                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${modalBonus ? (ar ? "left-0.5" : "right-0.5") : (ar ? "right-0.5" : "left-0.5")}`} />
-                </button>
+              {/* Bonus tiers (grade range → amount). Bonus is auto-applied by grade. */}
+              <div className="pt-2 border-t border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-700">
+                    {ar ? "شرائح المكافأة التلقائية" : "Automatic Bonus Tiers"}
+                  </span>
+                  <button type="button" onClick={addTier} className="text-xs text-brand-600 font-medium hover:text-brand-800">
+                    + {ar ? "إضافة شريحة" : "Add tier"}
+                  </button>
+                </div>
+                {tiers.length === 0 ? (
+                  <p className="text-xs text-slate-400">
+                    {ar ? "لا توجد شرائح — أضف نطاق درجات ومبلغ المكافأة." : "No tiers — add a grade range and bonus amount."}
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {tiers.map((t, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <span className="text-xs text-slate-400 w-10">{ar ? "من" : "From"}</span>
+                        <input type="number" min={0} max={100} value={t.minGrade}
+                          onChange={(e) => setTier(i, "minGrade", +e.target.value)}
+                          className="form-input w-16 py-1 px-2 text-center text-sm" dir="ltr" />
+                        <span className="text-xs text-slate-400">{ar ? "إلى" : "to"}</span>
+                        <input type="number" min={0} max={100} value={t.maxGrade}
+                          onChange={(e) => setTier(i, "maxGrade", +e.target.value)}
+                          className="form-input w-16 py-1 px-2 text-center text-sm" dir="ltr" />
+                        <span className="text-xs text-slate-400">→</span>
+                        <input type="number" min={0} value={t.amount}
+                          onChange={(e) => setTier(i, "amount", +e.target.value)}
+                          className="form-input w-20 py-1 px-2 text-center text-sm" dir="ltr" />
+                        <span className="text-xs text-slate-500">{ar ? "د.أ" : "JD"}</span>
+                        <button type="button" onClick={() => removeTier(i)} className="text-slate-300 hover:text-rose-500 ms-auto">
+                          <X size={15} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={saveTiers} disabled={tiersSaving}
+                    className="text-xs btn btn-secondary py-1 px-3">
+                    {tiersSaving ? (ar ? "جاري الحفظ..." : "Saving...") : (ar ? "حفظ الشرائح" : "Save tiers")}
+                  </button>
+                  {tiersMsg && <span className="text-xs text-emerald-600">{tiersMsg}</span>}
+                </div>
               </div>
 
               {/* Recommendations */}
@@ -340,16 +419,16 @@ export default function EvaluationsPage() {
                 <textarea className="form-textarea" rows={2} value={modalRecs} onChange={(e) => setModalRecs(e.target.value)} placeholder={ar ? "أدخل توصياتك..." : "Enter recommendations..."} />
               </div>
 
-              {/* Score summary */}
+              {/* Score summary + auto bonus */}
               <div className="bg-brand-50 rounded-xl p-3 flex gap-6 text-sm">
                 <div>
-                  <span className="text-slate-500">{ar ? "المجموع" : "Total"}: </span>
-                  <strong className="text-brand-700">{Object.values(modalScores).reduce((a: number, b: number) => a + b, 0)} / 65</strong>
+                  <span className="text-slate-500">{ar ? "الدرجة" : "Grade"}: </span>
+                  <strong className="text-brand-700">{gradeFromScores(modalScores).toFixed(1)} / 100</strong>
                 </div>
                 <div>
-                  <span className="text-slate-500">{ar ? "المعدل" : "Avg"}: </span>
-                  <strong className="text-brand-700">
-                    {(Object.values(modalScores).reduce((a: number, b: number) => a + b, 0) / EVAL_CRITERIA.length).toFixed(1)}
+                  <span className="text-slate-500">{ar ? "المكافأة" : "Bonus"}: </span>
+                  <strong className="text-emerald-600">
+                    {bonusForGrade(gradeFromScores(modalScores), tiers)} {ar ? "د.أ" : "JD"}
                   </strong>
                 </div>
               </div>

@@ -286,3 +286,21 @@
     @apply border-brand-500 bg-brand-50;
   }
 }
+
+/* Print: show only the document inside #print-area (used by the Job Offer page) */
+@media print {
+  body * { visibility: hidden; }
+  #print-area, #print-area * { visibility: visible; }
+  #print-area {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  #print-area input {
+    border: none !important;
+    background: transparent !important;
+  }
+  .no-print { display: none !important; }
+}
