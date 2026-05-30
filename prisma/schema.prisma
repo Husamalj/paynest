@@ -319,6 +319,7 @@ model Evaluation {
   scoreFeedback         Int?     @map("score_feedback") @db.SmallInt
   scoreCompliance       Int?     @map("score_compliance") @db.SmallInt
   bonusWorthy           Boolean  @default(false) @map("bonus_worthy")
+  bonusAmount           Int      @default(0) @map("bonus_amount")
   recommendations       String?
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
@@ -328,6 +329,54 @@ model Evaluation {
 
   @@unique([companyId, evaluatorId, employeeId, periodMonth, periodYear])
   @@map("evaluations")
+}
+
+model BonusTier {
+  id        Int      @id @default(autoincrement())
+  companyId Int      @default(1) @map("company_id")
+  minGrade  Int      @map("min_grade")
+  maxGrade  Int      @map("max_grade")
+  amount    Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("bonus_tiers")
+}
+
+model JobOffer {
+  id                  Int      @id @default(autoincrement())
+  companyId           Int      @default(1) @map("company_id")
+  createdBy           Int      @map("created_by")
+  // Personal information
+  name                String?
+  nationality         String?
+  phone1              String?
+  phone2              String?
+  nationalId          String?  @map("national_id")
+  qualifications      String?
+  experience          String?
+  offerDate           String?  @map("offer_date")
+  // Training details
+  trainingTitle       String?  @map("training_title")
+  sector              String?
+  trainingHours       String?  @map("training_hours")
+  trainingPeriod      String?  @map("training_period")
+  agreementDuration   String?  @map("agreement_duration")
+  agreementType       String?  @map("agreement_type")
+  agreementConditions String?  @map("agreement_conditions")
+  // Benefits
+  grantFirst          String?  @map("grant_first")
+  grantSecond         String?  @map("grant_second")
+  noteSecond          String?  @map("note_second")
+  // Validity
+  offerValidity       String?  @map("offer_validity")
+  joiningDate         String?  @map("joining_date")
+  // Applicant approval
+  signatureDate       String?  @map("signature_date")
+  fullName            String?  @map("full_name")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("job_offers")
 }
 
 model Announcement {

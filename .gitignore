@@ -12,3 +12,5 @@ backend/node_modules/
 *.tsbuildinfo
 
 .vercel
+
+tsconfig.tsbuildinfo

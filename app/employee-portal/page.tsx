@@ -35,6 +35,13 @@ const EVAL_CRITERIA = [
 const MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const defaultEvalScores = () => Object.fromEntries(EVAL_CRITERIA.map((c) => [c.key, 3]));
+const EVAL_MAX_TOTAL = EVAL_CRITERIA.length * 5; // 65
+const evalGradeFromScores = (scores: Record<string, number>) =>
+  (Object.values(scores).reduce((a, b) => a + (b || 0), 0) / EVAL_MAX_TOTAL) * 100;
+const evalBonusForGrade = (grade: number, tiers: { minGrade: number; maxGrade: number; amount: number }[]) => {
+  const t = tiers.find((x) => grade >= x.minGrade && grade <= x.maxGrade);
+  return t ? t.amount : 0;
+};
 
 function formatCurrency(value: unknown) {
   return (parseFloat(String(value)) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -138,7 +145,7 @@ export default function EmployeePortalPage() {
   const [evalSub, setEvalSub] = useState<any>(null);
   const [showEvalModal, setShowEvalModal] = useState(false);
   const [evalScores, setEvalScores] = useState<Record<string, number>>(defaultEvalScores());
-  const [evalBonusWorthy, setEvalBonusWorthy] = useState(false);
+  const [evalTiers, setEvalTiers] = useState<{ minGrade: number; maxGrade: number; amount: number }[]>([]);
   const [evalRecommendations, setEvalRecommendations] = useState("");
   const [evalLoading, setEvalLoading] = useState(false);
   const [evalSaving, setEvalSaving] = useState(false);
@@ -352,17 +359,18 @@ export default function EmployeePortalPage() {
     setEvalSub(sub);
     setEvalError("");
     setEvalScores(defaultEvalScores());
-    setEvalBonusWorthy(false);
     setEvalRecommendations("");
     setShowEvalModal(true);
     setEvalLoading(true);
+    api.get("/bonus-tiers")
+      .then((r) => setEvalTiers((r.data || []).map((t: any) => ({ minGrade: t.minGrade, maxGrade: t.maxGrade, amount: t.amount }))))
+      .catch(() => {});
     try {
       const empId = sub.employeeId || sub.employee_id;
       const res = await api.get("/evaluations", { params: { employee_id: empId, month: evalPeriodMonth, year: evalPeriodYear } });
       if (res.data) {
         const ev = res.data;
         setEvalScores(Object.fromEntries(EVAL_CRITERIA.map((c) => [c.key, ev[c.key] ?? 3])));
-        setEvalBonusWorthy(ev.bonus_worthy ?? false);
         setEvalRecommendations(ev.recommendations || "");
       }
     } catch { /* keep defaults */ }
@@ -380,7 +388,7 @@ export default function EmployeePortalPage() {
         period_month: evalPeriodMonth,
         period_year: evalPeriodYear,
         ...evalScores,
-        bonus_worthy: evalBonusWorthy,
+        bonus_amount: evalBonusForGrade(evalGradeFromScores(evalScores), evalTiers),
         recommendations: evalRecommendations,
       });
       setCompletedEvals((prev) => new Set([...prev, empId]));
@@ -955,22 +963,21 @@ export default function EmployeePortalPage() {
                   </div>
                 ))}
 
-                {/* Bonus toggle */}
-                <div className="flex items-center justify-between pt-3 border-t border-slate-200">
-                  <span className="text-sm text-slate-700 flex-1">
-                    {isRTL ? "هل يستحق الموظف مكافأة (100–125 دينار)؟" : "Does the employee deserve a bonus (100–125 JD)?"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setEvalBonusWorthy((b) => !b)}
-                    className={`relative w-12 h-6 rounded-full transition-all shrink-0 ${evalBonusWorthy ? "bg-brand-600" : "bg-slate-200"}`}
-                  >
-                    <span
-                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${
-                        evalBonusWorthy ? (isRTL ? "left-0.5" : "right-0.5") : (isRTL ? "right-0.5" : "left-0.5")
-                      }`}
-                    />
-                  </button>
+                {/* Automatic bonus (derived from grade tiers, set by HR/owner) */}
+                <div className="pt-3 border-t border-slate-200">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-700 font-medium">
+                      {isRTL ? "المكافأة التلقائية" : "Automatic Bonus"}
+                    </span>
+                    <strong className="text-emerald-600">
+                      {evalBonusForGrade(evalGradeFromScores(evalScores), evalTiers)} {isRTL ? "د.أ" : "JD"}
+                    </strong>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {evalTiers.length
+                      ? (isRTL ? "تُحتسب تلقائياً حسب الدرجة وشرائح المكافأة." : "Applied automatically based on the grade and bonus tiers.")
+                      : (isRTL ? "لم يتم تحديد شرائح مكافأة بعد." : "No bonus tiers configured yet.")}
+                  </p>
                 </div>
 
                 {/* Recommendations */}
@@ -988,15 +995,9 @@ export default function EmployeePortalPage() {
                 {/* Score summary */}
                 <div className="bg-brand-50 rounded-xl p-3 flex flex-wrap gap-6 text-sm">
                   <div>
-                    <span className="text-slate-500">{isRTL ? "المجموع الكلي" : "Total Score"}: </span>
+                    <span className="text-slate-500">{isRTL ? "الدرجة" : "Grade"}: </span>
                     <strong className="text-brand-700">
-                      {Object.values(evalScores).reduce((a, b) => a + b, 0)} / 65
-                    </strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">{isRTL ? "المعدل" : "Average"}: </span>
-                    <strong className="text-brand-700">
-                      {(Object.values(evalScores).reduce((a, b) => a + b, 0) / EVAL_CRITERIA.length).toFixed(1)}
+                      {((Object.values(evalScores).reduce((a, b) => a + b, 0) / (EVAL_CRITERIA.length * 5)) * 100).toFixed(1)} / 100
                     </strong>
                   </div>
                 </div>
