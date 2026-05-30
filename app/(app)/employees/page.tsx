@@ -44,20 +44,30 @@ const DOC_TYPES = [
   { key: "health",       ar: "خلو من الأمراض",        en: "Health Certificate" },
 ];
 
+// Strip everything but digits, then drop a leading trunk "0" so the stored
+// number is clean E.164 (e.g. +962790000000, not +9620790000000).
+function sanitizeLocal(v: string) {
+  return v.replace(/\D/g, "").replace(/^0+/, "");
+}
+
 function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const dialMatch = COUNTRIES.find((c) => value.startsWith(c.dial));
   const [dialCode, setDialCode] = useState(dialMatch?.dial ?? "+962");
   const [local, setLocal] = useState(dialMatch ? value.slice(dialMatch.dial.length) : value);
 
-  const handleDial = (d: string) => { setDialCode(d); onChange(d + local); };
-  const handleLocal = (v: string) => { setLocal(v); onChange(dialCode + v); };
+  const handleDial = (d: string) => { setDialCode(d); onChange(local ? d + local : ""); };
+  const handleLocal = (raw: string) => {
+    const v = sanitizeLocal(raw);
+    setLocal(v);
+    onChange(v ? dialCode + v : "");
+  };
 
   return (
     <div className="flex gap-2">
       <select className="form-input w-36 flex-shrink-0" value={dialCode} onChange={(e) => handleDial(e.target.value)}>
         {COUNTRIES.map((c) => <option key={c.code} value={c.dial}>{c.flag} {c.dial}</option>)}
       </select>
-      <input type="tel" className="form-input flex-1" placeholder="7XXXXXXXX" value={local} onChange={(e) => handleLocal(e.target.value)} />
+      <input type="tel" inputMode="numeric" maxLength={12} className="form-input flex-1" placeholder="7XXXXXXXX" value={local} onChange={(e) => handleLocal(e.target.value)} />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, HttpError } from "@/lib/auth";
 import { sendEmailVerification } from "@/lib/email";
+import { assertDeliverableEmail, assertValidPhone } from "@/lib/validate";
 
 export const runtime = "nodejs";
 
@@ -12,16 +13,26 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { companyName, slug, ownerName, email, password, maxEmployees } = body as {
+    const { companyName, slug, ownerName, email, phone, password, maxEmployees } = body as {
       companyName?: string;
       slug?: string;
       ownerName?: string;
       email?: string;
+      phone?: string;
       password?: string;
       maxEmployees?: number | string;
     };
     if (!companyName || !slug || !ownerName || !email || !password) {
       throw new HttpError(400, "Missing required fields");
+    }
+
+    // Validate contact info — email must be a real deliverable address.
+    try { await assertDeliverableEmail(email); }
+    catch (e: any) { throw new HttpError(400, e.message); }
+    // Phone is optional at signup, but if provided it must be valid.
+    if (phone) {
+      try { assertValidPhone(phone); }
+      catch (e: any) { throw new HttpError(400, e.message); }
     }
 
     // Parse maxEmployees — null/empty means unlimited

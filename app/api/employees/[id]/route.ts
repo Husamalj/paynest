@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 import { logAudit, diff } from "@/lib/audit";
+import { assertDeliverableEmail, assertValidPhone } from "@/lib/validate";
 
 export const runtime = "nodejs";
 
@@ -62,6 +63,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const mode = await getSystemMode(session.companyId);
     const body = await req.json();
+
+    // Validate contact info — email must be deliverable, phone must be valid.
+    if (body.email) {
+      try { await assertDeliverableEmail(body.email); }
+      catch (e: any) { throw new HttpError(400, e.message); }
+    }
+    if (body.phone) {
+      try { assertValidPhone(body.phone); }
+      catch (e: any) { throw new HttpError(400, e.message); }
+    }
 
     // Snapshot before for audit diff
     const before = await prisma.employee.findFirst({

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { sendNewEmployeeCredentials } from "@/lib/email";
+import { assertDeliverableEmail, assertValidPhone } from "@/lib/validate";
 
 export const runtime = "nodejs";
 
@@ -51,6 +52,16 @@ export async function POST(req: NextRequest) {
     const mode = await getSystemMode(session.companyId);
     const body = await req.json();
     const { employee_id, name, email, phone, base_salary, social_security, religion, allowance, job_title } = body;
+
+    // Validate contact info — email must be a real deliverable address, phone must be valid.
+    if (email) {
+      try { await assertDeliverableEmail(email); }
+      catch (e: any) { throw new HttpError(400, e.message); }
+    }
+    if (phone) {
+      try { assertValidPhone(phone); }
+      catch (e: any) { throw new HttpError(400, e.message); }
+    }
 
     // Enforce employee quota — block new employees if company is at max
     const company = await prisma.company.findUnique({
