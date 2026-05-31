@@ -111,6 +111,27 @@ export async function POST(req: NextRequest) {
       throw new HttpError(400, "Missing required fields");
     }
 
+    // Tree enforcement: a regular employee may only evaluate people they
+    // supervise (per the Supervisor Assignment chart). Owner/HR may evaluate anyone.
+    if (session.role === "employee") {
+      const settings = await prisma.companySettings.findFirst({ where: { companyId: session.companyId } });
+      const mode = settings?.systemMode ?? "daily";
+      const me = session.employeeNumber
+        ? await prisma.employee.findFirst({
+            where: { companyId: session.companyId, systemMode: mode, employeeId: session.employeeNumber },
+            select: { id: true },
+          })
+        : null;
+      const target = await prisma.employee.findFirst({
+        where: { companyId: session.companyId, systemMode: mode, employeeId: employee_id },
+        select: { supervisorId: true, supervisorIds: true },
+      });
+      const supIds = target ? [...(target.supervisorIds || []), target.supervisorId].filter((x) => x != null) : [];
+      if (!me || !supIds.includes(me.id)) {
+        throw new HttpError(403, "You can only evaluate employees you supervise");
+      }
+    }
+
     const clamp = (v: any) => { const n = parseInt(v, 10); return n >= 1 && n <= 5 ? n : 3; };
     const bonusAmt = Math.max(0, parseInt(bonus_amount, 10) || 0);
     const bonusWorthy = bonusAmt > 0;

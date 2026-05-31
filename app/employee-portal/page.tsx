@@ -152,8 +152,6 @@ export default function EmployeePortalPage() {
   const [evalError, setEvalError] = useState("");
   const [evalSuccess, setEvalSuccess] = useState("");
   const [completedEvals, setCompletedEvals] = useState<Set<string>>(new Set());
-  const [colleagues, setColleagues] = useState<any[]>([]); // everyone evaluatable (except owner + self)
-  const [colleagueSearch, setColleagueSearch] = useState("");
 
   // ── Task assignment (supervisor → subordinate) ──────────────────────────
   const [taskSub, setTaskSub] = useState<any>(null);
@@ -286,11 +284,6 @@ export default function EmployeePortalPage() {
         if (me.subordinates && me.subordinates.length > 0) {
           try { const slRes = await api.patch("/leaves", {}); setSubLeaves(slRes.data || []); } catch { /* no subs */ }
         }
-        // Everyone can evaluate everyone (except the owner) — load the full target list
-        try {
-          const tRes = await api.get("/evaluations/targets");
-          setColleagues((tRes.data || []).filter((c: any) => c.employee_id !== meId));
-        } catch { /* ignore */ }
       } else {
         const [employeesRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes] = await Promise.all([
           api.get("/employees"),
@@ -650,49 +643,6 @@ export default function EmployeePortalPage() {
                 </div>
               );
             })()}
-
-            {/* ── Evaluate anyone (everyone can evaluate everyone except the owner) ── */}
-            {colleagues.length > 0 && (
-              <div className="card">
-                <div className="card-header">
-                  <div className="card-title">
-                    <ClipboardList size={16} className="text-brand-600" />
-                    {isRTL ? "تقييم الزملاء" : "Evaluate Colleagues"}
-                    <span className="badge badge-gray text-[10px]">{colleagues.length}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <select className="form-input form-input-sm" value={evalPeriodMonth} onChange={(e) => setEvalPeriodMonth(Number(e.target.value))}>
-                      {(isRTL ? MONTHS_AR : MONTHS_EN).map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-                    </select>
-                    <input className="form-input form-input-sm w-24" placeholder={isRTL ? "بحث" : "Search"} value={colleagueSearch} onChange={(e) => setColleagueSearch(e.target.value)} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {colleagues
-                    .filter((c) => !colleagueSearch || (c.name || "").toLowerCase().includes(colleagueSearch.toLowerCase()) || String(c.employee_id).includes(colleagueSearch))
-                    .map((c) => {
-                      const cid = c.employee_id || c.employeeId;
-                      const isDone = completedEvals.has(String(cid));
-                      return (
-                        <div key={c.id} className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-slate-50">
-                          <div className="w-8 h-8 rounded-md bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                            {(c.name || "?").charAt(0).toUpperCase()}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium text-slate-900 truncate text-sm">{c.name}</div>
-                            <div className="text-[11px] text-slate-500 truncate">{c.email || cid}</div>
-                          </div>
-                          {isDone && <span className="badge badge-green text-[9px] shrink-0">{isRTL ? "تم" : "Done"}</span>}
-                          <button className="btn btn-sm btn-primary shrink-0" onClick={() => openEvalModal(c)}>
-                            <ClipboardList size={12} />
-                            {isDone ? (isRTL ? "تعديل" : "Edit") : (isRTL ? "تقييم" : "Evaluate")}
-                          </button>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
 
             {/* ── Subordinate leave requests (supervisor view) ────────── */}
             {subLeaves.length > 0 && (
