@@ -6,8 +6,18 @@ import {
   Calendar, Phone, Mail, Hash, Upload, FileText, CheckCircle, ChevronRight, Crown, Eye,
 } from "lucide-react";
 import clsx from "clsx";
+import { isValidPhoneNumber } from "libphonenumber-js";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api, { apiPostForm } from "@/lib/api";
+
+// True when the value is empty (phone optional) or a valid international number.
+function phoneOk(phone: string) {
+  if (!phone) return true;
+  const v = phone.startsWith("+") ? phone : `+${phone}`;
+  try { return isValidPhoneNumber(v); } catch { return false; }
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function formatCurrency(val: unknown) {
   return (parseFloat(String(val)) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -50,7 +60,7 @@ function sanitizeLocal(v: string) {
   return v.replace(/\D/g, "").replace(/^0+/, "");
 }
 
-function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function PhoneInput({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: boolean }) {
   const dialMatch = COUNTRIES.find((c) => value.startsWith(c.dial));
   const [dialCode, setDialCode] = useState(dialMatch?.dial ?? "+962");
   const [local, setLocal] = useState(dialMatch ? value.slice(dialMatch.dial.length) : value);
@@ -67,7 +77,7 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
       <select className="form-input w-36 flex-shrink-0" value={dialCode} onChange={(e) => handleDial(e.target.value)}>
         {COUNTRIES.map((c) => <option key={c.code} value={c.dial}>{c.flag} {c.dial}</option>)}
       </select>
-      <input type="tel" inputMode="numeric" maxLength={12} className="form-input flex-1" placeholder="7XXXXXXXX" value={local} onChange={(e) => handleLocal(e.target.value)} />
+      <input type="tel" inputMode="numeric" maxLength={12} className={clsx("form-input flex-1", error && "border-rose-500 ring-1 ring-rose-500 focus:border-rose-500")} placeholder="7XXXXXXXX" value={local} onChange={(e) => handleLocal(e.target.value)} />
     </div>
   );
 }
@@ -85,6 +95,8 @@ export default function EmployeesPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [quotaError, setQuotaError] = useState("");  // friendly upgrade prompt
+  const [phoneError, setPhoneError] = useState("");  // inline phone validation
+  const [emailError, setEmailError] = useState("");  // inline email validation
 
   // Add modal multi-step
   const [showAdd, setShowAdd] = useState(false);
@@ -150,6 +162,17 @@ export default function EmployeesPage() {
   const handleAddStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.employee_id || !form.name || !form.email || !form.base_salary) { setError(t("fillRequired")); return; }
+    // Inline contact validation before submitting
+    if (!EMAIL_RE.test(form.email)) {
+      setEmailError(ar ? "صيغة البريد الإلكتروني غير صحيحة" : "Invalid email format");
+      return;
+    }
+    setEmailError("");
+    if (!phoneOk(form.phone)) {
+      setPhoneError(ar ? "رقم الهاتف غير صحيح لهذه الدولة" : "Invalid phone number for the selected country");
+      return;
+    }
+    setPhoneError("");
     try {
       await api.post("/employees", { ...form, base_salary: parseFloat(form.base_salary), allowance: parseFloat(form.allowance || "0"), job_title: form.job_title || null });
       setCreatedEmpId(form.employee_id);
@@ -205,6 +228,7 @@ export default function EmployeesPage() {
       social_security: !!selectedEmployee.social_security,
       religion: selectedEmployee.religion || "",
     });
+    setPhoneError(""); setEmailError("");
     setShowEdit(true);
   };
 
@@ -212,6 +236,16 @@ export default function EmployeesPage() {
     e.preventDefault();
     if (!selectedEmployee) return;
     if (!editForm.employee_id || !editForm.name || !editForm.email || !editForm.base_salary) { setError(t("fillRequired")); return; }
+    if (!EMAIL_RE.test(editForm.email)) {
+      setEmailError(ar ? "صيغة البريد الإلكتروني غير صحيحة" : "Invalid email format");
+      return;
+    }
+    setEmailError("");
+    if (!phoneOk(editForm.phone)) {
+      setPhoneError(ar ? "رقم الهاتف غير صحيح لهذه الدولة" : "Invalid phone number for the selected country");
+      return;
+    }
+    setPhoneError("");
     setSavingEdit(true);
     try {
       const res = await api.put(`/employees/${selectedEmployee.employee_id}`, { ...editForm, base_salary: parseFloat(editForm.base_salary), allowance: parseFloat(editForm.allowance || "0"), job_title: editForm.job_title || null });
@@ -245,7 +279,7 @@ export default function EmployeesPage() {
     <div className="space-y-6">
       <div className="page-header">
         <div><h2 className="page-title">{t("employees")}</h2><p className="page-subtitle">{t("employeeManagement")}</p></div>
-        <button className="btn btn-primary" onClick={() => { setShowAdd(true); setAddStep(1); setForm({ ...emptyForm }); setDocFiles({}); setError(""); }}>
+        <button className="btn btn-primary" onClick={() => { setShowAdd(true); setAddStep(1); setForm({ ...emptyForm }); setDocFiles({}); setError(""); setPhoneError(""); setEmailError(""); }}>
           <Plus size={15} /> {t("addEmployee")}
         </button>
       </div>
@@ -463,10 +497,15 @@ export default function EmployeesPage() {
               <form onSubmit={handleAddStep1} className="space-y-4">
                 <div><label className="form-label">{t("employeeId")} *</label><input className="form-input" value={form.employee_id} onChange={(e) => setForm((f) => ({ ...f, employee_id: e.target.value }))} placeholder="EMP-001" /></div>
                 <div><label className="form-label">{t("name")} *</label><input className="form-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} /></div>
-                <div><label className="form-label">{emailTitle} *</label><input type="email" className="form-input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="employee@company.com" /></div>
+                <div>
+                  <label className="form-label">{emailTitle} *</label>
+                  <input type="email" className={clsx("form-input", emailError && "border-rose-500 ring-1 ring-rose-500 focus:border-rose-500")} value={form.email} onChange={(e) => { setForm((f) => ({ ...f, email: e.target.value })); if (emailError) setEmailError(""); }} placeholder="employee@company.com" />
+                  {emailError && <p className="text-xs text-rose-600 mt-1">{emailError}</p>}
+                </div>
                 <div>
                   <label className="form-label">{phoneTitle}</label>
-                  <PhoneInput value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} />
+                  <PhoneInput value={form.phone} error={!!phoneError} onChange={(v) => { setForm((f) => ({ ...f, phone: v })); if (phoneError) setPhoneError(""); }} />
+                  {phoneError && <p className="text-xs text-rose-600 mt-1">{phoneError}</p>}
                 </div>
                 <div><label className="form-label">{t("baseSalary")} *</label><input type="number" className="form-input" value={form.base_salary} onChange={(e) => setForm((f) => ({ ...f, base_salary: e.target.value }))} placeholder="0.00" /></div>
                 <div><label className="form-label">{ar ? "العلاوة (Allowance)" : "Allowance"}</label><input type="number" className="form-input" value={form.allowance} onChange={(e) => setForm((f) => ({ ...f, allowance: e.target.value }))} placeholder="0.00" /></div>
@@ -541,8 +580,16 @@ export default function EmployeesPage() {
             <form onSubmit={handleEdit} className="space-y-4">
               <div><label className="form-label">{t("employeeId")} *</label><input className="form-input" value={editForm.employee_id} onChange={(e) => setEditForm((f) => ({ ...f, employee_id: e.target.value }))} /></div>
               <div><label className="form-label">{t("name")} *</label><input className="form-input" value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} /></div>
-              <div><label className="form-label">{emailTitle} *</label><input type="email" className="form-input" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} /></div>
-              <div><label className="form-label">{phoneTitle}</label><PhoneInput value={editForm.phone} onChange={(v) => setEditForm((f) => ({ ...f, phone: v }))} /></div>
+              <div>
+                <label className="form-label">{emailTitle} *</label>
+                <input type="email" className={clsx("form-input", emailError && "border-rose-500 ring-1 ring-rose-500 focus:border-rose-500")} value={editForm.email} onChange={(e) => { setEditForm((f) => ({ ...f, email: e.target.value })); if (emailError) setEmailError(""); }} />
+                {emailError && <p className="text-xs text-rose-600 mt-1">{emailError}</p>}
+              </div>
+              <div>
+                <label className="form-label">{phoneTitle}</label>
+                <PhoneInput value={editForm.phone} error={!!phoneError} onChange={(v) => { setEditForm((f) => ({ ...f, phone: v })); if (phoneError) setPhoneError(""); }} />
+                {phoneError && <p className="text-xs text-rose-600 mt-1">{phoneError}</p>}
+              </div>
               <div><label className="form-label">{t("baseSalary")} *</label><input type="number" className="form-input" value={editForm.base_salary} onChange={(e) => setEditForm((f) => ({ ...f, base_salary: e.target.value }))} /></div>
               <div><label className="form-label">{ar ? "العلاوة (Allowance)" : "Allowance"}</label><input type="number" className="form-input" value={editForm.allowance} onChange={(e) => setEditForm((f) => ({ ...f, allowance: e.target.value }))} placeholder="0.00" /></div>
               <div><label className="form-label">{ar ? "المسمى الوظيفي" : "Job Title"}</label><input className="form-input" value={editForm.job_title} onChange={(e) => setEditForm((f) => ({ ...f, job_title: e.target.value }))} placeholder={ar ? "مثال: مطور برمجيات" : "e.g. Software Engineer"} /></div>

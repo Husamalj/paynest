@@ -19,6 +19,23 @@ function formatCurrency(val: unknown) {
   return (parseFloat(String(val)) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// Format a stored time value (ISO/Date string for @db.Time, or "HH:mm") into HH:mm (UTC).
+function formatTime(val: unknown): string {
+  if (!val) return "—";
+  const s = String(val);
+  if (/^\d{1,2}:\d{2}/.test(s)) return s.slice(0, 5);
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return "—";
+  return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+}
+
+// Weekday short name from a YYYY-MM-DD string.
+function weekdayName(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  if (isNaN(d.getTime())) return "";
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getUTCDay()];
+}
+
 function getStatusBadge(status: string, t: (k: any) => string) {
   const map: Record<string, { cls: string; label: string }> = { "Full Attendance": { cls: "badge-green", label: t("fullAttendance") }, "Has Deductions": { cls: "badge-red", label: t("hasDeductions") }, "Has Extras": { cls: "badge-blue", label: t("hasExtras") }, Absent: { cls: "badge-gray", label: t("absent") } };
   const info = map[status] || { cls: "badge-gray", label: status };
@@ -198,11 +215,14 @@ export default function PayrollPage() {
                             <p className="font-semibold text-[13px] mb-2 text-slate-700 flex items-center gap-1"><Calendar size={13} /> {t("dailyBreakdown")}</p>
                             <div className="rounded-lg border border-slate-200 overflow-x-auto bg-white">
                               <table className="w-full text-xs">
-                                <thead><tr className="bg-slate-100/60"><th className="px-3 py-2 text-left">{t("date")}</th><th className="px-3 py-2 text-right">{t("hoursWorked")}</th><th className="px-3 py-2 text-right">{t("hourDiff")}</th><th className="px-3 py-2 text-right">{t("adjustment")}</th><th className="px-3 py-2 text-left">{t("status")}</th></tr></thead>
+                                <thead><tr className="bg-slate-100/60"><th className="px-3 py-2 text-left">{t("date")}</th><th className="px-3 py-2 text-left">{lang === "ar" ? "اليوم" : "Day"}</th><th className="px-3 py-2 text-center">{lang === "ar" ? "الدخول" : "Check In"}</th><th className="px-3 py-2 text-center">{lang === "ar" ? "الخروج" : "Check Out"}</th><th className="px-3 py-2 text-right">{t("hoursWorked")}</th><th className="px-3 py-2 text-right">{t("hourDiff")}</th><th className="px-3 py-2 text-right">{t("adjustment")}</th><th className="px-3 py-2 text-left">{t("status")}</th></tr></thead>
                                 <tbody>
                                   {breakdown.map((day: any, i: number) => (
                                     <tr key={i} className="border-t border-slate-100">
                                       <td className="px-3 py-1.5 font-mono">{day.date}</td>
+                                      <td className="px-3 py-1.5 text-slate-500">{weekdayName(day.date)}</td>
+                                      <td className="px-3 py-1.5 text-center font-mono text-slate-600">{formatTime(day.check_in)}</td>
+                                      <td className="px-3 py-1.5 text-center font-mono text-slate-600">{formatTime(day.check_out)}</td>
                                       <td className="px-3 py-1.5 text-right font-mono">{parseFloat(day.hours_worked || 0).toFixed(2)}</td>
                                       <td className={clsx("px-3 py-1.5 text-right font-mono", day.diff < 0 ? "text-rose-600" : day.diff > 0 ? "text-emerald-600" : "text-slate-500")}>{day.diff >= 0 ? "+" : ""}{parseFloat(day.diff || 0).toFixed(2)}</td>
                                       <td className={clsx("px-3 py-1.5 text-right font-mono", day.adjustment < 0 ? "text-rose-600" : day.adjustment > 0 ? "text-emerald-600" : "text-slate-500")}>{day.adjustment >= 0 ? "+" : ""}{formatCurrency(day.adjustment)}</td>

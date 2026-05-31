@@ -150,7 +150,7 @@ export function calculateDailyPayroll(
           dayAdjustment = (hoursWorked - reqHours) * hourlyRate * extraRate;
         }
         totalAdjustment += dayAdjustment;
-        dailyBreakdown.push({ date: workday, hours_worked: hoursWorked, required: reqHours, diff: parseFloat(diff.toFixed(4)), adjustment: parseFloat(dayAdjustment.toFixed(4)), status: "present" });
+        dailyBreakdown.push({ date: workday, hours_worked: hoursWorked, required: reqHours, diff: parseFloat(diff.toFixed(4)), adjustment: parseFloat(dayAdjustment.toFixed(4)), status: "present", check_in: record.clock_in ?? record.clockIn ?? null, check_out: record.clock_out ?? record.clockOut ?? null });
       } else {
         const fullDayDeduct = -(reqHours * hourlyRate);
         totalAdjustment += fullDayDeduct;
