@@ -44,7 +44,15 @@ export async function GET(req: NextRequest) {
       orderBy: { name: "asc" },
     });
 
-    return NextResponse.json({ employees, systemMode: mode });
+    // Drop stale supervisor references that point to ids not present on this canvas
+    // (other system mode, deleted, or excluded owner) so the chart renders cleanly.
+    const validIds = new Set(employees.map((e) => e.id));
+    const sanitized = employees.map((e) => {
+      const ids = (e.supervisorIds || []).filter((x) => validIds.has(x));
+      return { ...e, supervisorIds: ids, supervisorId: ids[0] ?? null };
+    });
+
+    return NextResponse.json({ employees: sanitized, systemMode: mode });
   } catch (err) {
     return errorResponse(err);
   }
@@ -92,14 +100,17 @@ export async function PUT(req: NextRequest) {
       return { id: a.id, supervisorIds: ids };
     });
 
-    // Apply into in-memory map for validation
+    // Apply into in-memory map for validation.
+    // Stale supervisor references (ids that no longer exist in this company/system mode —
+    // e.g. left over from the other payroll mode or a deleted employee) are silently
+    // dropped instead of failing the whole save, so the org chart self-heals.
     for (const a of normalised) {
       if (typeof a.id !== "number") throw new HttpError(400, "Invalid assignment id");
       if (!byId.has(a.id)) throw new HttpError(400, `Employee ${a.id} not in your company / system mode`);
-      for (const supId of a.supervisorIds) {
+      a.supervisorIds = a.supervisorIds.filter((supId) => {
         if (supId === a.id) throw new HttpError(400, "An employee cannot supervise themselves");
-        if (!byId.has(supId)) throw new HttpError(400, `Supervisor ${supId} not in your company / system mode`);
-      }
+        return byId.has(supId); // drop unknown/stale supervisor ids
+      });
       byId.get(a.id)!.supervisorIds = a.supervisorIds;
     }
 
