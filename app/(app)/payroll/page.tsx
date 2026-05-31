@@ -57,15 +57,28 @@ export default function PayrollPage() {
   const [periodMonth, setPeriodMonth] = useState(now.getMonth() + 1);
   const [periodYear, setPeriodYear]   = useState(now.getFullYear());
   const yearOptions = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1];
+  // attMap[employee_id][YYYY-MM-DD] = { clock_in, clock_out } — read live from attendance records
+  const [attMap, setAttMap] = useState<Record<string, Record<string, { clock_in: string | null; clock_out: string | null }>>>({});
 
   const loadPayroll = async (m: number, y: number) => {
     try {
       // /payroll/period returns { period_month, period_year, system_mode, results }
-      const periodRes = await api.get(`/payroll/period?month=${m}&year=${y}`).catch(() => ({ data: { results: [] as any[] } }));
+      const [periodRes, attRes] = await Promise.all([
+        api.get(`/payroll/period?month=${m}&year=${y}`).catch(() => ({ data: { results: [] as any[] } })),
+        api.get(`/attendance?month=${m}&year=${y}`).catch(() => ({ data: [] as any[] })),
+      ]);
       const list = Array.isArray(periodRes.data?.results)
         ? periodRes.data.results
         : Array.isArray(periodRes.data) ? periodRes.data : [];
       setPayroll(list);
+      // build attendance lookup
+      const map: Record<string, Record<string, { clock_in: string | null; clock_out: string | null }>> = {};
+      for (const r of (Array.isArray(attRes.data) ? attRes.data : [])) {
+        const eid = String(r.employee_id);
+        if (!map[eid]) map[eid] = {};
+        if (r.work_date) map[eid][r.work_date] = { clock_in: r.clock_in ?? null, clock_out: r.clock_out ?? null };
+      }
+      setAttMap(map);
     } catch (err: any) { setError(err.message); }
   };
 
@@ -217,18 +230,23 @@ export default function PayrollPage() {
                               <table className="w-full text-xs">
                                 <thead><tr className="bg-slate-100/60"><th className="px-3 py-2 text-left">{t("date")}</th><th className="px-3 py-2 text-left">{lang === "ar" ? "اليوم" : "Day"}</th><th className="px-3 py-2 text-center">{lang === "ar" ? "الدخول" : "Check In"}</th><th className="px-3 py-2 text-center">{lang === "ar" ? "الخروج" : "Check Out"}</th><th className="px-3 py-2 text-right">{t("hoursWorked")}</th><th className="px-3 py-2 text-right">{t("hourDiff")}</th><th className="px-3 py-2 text-right">{t("adjustment")}</th><th className="px-3 py-2 text-left">{t("status")}</th></tr></thead>
                                 <tbody>
-                                  {breakdown.map((day: any, i: number) => (
+                                  {breakdown.map((day: any, i: number) => {
+                                    const att = attMap[String(row.employee_id ?? row.employeeId)]?.[day.date];
+                                    const cin = att?.clock_in ?? (day.check_in ? formatTime(day.check_in) : "—");
+                                    const cout = att?.clock_out ?? (day.check_out ? formatTime(day.check_out) : "—");
+                                    return (
                                     <tr key={i} className="border-t border-slate-100">
                                       <td className="px-3 py-1.5 font-mono">{day.date}</td>
                                       <td className="px-3 py-1.5 text-slate-500">{weekdayName(day.date)}</td>
-                                      <td className="px-3 py-1.5 text-center font-mono text-slate-600">{formatTime(day.check_in)}</td>
-                                      <td className="px-3 py-1.5 text-center font-mono text-slate-600">{formatTime(day.check_out)}</td>
+                                      <td className="px-3 py-1.5 text-center font-mono text-slate-600">{cin || "—"}</td>
+                                      <td className="px-3 py-1.5 text-center font-mono text-slate-600">{cout || "—"}</td>
                                       <td className="px-3 py-1.5 text-right font-mono">{parseFloat(day.hours_worked || 0).toFixed(2)}</td>
                                       <td className={clsx("px-3 py-1.5 text-right font-mono", day.diff < 0 ? "text-rose-600" : day.diff > 0 ? "text-emerald-600" : "text-slate-500")}>{day.diff >= 0 ? "+" : ""}{parseFloat(day.diff || 0).toFixed(2)}</td>
                                       <td className={clsx("px-3 py-1.5 text-right font-mono", day.adjustment < 0 ? "text-rose-600" : day.adjustment > 0 ? "text-emerald-600" : "text-slate-500")}>{day.adjustment >= 0 ? "+" : ""}{formatCurrency(day.adjustment)}</td>
                                       <td className="px-3 py-1.5"><span className={`badge ${day.status === "present" ? "badge-green" : "badge-gray"}`}>{day.status}</span></td>
                                     </tr>
-                                  ))}
+                                    );
+                                  })}
                                 </tbody>
                               </table>
                             </div>
