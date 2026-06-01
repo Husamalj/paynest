@@ -27,7 +27,6 @@ const DOC_TYPES = [
   { key: "certificate", ar: "شهادة / مؤهل",  en: "Certificate / Degree" },
   { key: "transcript",  ar: "كشف العلامات",   en: "Academic Transcript" },
   { key: "no_criminal", ar: "عدم المحكومية",  en: "No Criminal Record" },
-  { key: "medical",     ar: "الإفصاح الطبي",  en: "Medical Disclosure" },
   { key: "health",      ar: "خلو من الأمراض", en: "Health Certificate" },
 ];
 
