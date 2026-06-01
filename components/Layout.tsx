@@ -266,9 +266,13 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
               onClick={() => setProfileOpen((o) => !o)}
               className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors"
             >
-              <div className="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-                {(user.name || "U")[0].toUpperCase()}
-              </div>
+              {user.photo_url || user.photoUrl ? (
+                <img src={user.photo_url || user.photoUrl} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0 ring-2 ring-brand-100" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                  {(user.name || "U")[0].toUpperCase()}
+                </div>
+              )}
               <div className="hidden sm:block text-left min-w-0">
                 <div className="text-sm font-semibold text-slate-800 truncate max-w-[120px]">{user.name || "User"}</div>
                 <div className="text-[11px] text-slate-400 uppercase font-medium">{role}</div>

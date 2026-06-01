@@ -12,10 +12,23 @@ export async function GET(req: NextRequest) {
       include: { company: true },
     });
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 401 });
+
+    // Profile photo lives on the matching Employee record (by employee number)
+    let photoUrl: string | null = null;
+    if (user.employeeNumber && user.companyId != null) {
+      const emp = await prisma.employee.findFirst({
+        where: { employeeId: user.employeeNumber, companyId: user.companyId },
+        select: { photoUrl: true },
+      });
+      photoUrl = emp?.photoUrl ?? null;
+    }
+
     return NextResponse.json({
       user: {
         id: user.id,
         name: user.name,
+        photo_url: photoUrl,
+        photoUrl: photoUrl,
         email: user.email,
         role: user.role,
         company_id: user.companyId,
