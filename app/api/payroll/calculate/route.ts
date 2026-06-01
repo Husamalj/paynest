@@ -29,10 +29,18 @@ export async function POST(req: NextRequest) {
 
     const mode = settings.systemMode || "daily";
 
+    // Exclude owner / super_admin from payroll (they are not paid employees)
+    const adminUsers = await prisma.user.findMany({
+      where: { companyId, role: { in: ["owner", "super_admin"] } },
+      select: { employeeNumber: true },
+    });
+    const adminNums = adminUsers.map((u) => u.employeeNumber).filter(Boolean) as string[];
+
     const employees = await prisma.employee.findMany({
       where: {
         companyId,
         systemMode: mode,
+        ...(adminNums.length > 0 ? { NOT: { employeeId: { in: adminNums } } } : {}),
       },
       orderBy: { name: "asc" },
     });

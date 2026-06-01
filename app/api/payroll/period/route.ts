@@ -29,6 +29,14 @@ export async function GET(req: NextRequest) {
       orderBy: { calculatedAt: "desc" },
     });
 
+    // Exclude owner / super_admin rows from the payroll list
+    const adminUsers = await prisma.user.findMany({
+      where: { companyId, role: { in: ["owner", "super_admin"] } },
+      select: { employeeNumber: true },
+    });
+    const adminNums = new Set(adminUsers.map((u) => u.employeeNumber).filter(Boolean) as string[]);
+    const visibleRecords = records.filter((r) => !r.employeeId || !adminNums.has(r.employeeId));
+
     const employees = await prisma.employee.findMany({
       where: { companyId, systemMode: mode },
       select: { employeeId: true, name: true, socialSecurity: true },
@@ -36,7 +44,7 @@ export async function GET(req: NextRequest) {
     const empMap: Record<string, any> = {};
     for (const e of employees) { if (e.employeeId) empMap[e.employeeId] = e; }
 
-    const results = records.map((r) => ({
+    const results = visibleRecords.map((r) => ({
       ...r,
       // snake_case mirrors for legacy UI code (dashboard, reports, etc.)
       base_salary:             r.baseSalary,
