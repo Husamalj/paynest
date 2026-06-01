@@ -128,6 +128,15 @@ export async function POST(req: NextRequest) {
       bonusesMap[bd.employeeId].push(bd);
     }
 
+    // Official holidays in this period — treated as paid days off (no deduction)
+    const holidayRows = await prisma.officialHoliday.findMany({
+      where: { companyId, holidayDate: { gte: periodStart, lte: periodEnd } },
+      select: { holidayDate: true },
+    });
+    const holidays = holidayRows
+      .map((h) => h.holidayDate?.toISOString().substring(0, 10))
+      .filter(Boolean) as string[];
+
     const settingsPlain = {
       req_hours: settings.reqHours,
       month_days: settings.monthDays,
@@ -136,6 +145,7 @@ export async function POST(req: NextRequest) {
       extra_rate: settings.extraRate,
       workdays: settings.workdays,
       work_start_time: (settings as any).workStartTime ?? "09:00",
+      holidays,
     };
 
     const empPlain = employees.map((e) => ({

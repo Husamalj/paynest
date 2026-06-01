@@ -103,7 +103,9 @@ export function calculateDailyPayroll(
   const workdayNames = settings.workdays
     ? settings.workdays.split(",").map((s: string) => s.trim())
     : ["Sun", "Mon", "Tue", "Wed", "Thu"];
-  const workdays = getWorkdaysInMonth(year, month, workdayNames);
+  const holidaySet = new Set<string>(Array.isArray(settings.holidays) ? settings.holidays : []);
+  // Official holidays are paid days off — drop them from the working days
+  const workdays = getWorkdaysInMonth(year, month, workdayNames).filter((d) => !holidaySet.has(d));
   const reqHours = parseFloat(settings.req_hours ?? settings.reqHours) || 8;
   const monthDays = parseFloat(settings.month_days ?? settings.monthDays) || 26;
   const lateTolerance = parseFloat(settings.late_tolerance ?? settings.lateTolerance) || 0;
@@ -207,6 +209,11 @@ export function calculateHoursPayroll(
   const deductionRate = parseFloat(settings.deduction_rate ?? settings.deductionRate) || 1.0;
   const extraRate = parseFloat(settings.extra_rate ?? settings.extraRate) || 1.0;
   const { month, year } = period;
+  // Official holidays in this month — reduce the required hours (paid days off)
+  const holidaysInMonth = (Array.isArray(settings.holidays) ? settings.holidays : []).filter((d: string) => {
+    const dt = new Date(d);
+    return !Number.isNaN(dt.getTime()) && dt.getMonth() + 1 === month && dt.getFullYear() === year;
+  }).length;
 
   return employees.map((emp) => {
     const baseSalary = parseFloat(emp.base_salary ?? emp.baseSalary) || 0;
@@ -226,7 +233,7 @@ export function calculateHoursPayroll(
 
     // Estimate hours per day from monthly target (divide by ~26 working days)
     const estHoursPerDay = baseRequiredHours / 26;
-    const requiredHours = Math.max(0, baseRequiredHours - paidLeaveDays * estHoursPerDay);
+    const requiredHours = Math.max(0, baseRequiredHours - (paidLeaveDays + holidaysInMonth) * estHoursPerDay);
     let totalHours = 0;
 
     for (const [dateKey, record] of Object.entries(empAttendance)) {
