@@ -138,6 +138,7 @@ export default function EmployeePortalPage() {
   // Salary advance
   const [advForm, setAdvForm] = useState({ amount: "", reason: "", installments: "1" });
   const [advances, setAdvances] = useState<any[]>([]);
+  const [onLeave, setOnLeave] = useState<any[]>([]);
   const [advSaving, setAdvSaving] = useState(false);
   const [advError, setAdvError] = useState("");
   const [advSuccess, setAdvSuccess] = useState("");
@@ -299,6 +300,7 @@ export default function EmployeePortalPage() {
           try { const slRes = await api.patch("/leaves", {}); setSubLeaves(slRes.data || []); } catch { /* no subs */ }
         }
         try { const advRes = await api.get("/advances"); setAdvances(advRes.data || []); } catch { /* ignore */ }
+        try { const olRes = await api.get("/leaves/on-leave"); setOnLeave(olRes.data || []); } catch { /* ignore */ }
       } else {
         const [employeesRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes] = await Promise.all([
           api.get("/employees"),
@@ -804,6 +806,25 @@ export default function EmployeePortalPage() {
                 </div>
               )}
             </div>
+
+            {/* ── Who's on leave today (so colleagues don't disturb them) ── */}
+            {onLeave.length > 0 && (
+              <div className="card border-amber-200 bg-amber-50/40">
+                <div className="card-header"><div className="card-title"><Palmtree size={16} className="text-amber-600" />{isRTL ? "زملاء في إجازة اليوم" : "Colleagues on leave today"}<span className="badge badge-yellow text-[10px]">{onLeave.length}</span></div></div>
+                <div className="flex flex-wrap gap-2">
+                  {onLeave.map((l) => (
+                    <div key={l.id} className="flex items-center gap-2 px-3 py-2 rounded-full bg-white border border-amber-200">
+                      <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-bold">{(l.employee_name || "?").charAt(0).toUpperCase()}</div>
+                      <div className="text-sm">
+                        <span className="font-medium text-slate-900">{l.employee_name}</span>
+                        <span className="text-[11px] text-slate-500 ms-1">{isRTL ? "يعود" : "back"} {l.end_date}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-amber-700/70 mt-2">{isRTL ? "🌴 هؤلاء الزملاء في إجازة — يُرجى عدم إزعاجهم." : "🌴 These colleagues are on leave — please avoid disturbing them."}</p>
+              </div>
+            )}
 
             {/* ── Leave + Permission side by side ───────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
