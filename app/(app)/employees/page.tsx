@@ -123,11 +123,24 @@ export default function EmployeesPage() {
   // Existing employee documents
   const [empDocs, setEmpDocs] = useState<any[]>([]);
 
+  // Bilingual dictionary for common religion values — typed in either language,
+  // displayed in the current language. Falls back to the raw text if unknown.
+  const RELIGION_DICT: { ar: string; en: string; keys: string[] }[] = [
+    { ar: "مسلم", en: "Muslim", keys: ["muslim", "مسلم", "اسلام", "إسلام", "مسلمة"] },
+    { ar: "مسيحي", en: "Christian", keys: ["christian", "مسيحي", "مسيحية", "نصراني"] },
+    { ar: "يهودي", en: "Jewish", keys: ["jewish", "jew", "يهودي", "يهودية"] },
+    { ar: "بوذي", en: "Buddhist", keys: ["buddhist", "بوذي", "بوذية"] },
+    { ar: "هندوسي", en: "Hindu", keys: ["hindu", "هندوسي", "هندوسية"] },
+    { ar: "درزي", en: "Druze", keys: ["druze", "درزي", "درزية"] },
+    { ar: "بهائي", en: "Baha'i", keys: ["bahai", "baha'i", "بهائي"] },
+    { ar: "بدون", en: "None", keys: ["none", "بدون", "لا يوجد", "غير محدد"] },
+  ];
   const religionLabel = (value: string) => {
     if (!value) return ar ? "غير محدد" : "Not selected";
-    const item = religionOptions.find((r) => r.value === value);
-    if (!item) return value; // free-text value
-    return (item as any)[lang] || item.en;
+    const norm = value.trim().toLowerCase();
+    const item = RELIGION_DICT.find((r) => r.keys.includes(norm));
+    if (!item) return value; // unknown free-text → show as typed
+    return ar ? item.ar : item.en;
   };
 
   const loadEmployees = async () => {
