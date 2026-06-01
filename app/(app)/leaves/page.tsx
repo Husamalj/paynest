@@ -152,7 +152,10 @@ export default function LeavesPage() {
                 <tbody>
                   {filteredLeaves.map((leave) => (
                     <tr key={leave.id}>
-                      <td className="font-medium">{leave.employeeName || leave.employee_name || leave.employeeId}</td>
+                      <td className="font-medium">
+                        <div>{leave.employeeName || leave.employee_name || leave.employeeId}</div>
+                        <div className="text-[11px] font-mono text-slate-400">{leave.employeeId || leave.employee_id}</div>
+                      </td>
                       <td>
                         <span className="badge badge-blue">{leave.leaveType || leave.leave_type}</span>
                         {(leave.attachmentUrl || leave.attachment_url) && (
