@@ -175,6 +175,7 @@ export default function PayrollPage() {
                   <th className="text-right">{t("baseSalary")}</th>
                   <th className="text-right">{t("totalHours")}</th>
                   <th className="text-right">{t("hourDiff")}</th>
+                  <th className="text-right">{lang === "ar" ? "وقت إضافي" : "Overtime"}</th>
                   <th className="text-right">{t("adjustment")}</th>
                   <th className="text-right">{t("bonusTotal")}</th>
                   <th className="text-right">{t("deductionTotal")}</th>
@@ -188,6 +189,9 @@ export default function PayrollPage() {
                 {payroll.map((row) => {
                   const isExp = expanded.has(row.id);
                   const breakdown = (() => { try { return typeof row.dailyBreakdown === "string" ? JSON.parse(row.dailyBreakdown) : (row.dailyBreakdown || row.daily_breakdown || []); } catch { return []; } })();
+                  const overtime = breakdown.length > 0
+                    ? breakdown.reduce((s: number, d: any) => s + Math.max(0, parseFloat(d.diff) || 0), 0)
+                    : Math.max(0, parseFloat(row.hourDiff || row.hour_diff || 0));
                   return [
                     <tr key={row.id} className="group cursor-pointer hover:bg-slate-50" onClick={() => toggleExpand(row.id)}>
                       <td className="pl-3 w-8">{breakdown?.length > 0 ? (isExp ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronRight size={14} className="text-slate-400" />) : null}</td>
@@ -195,6 +199,7 @@ export default function PayrollPage() {
                       <td className="text-right font-mono">{formatCurrency(row.baseSalary || row.base_salary)}</td>
                       <td className="text-right font-mono">{parseFloat(row.totalHours || row.total_hours || 0).toFixed(2)}</td>
                       <td className={clsx("text-right font-mono", parseFloat(row.hourDiff || row.hour_diff || 0) < 0 ? "text-rose-600" : "text-emerald-600")}>{parseFloat(row.hourDiff || row.hour_diff || 0).toFixed(2)}</td>
+                      <td className={clsx("text-right font-mono", overtime > 0 ? "text-emerald-600 font-semibold" : "text-slate-400")}>{overtime.toFixed(2)}</td>
                       <td className={clsx("text-right font-mono", parseFloat(row.adjustment || 0) < 0 ? "text-rose-600" : "text-emerald-600")}>{formatCurrency(row.adjustment)}</td>
                       <td className="text-right font-mono text-emerald-600">{formatCurrency(row.bonusTotal || row.bonus_total)}</td>
                       <td className="text-right font-mono text-rose-600">{formatCurrency(row.deductionTotal || row.deduction_total)}</td>
@@ -223,7 +228,7 @@ export default function PayrollPage() {
                     </tr>,
                     isExp && breakdown?.length > 0 && (
                       <tr key={`${row.id}-breakdown`}>
-                        <td colSpan={12} className="bg-slate-50 p-0">
+                        <td colSpan={13} className="bg-slate-50 p-0">
                           <div className="p-4">
                             <p className="font-semibold text-[13px] mb-2 text-slate-700 flex items-center gap-1"><Calendar size={13} /> {t("dailyBreakdown")}</p>
                             <div className="rounded-lg border border-slate-200 overflow-x-auto bg-white">
