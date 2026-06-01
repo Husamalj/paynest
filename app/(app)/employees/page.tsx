@@ -413,6 +413,43 @@ export default function EmployeesPage() {
                 <div className="py-3">
                   <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">{ar ? "الوثائق المرفوعة" : "Uploaded Documents"}</div>
                   <div className="space-y-2">
+                    {/* Profile photo row */}
+                    <div className="flex items-center gap-2 py-1.5 border-b border-slate-50">
+                      {selectedEmployee.photo_url
+                        ? <img src={selectedEmployee.photo_url} alt="" onClick={() => setLightbox(selectedEmployee.photo_url)} className="w-5 h-5 rounded-full object-cover cursor-pointer flex-shrink-0" />
+                        : <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-200 flex-shrink-0" />}
+                      <span className={clsx("text-xs flex-1 min-w-0 truncate", selectedEmployee.photo_url ? "text-slate-700 font-medium" : "text-slate-400")}>
+                        {ar ? "الصورة الشخصية" : "Profile Photo"}
+                      </span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {selectedEmployee.photo_url && (
+                          <button onClick={() => setLightbox(selectedEmployee.photo_url)} title={ar ? "عرض" : "View"} className="p-1 rounded hover:bg-brand-50 text-brand-600"><Eye size={13} /></button>
+                        )}
+                        <label title={ar ? "رفع/تغيير" : "Upload"} className="p-1 rounded hover:bg-brand-50 text-brand-600 cursor-pointer">
+                          <Upload size={13} />
+                          <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                            const f = e.target.files?.[0]; if (!f) return;
+                            if (f.size > 5 * 1024 * 1024) { setError(ar ? "الصورة أكبر من 5MB" : "Image exceeds 5MB"); return; }
+                            const b64 = await toBase64(f);
+                            try {
+                              const res = await api.put(`/employees/${selectedEmployee.employee_id}`, { photo_url: b64 });
+                              setEmployees((p) => p.map((emp) => emp.employee_id === selectedEmployee.employee_id ? res.data : emp));
+                              setSuccess(ar ? "تم تحديث الصورة" : "Photo updated");
+                            } catch (er: any) { setError(er.message); }
+                          }} />
+                        </label>
+                        {selectedEmployee.photo_url && (
+                          <button title={ar ? "حذف" : "Delete"} className="p-1 rounded hover:bg-rose-50 text-rose-500" onClick={async () => {
+                            if (!window.confirm(ar ? "حذف الصورة؟" : "Delete photo?")) return;
+                            try {
+                              const res = await api.put(`/employees/${selectedEmployee.employee_id}`, { photo_url: "" });
+                              setEmployees((p) => p.map((emp) => emp.employee_id === selectedEmployee.employee_id ? res.data : emp));
+                              setSuccess(ar ? "تم الحذف" : "Deleted");
+                            } catch (er: any) { setError(er.message); }
+                          }}><Trash2 size={13} /></button>
+                        )}
+                      </div>
+                    </div>
                     {DOC_TYPES.map((dt) => {
                       const uploaded = empDocs.find((d) => d.documentType === dt.key);
                       const empIdParam = selectedEmployee.employee_id;
