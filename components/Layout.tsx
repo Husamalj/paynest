@@ -24,6 +24,7 @@ import {
   Network,
   ScrollText,
   FileText,
+  Mail,
   KeyRound,
   X,
   AlertTriangle,
@@ -60,14 +61,14 @@ const NAV_ITEMS: NavItem[] = [
       { key: "remoteMenu", path: "/employees/remote" },
     ],
   },
-  { key: "bonuses", path: "/bonuses", icon: Gift },
-  { key: "leaves", path: "/leaves", icon: Palmtree },
-  { key: "tasks", path: "/tasks", icon: CheckSquare },
+  { key: "supervisorAssignment", path: "/supervisor-assignment", icon: Network },
   { key: "evaluations", path: "/evaluations", icon: ClipboardList },
+  { key: "leaves", path: "/leaves", icon: Palmtree },
+  { key: "bonuses", path: "/bonuses", icon: Gift },
+  { key: "tasks", path: "/tasks", icon: CheckSquare },
   { key: "jobOffer", path: "/job-offer", icon: FileText },
   { key: "announcements", path: "/announcements", icon: Bell },
   { key: "reports", path: "/reports", icon: BarChart3 },
-  { key: "supervisorAssignment", path: "/supervisor-assignment", icon: Network },
   { key: "auditLog", path: "/audit-log", icon: ScrollText },
   { key: "hrTeam", path: "/hr-team", icon: ShieldCheck },
   { key: "settings", path: "/settings", icon: SettingsIcon },
@@ -226,6 +227,7 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
                   onClick={() => setSidebarOpen(false)}
                   className={clsx(
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                    item.key === "settings" && "mt-2 border-t border-slate-100 pt-3",
                     isActive ? "bg-brand-50 text-brand-700 shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   )}
                 >
@@ -234,6 +236,15 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
                 </Link>
               );
             })}
+
+            {/* Contact us — below Settings */}
+            <a
+              href="mailto:support@paynest.app"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all"
+            >
+              <Mail size={17} strokeWidth={2} className="text-slate-400" />
+              <span>{isRTL ? "تواصل معنا" : "Contact us"}</span>
+            </a>
           </div>
         </nav>
 
