@@ -111,6 +111,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [settings, setSettings] = useState<any>(null);
+  const [payrollPeriod, setPayrollPeriod] = useState<{ month: number | null; year: number | null }>({ month: null, year: null });
 
   useEffect(() => {
     Promise.all([
@@ -124,6 +125,7 @@ export default function DashboardPage() {
     ])
       .then(([prRes, empRes, raRes, leavesRes, tasksRes, annRes, setRes]) => {
         setPayroll(prRes.data.results || []);
+        setPayrollPeriod({ month: prRes.data.period_month ?? null, year: prRes.data.period_year ?? null });
         setEmployees(empRes.data || []);
         setRemoteAssignments(raRes.data || []);
         setLeaves(leavesRes.data || []);
@@ -162,6 +164,15 @@ export default function DashboardPage() {
       </div>
 
       {error && <div className="alert alert-error"><AlertTriangle size={16} />{error}</div>}
+
+      {payrollPeriod.month && (
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 text-sm font-medium">
+          <Wallet size={14} />
+          {isRTL
+            ? `كشف رواتب: ${["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"][payrollPeriod.month - 1]} ${payrollPeriod.year}`
+            : `Payroll period: ${["January","February","March","April","May","June","July","August","September","October","November","December"][payrollPeriod.month - 1]} ${payrollPeriod.year}`}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
         <StatCard title={t("totalEmployees")} value={employees.length} icon={Users} color="brand" />
