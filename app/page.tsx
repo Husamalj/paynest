@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ArrowRight, Wallet, Clock, UserCircle, BarChart3, ShieldCheck, TrendingUp,
   Globe, LogIn, PlayCircle, CheckCircle2, Sparkles, Building2,
@@ -42,13 +43,13 @@ function TopNav({ ar }: { ar: boolean }) {
             <Globe size={14} />
             {lang === "ar" ? "EN" : "AR"}
           </button>
-          <button
-            onClick={() => router.push("/portal-select")}
+          <Link
+            href="/login"
             className="text-slate-700 hover:text-slate-900 text-sm font-medium px-3 py-2 hidden sm:inline-flex items-center gap-1"
           >
             <LogIn size={14} />
             {ar ? "تسجيل الدخول" : "Log In"}
-          </button>
+          </Link>
           <button
             onClick={() => router.push("/signup")}
             className="inline-flex items-center gap-1.5 bg-gradient-to-br from-brand-500 to-brand-700 hover:from-brand-600 hover:to-brand-800 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-all"
@@ -176,13 +177,13 @@ function Hero({ ar }: { ar: boolean }) {
             {ar ? "ابدأ الآن" : "Get Started"}
             <ArrowRight size={17} className={ar ? "rotate-180" : ""} />
           </button>
-          <button
-            onClick={() => router.push("/portal-select")}
+          <Link
+            href="/login"
             className="inline-flex items-center gap-2 bg-white text-slate-700 hover:text-slate-900 border border-slate-200 hover:border-slate-300 text-base font-semibold px-6 py-3 rounded-xl shadow-sm transition-all"
           >
             <LogIn size={17} />
             {ar ? "تسجيل الدخول" : "Log In"}
-          </button>
+          </Link>
         </div>
 
         {/* Trust badges */}
@@ -345,9 +346,9 @@ function Footer({ ar }: { ar: boolean }) {
           <button onClick={() => router.push("/privacy")} className="hover:text-slate-900 transition-colors">
             {ar ? "الخصوصية" : "Privacy"}
           </button>
-          <button onClick={() => router.push("/portal-select")} className="hover:text-slate-900 transition-colors">
+          <Link href="/login" className="hover:text-slate-900 transition-colors">
             {ar ? "تسجيل الدخول" : "Log In"}
-          </button>
+          </Link>
           <button onClick={() => router.push("/signup")} className="hover:text-slate-900 transition-colors">
             {ar ? "إنشاء حساب" : "Sign Up"}
           </button>
