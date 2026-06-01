@@ -40,14 +40,23 @@ const NODE_W = 200;
 const NODE_H = 84;
 
 // Custom node — an employee card
-function EmployeeNode({ data }: NodeProps<Node<{ emp: Emp; subordinateCount: number }>>) {
-  const { emp, subordinateCount } = data;
+function EmployeeNode({ data }: NodeProps<Node<{ emp: Emp; subordinateCount: number; onRemove?: (id: string) => void }>>) {
+  const { emp, subordinateCount, onRemove } = data;
   const initial = (emp.name || "?").trim().charAt(0).toUpperCase();
   return (
     <div
-      className="bg-white border border-slate-200 rounded-xl shadow-sm px-3 py-2.5 flex items-center gap-2.5 hover:shadow-md transition-shadow"
+      className="group bg-white border border-slate-200 rounded-xl shadow-sm px-3 py-2.5 flex items-center gap-2.5 hover:shadow-md transition-shadow relative"
       style={{ width: NODE_W, minHeight: NODE_H }}
     >
+      {onRemove && (
+        <button
+          title="Return to list"
+          onClick={(e) => { e.stopPropagation(); onRemove(String(emp.id)); }}
+          className="absolute -top-2 -end-2 w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center text-xs shadow opacity-0 group-hover:opacity-100 transition-opacity z-10"
+        >
+          ×
+        </button>
+      )}
       <Handle type="target" position={Position.Top} className="!bg-brand-500 !w-2.5 !h-2.5 !border-2 !border-white" />
       <div className="w-9 h-9 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center font-bold flex-shrink-0">
         {initial}
@@ -199,13 +208,26 @@ function CanvasInner({ employees, setEmployees, lang, t }: any) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition, fitView } = useReactFlow();
 
+  // Remove a node from the canvas (returns the employee to the left rail)
+  const removeFromCanvas = useCallback((nodeId: string) => {
+    setNodes((ns) => ns.filter((n) => n.id !== nodeId));
+    setEdges((es) => es.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    setDirty(true);
+  }, [setNodes, setEdges]);
+
+  // Attach the remove handler to every node's data
+  const withHandlers = useCallback(
+    (ns: Node[]) => ns.map((n) => ({ ...n, data: { ...(n.data as any), onRemove: removeFromCanvas } })),
+    [removeFromCanvas]
+  );
+
   // Initial sync: when `employees` (server snapshot) changes, lay out the canvas
   useEffect(() => {
-    setNodes(layoutNodes(employees));
+    setNodes(withHandlers(layoutNodes(employees)));
     setEdges(buildEdges(employees));
     setDirty(false);
     setTimeout(() => fitView({ padding: 0.2, duration: 400 }), 50);
-  }, [employees, setNodes, setEdges, fitView]);
+  }, [employees, setNodes, setEdges, fitView, withHandlers]);
 
   // Nodes currently on the canvas (by id)
   const onCanvasIds = useMemo(() => new Set(nodes.map((n) => n.id)), [nodes]);
@@ -249,12 +271,12 @@ function CanvasInner({ employees, setEmployees, lang, t }: any) {
           id: String(emp.id),
           type: "employee",
           position,
-          data: { emp, subordinateCount: 0 },
+          data: { emp, subordinateCount: 0, onRemove: removeFromCanvas },
         },
       ]);
       setDirty(true);
     },
-    [employees, nodes, screenToFlowPosition, setNodes]
+    [employees, nodes, screenToFlowPosition, setNodes, removeFromCanvas]
   );
 
   // Connect: source → target means source supervises target
@@ -297,14 +319,8 @@ function CanvasInner({ employees, setEmployees, lang, t }: any) {
     [setEdges, t]
   );
 
-  const removeFromCanvas = (nodeId: string) => {
-    setNodes((ns) => ns.filter((n) => n.id !== nodeId));
-    setEdges((es) => es.filter((e) => e.source !== nodeId && e.target !== nodeId));
-    setDirty(true);
-  };
-
   const reset = () => {
-    setNodes(layoutNodes(employees));
+    setNodes(withHandlers(layoutNodes(employees)));
     setEdges(buildEdges(employees));
     setDirty(false);
     setError("");
