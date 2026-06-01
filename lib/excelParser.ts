@@ -279,3 +279,23 @@ export function parseSalaryFile(buffer: Buffer): EmployeeRecord[] {
 
   return employees;
 }
+
+/**
+ * Detect whether an uploaded workbook looks like an attendance (time/hours)
+ * file or a salary file — used to warn when a file is dropped in the wrong box.
+ * Returns "attendance" | "salary" | "unknown".
+ */
+export function detectFileKind(buffer: Buffer): "attendance" | "salary" | "unknown" {
+  try {
+    const workbook = XLSX.read(buffer, { type: "buffer", cellDates: false, cellNF: false });
+    for (const sheetName of workbook.SheetNames) {
+      const ws = workbook.Sheets[sheetName];
+      if (!ws) continue;
+      const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "", raw: true });
+      if (!rows.length) continue;
+      if (findAttendanceHeaderRow(rows) >= 0) return "attendance";
+      if (findSalaryHeaderRow(rows) >= 0) return "salary";
+    }
+  } catch { /* ignore */ }
+  return "unknown";
+}

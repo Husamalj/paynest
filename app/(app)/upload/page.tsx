@@ -92,6 +92,10 @@ export default function UploadPage() {
       const msg = err.response?.data?.error || err.message;
       if (typeof msg === "string" && msg.startsWith("QUOTA_EXCEEDED")) {
         setQuotaError(msg.replace("QUOTA_EXCEEDED: ", ""));
+      } else if (typeof msg === "string" && msg.startsWith("WRONG_BOX_SALARY")) {
+        setError(ar ? "⚠️ يبدو أن هذا ملف رواتب. الرجاء رفعه في خانة \"Salary File\" وليس الحضور." : "⚠️ This looks like a Salary file. Please upload it in the \"Salary File\" box, not Attendance.");
+      } else if (typeof msg === "string" && msg.startsWith("WRONG_BOX_ATTENDANCE")) {
+        setError(ar ? "⚠️ يبدو أن هذا ملف حضور. الرجاء رفعه في خانة \"Attendance Files\" وليس الرواتب." : "⚠️ This looks like an Attendance file. Please upload it in the \"Attendance Files\" box, not Salary.");
       } else {
         setError(msg);
       }
@@ -122,6 +126,10 @@ export default function UploadPage() {
       const msg = err.response?.data?.error || err.message;
       if (typeof msg === "string" && msg.startsWith("QUOTA_EXCEEDED")) {
         setQuotaError(msg.replace("QUOTA_EXCEEDED: ", ""));
+      } else if (typeof msg === "string" && msg.startsWith("WRONG_BOX_SALARY")) {
+        setError(ar ? "⚠️ يبدو أن هذا ملف رواتب. الرجاء رفعه في خانة \"Salary File\" وليس الحضور." : "⚠️ This looks like a Salary file. Please upload it in the \"Salary File\" box, not Attendance.");
+      } else if (typeof msg === "string" && msg.startsWith("WRONG_BOX_ATTENDANCE")) {
+        setError(ar ? "⚠️ يبدو أن هذا ملف حضور. الرجاء رفعه في خانة \"Attendance Files\" وليس الرواتب." : "⚠️ This looks like an Attendance file. Please upload it in the \"Attendance Files\" box, not Salary.");
       } else {
         setError(msg);
       }

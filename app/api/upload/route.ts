@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
-import { parseAttendanceFile, parseSalaryFile } from "@/lib/excelParser";
+import { parseAttendanceFile, parseSalaryFile, detectFileKind } from "@/lib/excelParser";
 import { logAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
@@ -91,6 +91,11 @@ export async function POST(req: NextRequest) {
         employeeCount = (records as any).employeeCount ?? new Set(records.map((r) => r.employee_id)).size;
         preview = records.slice(0, 10);
 
+        // Smart mismatch warning: file dropped in the wrong box
+        if (records.length === 0 && detectFileKind(buf) === "salary") {
+          throw new HttpError(400, "WRONG_BOX_SALARY: This looks like a Salary file. Please upload it in the \"Salary File\" box, not Attendance.");
+        }
+
         if (records.length > 0) {
           const uniqueEmpIds = [...new Set(records.map((r) => r.employee_id))];
 
@@ -177,6 +182,11 @@ export async function POST(req: NextRequest) {
         rowCount = emps.length;
         employeeCount = emps.length;
         preview = emps.slice(0, 10);
+
+        // Smart mismatch warning: file dropped in the wrong box
+        if (emps.length === 0 && detectFileKind(buf) === "attendance") {
+          throw new HttpError(400, "WRONG_BOX_ATTENDANCE: This looks like an Attendance file. Please upload it in the \"Attendance Files\" box, not Salary.");
+        }
 
         if (emps.length > 0) {
           const empIds = emps.map((e) => e.employee_id);
