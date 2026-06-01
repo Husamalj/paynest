@@ -139,6 +139,10 @@ export default function EmployeePortalPage() {
   const [advForm, setAdvForm] = useState({ amount: "", reason: "", installments: "1" });
   const [advances, setAdvances] = useState<any[]>([]);
   const [onLeave, setOnLeave] = useState<any[]>([]);
+  // Quick-action modals
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showPermModal, setShowPermModal] = useState(false);
+  const [showAdvModal, setShowAdvModal] = useState(false);
   const [advSaving, setAdvSaving] = useState(false);
   const [advError, setAdvError] = useState("");
   const [advSuccess, setAdvSuccess] = useState("");
@@ -348,6 +352,7 @@ export default function EmployeePortalPage() {
       });
       setLeaves((prev) => [res.data, ...prev]);
       setPermForm({ date: "", hours: "1", reason: "", attachment: "" });
+      setShowPermModal(false);
       setPermSuccess(isRTL ? "تم إرسال طلب المغادرة" : "Permission request sent");
     } catch (err: any) { setPermError(err.message); }
     finally { setPermSaving(false); }
@@ -362,6 +367,7 @@ export default function EmployeePortalPage() {
       const res = await api.post("/advances", { amount: amt, reason: advForm.reason, installments: parseInt(advForm.installments) || 1 });
       setAdvances((p) => [res.data, ...p]);
       setAdvForm({ amount: "", reason: "", installments: "1" });
+      setShowAdvModal(false);
       setAdvSuccess(isRTL ? "تم إرسال طلب السلفة" : "Advance request sent");
     } catch (err: any) { setAdvError(err.message); }
     finally { setAdvSaving(false); }
@@ -385,6 +391,7 @@ export default function EmployeePortalPage() {
       });
       setLeaves((prev) => [res.data, ...prev]);
       setLeaveForm({ leave_type: "annual", start_date: "", end_date: "", reason: "", attachment: "" });
+      setShowLeaveModal(false);
       setSuccess(isRTL ? "تم إرسال طلب الإجازة" : "Leave request sent");
     } catch (err: any) { setError(err.message); }
     finally { setSaving(false); }
@@ -826,11 +833,27 @@ export default function EmployeePortalPage() {
               </div>
             )}
 
-            {/* ── Leave + Permission side by side ───────────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {/* Request Leave */}
-              <div className="card">
-                <div className="card-header"><div className="card-title"><Palmtree size={16} className="text-brand-600" />{text.requestLeave}</div></div>
+            {/* ── Quick actions ───────────────────────── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button type="button" onClick={() => setShowLeaveModal(true)} className="card card-interactive flex items-center gap-3 text-start">
+                <div className="w-10 h-10 rounded-xl bg-brand-100 text-brand-600 flex items-center justify-center flex-shrink-0"><Palmtree size={20} /></div>
+                <div className="min-w-0"><div className="font-semibold text-slate-900">{text.requestLeave}</div><div className="text-xs text-slate-500 truncate">{isRTL ? "سنوية / مرضية / بدون راتب" : "Annual / sick / unpaid"}</div></div>
+              </button>
+              <button type="button" onClick={() => setShowPermModal(true)} className="card card-interactive flex items-center gap-3 text-start">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0"><Clock size={20} /></div>
+                <div className="min-w-0"><div className="font-semibold text-slate-900">{isRTL ? "طلب مغادرة" : "Permission"}</div><div className="text-xs text-slate-500 truncate">{isRTL ? "1 / 2 / 3 ساعات" : "1 / 2 / 3 hours"}</div></div>
+              </button>
+              <button type="button" onClick={() => setShowAdvModal(true)} className="card card-interactive flex items-center gap-3 text-start">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg">💵</div>
+                <div className="min-w-0"><div className="font-semibold text-slate-900">{isRTL ? "طلب سلفة" : "Request Advance"}</div><div className="text-xs text-slate-500 truncate">{isRTL ? "تُخصم من الراتب" : "Deducted from salary"}</div></div>
+              </button>
+            </div>
+
+            {/* ── Request Leave modal ── */}
+            {showLeaveModal && (
+            <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowLeaveModal(false); }}>
+              <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto" dir={isRTL ? "rtl" : "ltr"}>
+                <div className="card-header"><div className="card-title"><Palmtree size={16} className="text-brand-600" />{text.requestLeave}</div><button type="button" onClick={() => setShowLeaveModal(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button></div>
                 <form className="space-y-4" onSubmit={submitLeave}>
                   <div>
                     <label className="form-label">{text.leaveType}</label>
@@ -872,14 +895,19 @@ export default function EmployeePortalPage() {
                   </button>
                 </form>
               </div>
+            </div>
+            )}
 
-              {/* Permission / Short Leave */}
-              <div className="card">
+            {/* ── Permission modal ── */}
+            {showPermModal && (
+            <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowPermModal(false); }}>
+              <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto" dir={isRTL ? "rtl" : "ltr"}>
                 <div className="card-header">
                   <div className="card-title">
                     <Clock size={16} className="text-amber-500" />
                     {isRTL ? "طلب إذن مغادرة" : "Permission Request"}
                   </div>
+                  <button type="button" onClick={() => setShowPermModal(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
                 </div>
                 <form className="space-y-4" onSubmit={submitPermission}>
                   <div>
@@ -933,11 +961,13 @@ export default function EmployeePortalPage() {
                 </form>
               </div>
             </div>
+            )}
 
-            {/* ── Salary advance ─────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="card">
-                <div className="card-header"><div className="card-title"><span className="text-base">💵</span>{isRTL ? "طلب سلفة" : "Request Advance"}</div></div>
+            {/* ── Request Advance modal ── */}
+            {showAdvModal && (
+            <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAdvModal(false); }}>
+              <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto" dir={isRTL ? "rtl" : "ltr"}>
+                <div className="card-header"><div className="card-title"><span className="text-base">💵</span>{isRTL ? "طلب سلفة" : "Request Advance"}</div><button type="button" onClick={() => setShowAdvModal(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button></div>
                 <form onSubmit={submitAdvance} className="space-y-3">
                   <div>
                     <label className="form-label">{isRTL ? "المبلغ" : "Amount"} *</label>
@@ -967,7 +997,11 @@ export default function EmployeePortalPage() {
                   <p className="text-[11px] text-slate-400 text-center">{isRTL ? "يصل الطلب للموارد البشرية، وعند الموافقة يُخصم من راتبك." : "Goes to HR; once approved it's deducted from your salary."}</p>
                 </form>
               </div>
-              <div className="card">
+            </div>
+            )}
+
+            {/* My Advances list */}
+            <div className="card">
                 <div className="card-header"><div className="card-title"><span className="text-base">📋</span>{isRTL ? "سُلَفي" : "My Advances"}</div></div>
                 {advances.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{text.noData}</div> : (
                   <div className="space-y-2">
@@ -985,7 +1019,6 @@ export default function EmployeePortalPage() {
                   </div>
                 )}
               </div>
-            </div>
 
             <div className="card">
               <div className="card-header"><div className="card-title"><Calendar size={16} className="text-brand-600" />{text.myLeaves}</div></div>
