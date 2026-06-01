@@ -82,7 +82,7 @@ function PhoneInput({ value, onChange, error }: { value: string; onChange: (v: s
   );
 }
 
-const emptyForm = { employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", nationality: "", gender: "", social_security: false, religion: "" };
+const emptyForm = { employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", nationality: "", gender: "", national_id: "", birth_date: "", social_security: false, religion: "" };
 
 export default function EmployeesPage() {
   const { t, lang } = useLanguage();
@@ -118,7 +118,7 @@ export default function EmployeesPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [editForm, setEditForm] = useState({ employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", nationality: "", gender: "", social_security: false, religion: "", photo_url: "" });
+  const [editForm, setEditForm] = useState({ employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", nationality: "", gender: "", national_id: "", birth_date: "", social_security: false, religion: "", photo_url: "" });
 
   // Existing employee documents
   const [empDocs, setEmpDocs] = useState<any[]>([]);
@@ -281,6 +281,8 @@ export default function EmployeesPage() {
       religion: selectedEmployee.religion || "",
       nationality: selectedEmployee.nationality || "",
       gender: selectedEmployee.gender || "",
+      national_id: selectedEmployee.national_id || "",
+      birth_date: selectedEmployee.birth_date ? String(selectedEmployee.birth_date).substring(0, 10) : "",
       photo_url: selectedEmployee.photo_url || "",
     });
     setPhoneError(""); setEmailError("");
@@ -411,6 +413,24 @@ export default function EmployeesPage() {
                 </div>
               </div>
               <div className="divide-y divide-slate-100">
+                {selectedEmployee.national_id && (
+                  <div className="flex items-start gap-3 py-3">
+                    <Hash size={15} className="text-slate-400 mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{ar ? "الرقم الوطني" : "National ID"}</div>
+                      <div className="text-sm font-medium text-slate-800">{selectedEmployee.national_id}</div>
+                    </div>
+                  </div>
+                )}
+                {selectedEmployee.birth_date && (
+                  <div className="flex items-start gap-3 py-3">
+                    <Calendar size={15} className="text-slate-400 mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{ar ? "تاريخ الميلاد" : "Date of Birth"}</div>
+                      <div className="text-sm font-medium text-slate-800">{new Date(selectedEmployee.birth_date).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+                )}
                 {selectedEmployee.job_title && (
                   <div className="flex items-start gap-3 py-3">
                     <FileText size={15} className="text-slate-400 mt-0.5 flex-shrink-0" />
@@ -625,6 +645,8 @@ export default function EmployeesPage() {
               <form onSubmit={handleAddStep1} className="space-y-4">
                 <div><label className="form-label">{t("employeeId")} *</label><input className="form-input" value={form.employee_id} onChange={(e) => setForm((f) => ({ ...f, employee_id: e.target.value }))} placeholder="EMP-001" /></div>
                 <div><label className="form-label">{t("name")} *</label><input className="form-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} /></div>
+                <div><label className="form-label">{ar ? "الرقم الوطني" : "National ID"}</label><input className="form-input" value={form.national_id} onChange={(e) => setForm((f) => ({ ...f, national_id: e.target.value }))} placeholder={ar ? "الرقم الوطني / الهوية" : "National ID number"} /></div>
+                <div><label className="form-label">{ar ? "تاريخ الميلاد" : "Date of Birth"}</label><input type="date" className="form-input" value={form.birth_date} onChange={(e) => setForm((f) => ({ ...f, birth_date: e.target.value }))} /></div>
                 <div><label className="form-label">{ar ? "الجنسية" : "Nationality"}</label><input className="form-input" value={form.nationality} onChange={(e) => setForm((f) => ({ ...f, nationality: e.target.value }))} placeholder={ar ? "مثال: أردني" : "e.g. Jordanian"} /></div>
                 <div>
                   <label className="form-label">{emailTitle} *</label>
@@ -751,6 +773,8 @@ export default function EmployeesPage() {
               </div>
               <div><label className="form-label">{t("employeeId")} *</label><input className="form-input" value={editForm.employee_id} onChange={(e) => setEditForm((f) => ({ ...f, employee_id: e.target.value }))} /></div>
               <div><label className="form-label">{t("name")} *</label><input className="form-input" value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} /></div>
+              <div><label className="form-label">{ar ? "الرقم الوطني" : "National ID"}</label><input className="form-input" value={editForm.national_id} onChange={(e) => setEditForm((f) => ({ ...f, national_id: e.target.value }))} placeholder={ar ? "الرقم الوطني / الهوية" : "National ID number"} /></div>
+              <div><label className="form-label">{ar ? "تاريخ الميلاد" : "Date of Birth"}</label><input type="date" className="form-input" value={editForm.birth_date} onChange={(e) => setEditForm((f) => ({ ...f, birth_date: e.target.value }))} /></div>
               <div><label className="form-label">{ar ? "الجنسية" : "Nationality"}</label><input className="form-input" value={editForm.nationality} onChange={(e) => setEditForm((f) => ({ ...f, nationality: e.target.value }))} placeholder={ar ? "مثال: أردني" : "e.g. Jordanian"} /></div>
               <div>
                 <label className="form-label">{emailTitle} *</label>

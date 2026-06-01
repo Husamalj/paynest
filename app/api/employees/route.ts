@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     const mode = await getSystemMode(session.companyId);
     const body = await req.json();
-    const { employee_id, name, email, phone, base_salary, social_security, religion, allowance, job_title, nationality, gender } = body;
+    const { employee_id, name, email, phone, base_salary, social_security, religion, allowance, job_title, nationality, gender, national_id, birth_date } = body;
 
     // Validate contact info — email must be a real deliverable address, phone must be valid.
     if (email) {
@@ -109,6 +109,8 @@ export async function POST(req: NextRequest) {
         jobTitle: job_title ?? null,
         nationality: nationality ?? null,
         gender: gender ?? null,
+        nationalId: national_id ?? null,
+        birthDate: birth_date ? new Date(birth_date) : null,
         socialSecurity: !!social_security,
         religion: religion ?? "",
         systemMode: mode,
@@ -123,6 +125,8 @@ export async function POST(req: NextRequest) {
         jobTitle: job_title ?? null,
         nationality: nationality ?? null,
         gender: gender ?? null,
+        nationalId: national_id ?? null,
+        birthDate: birth_date ? new Date(birth_date) : null,
         socialSecurity: !!social_security,
         religion: religion ?? "",
         companyId: session.companyId,
@@ -187,6 +191,8 @@ function toSnake(e: any) {
     job_title: e.jobTitle,
     nationality: e.nationality,
     gender: e.gender,
+    national_id: e.nationalId,
+    birth_date: e.birthDate,
     photo_url: e.photoUrl,
     social_security: e.socialSecurity,
     remote_days: e.remoteDays,
