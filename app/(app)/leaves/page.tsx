@@ -25,8 +25,8 @@ export default function LeavesPage() {
   const [showAddLeave, setShowAddLeave] = useState(false);
   const [showAddHoliday, setShowAddHoliday] = useState(false);
   const [leaveFilter, setLeaveFilter] = useState("all");
-  const [filterMonth, setFilterMonth] = useState(0); // 0 = all months
-  const [filterYear, setFilterYear] = useState(0);   // 0 = all years
+  const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [leaveForm, setLeaveForm] = useState({ employee_id: "", employee_name: "", leave_type: "annual", start_date: "", end_date: "", days_count: "", reason: "" });
   const [holidayForm, setHolidayForm] = useState({ name: "", start_date: "", end_date: "" });
 
@@ -122,11 +122,9 @@ export default function LeavesPage() {
             <div className="card-title"><Palmtree size={16} className="text-brand-600" />{t("requestsTitle")}</div>
             <div className="flex items-center gap-2 flex-wrap">
               <select className="form-input h-9 py-0 w-36 text-sm" value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))}>
-                <option value={0}>All months</option>
                 {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
               </select>
               <select className="form-input h-9 py-0 w-28 text-sm" value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))}>
-                <option value={0}>All years</option>
                 {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
               <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden h-9 text-sm">
