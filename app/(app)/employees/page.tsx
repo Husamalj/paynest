@@ -143,6 +143,38 @@ export default function EmployeesPage() {
     return ar ? item.ar : item.en;
   };
 
+  // Bilingual dictionary for common nationalities (MENA + a few others).
+  const NATIONALITY_DICT: { ar: string; en: string; keys: string[] }[] = [
+    { ar: "أردني", en: "Jordanian", keys: ["jordanian", "اردني", "أردني", "اردنية", "أردنية"] },
+    { ar: "سعودي", en: "Saudi", keys: ["saudi", "سعودي", "سعودية"] },
+    { ar: "إماراتي", en: "Emirati", keys: ["emirati", "اماراتي", "إماراتي"] },
+    { ar: "كويتي", en: "Kuwaiti", keys: ["kuwaiti", "كويتي"] },
+    { ar: "قطري", en: "Qatari", keys: ["qatari", "قطري"] },
+    { ar: "بحريني", en: "Bahraini", keys: ["bahraini", "بحريني"] },
+    { ar: "عماني", en: "Omani", keys: ["omani", "عماني", "عُماني"] },
+    { ar: "مصري", en: "Egyptian", keys: ["egyptian", "مصري", "مصرية"] },
+    { ar: "فلسطيني", en: "Palestinian", keys: ["palestinian", "فلسطيني", "فلسطينية"] },
+    { ar: "لبناني", en: "Lebanese", keys: ["lebanese", "لبناني"] },
+    { ar: "سوري", en: "Syrian", keys: ["syrian", "سوري", "سورية"] },
+    { ar: "عراقي", en: "Iraqi", keys: ["iraqi", "عراقي"] },
+    { ar: "يمني", en: "Yemeni", keys: ["yemeni", "يمني"] },
+    { ar: "سوداني", en: "Sudanese", keys: ["sudanese", "سوداني"] },
+    { ar: "مغربي", en: "Moroccan", keys: ["moroccan", "مغربي"] },
+    { ar: "تونسي", en: "Tunisian", keys: ["tunisian", "تونسي"] },
+    { ar: "جزائري", en: "Algerian", keys: ["algerian", "جزائري"] },
+    { ar: "تركي", en: "Turkish", keys: ["turkish", "تركي"] },
+    { ar: "هندي", en: "Indian", keys: ["indian", "هندي"] },
+    { ar: "باكستاني", en: "Pakistani", keys: ["pakistani", "باكستاني"] },
+    { ar: "فلبيني", en: "Filipino", keys: ["filipino", "فلبيني"] },
+  ];
+  const nationalityLabel = (value: string) => {
+    if (!value) return "";
+    const norm = value.trim().toLowerCase();
+    const item = NATIONALITY_DICT.find((r) => r.keys.includes(norm));
+    if (!item) return value;
+    return ar ? item.ar : item.en;
+  };
+
   const loadEmployees = async () => {
     setLoading(true);
     try {
@@ -393,7 +425,7 @@ export default function EmployeesPage() {
                     <Shield size={15} className="text-slate-400 mt-0.5 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
                       <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{ar ? "الجنسية" : "Nationality"}</div>
-                      <div className="text-sm font-medium text-slate-800">{selectedEmployee.nationality}</div>
+                      <div className="text-sm font-medium text-slate-800">{nationalityLabel(selectedEmployee.nationality)}</div>
                     </div>
                   </div>
                 )}
