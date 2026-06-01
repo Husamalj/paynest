@@ -47,7 +47,7 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-const TABS = ["employees", "team", "leaves", "tasks", "announcements", "hr_team"] as const;
+const TABS = ["employees", "team", "leaves", "announcements", "hr_team"] as const;
 type Tab = typeof TABS[number];
 
 const emptyEmp  = { employee_id: "", name: "", email: "", phone: "", base_salary: "", social_security: false, religion: "" };
@@ -85,6 +85,10 @@ export default function OwnerPortalPage() {
   const [taskName, setTaskName] = useState("");
   const [taskDeadline, setTaskDeadline] = useState("");
   const [taskSaving, setTaskSaving] = useState(false);
+
+  /* ─── announcement compose ─── */
+  const [annForm, setAnnForm] = useState({ title: "", message: "" });
+  const [annSaving, setAnnSaving] = useState(false);
   const [empDocs,        setEmpDocs]       = useState<any[]>([]);
   const [showAddEmp,  setShowAddEmp]  = useState(false);
   const [addEmpStep,  setAddEmpStep]  = useState(1);
@@ -166,6 +170,24 @@ export default function OwnerPortalPage() {
       const r = await api.get("/tasks"); setTasks(r.data || []);
     } catch (err: any) { setError(err.message); }
     finally { setTaskSaving(false); }
+  };
+
+  const submitAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!annForm.title.trim() || !annForm.message.trim()) return;
+    setAnnSaving(true);
+    try {
+      const res = await api.post("/announcements", {
+        title: annForm.title.trim(),
+        message: annForm.message.trim(),
+        published: true,
+        visible_to_employees: true,
+      });
+      setAnnouncements((p) => [res.data, ...p]);
+      setAnnForm({ title: "", message: "" });
+      setSuccess(ar ? "تم نشر الإعلان" : "Announcement published");
+    } catch (err: any) { setError(err.message); }
+    finally { setAnnSaving(false); }
   };
 
   const loadDocs = async (id: string) => {
@@ -305,7 +327,6 @@ export default function OwnerPortalPage() {
     { key: "team",          label: ar ? "فريقي"       : "My Team",       icon: Users,       badge: subordinates.length },
     { key: "hr_team",       label: ar ? "فريق HR"     : "HR Team",       icon: ShieldCheck, badge: hrs.length },
     { key: "leaves",        label: ar ? "الإجازات"    : "Leaves",        icon: Calendar,    badge: pendingLeaves },
-    { key: "tasks",         label: ar ? "المهام"      : "Tasks",         icon: CheckSquare, badge: openTasksCount },
     { key: "announcements", label: ar ? "الإعلانات"   : "Announcements", icon: Bell,        badge: announcements.length },
   ] as const;
 
@@ -640,32 +661,21 @@ export default function OwnerPortalPage() {
           </div>
         )}
 
-        {/* ══ TASKS TAB ══ */}
-        {tab === "tasks" && (
-          <div className="card">
-            <div className="card-header"><div className="card-title"><CheckSquare size={16} className="text-violet-600" />{ar ? "المهام" : "Tasks"}</div></div>
-            {tasks.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{ar ? "لا يوجد مهام" : "No tasks"}</div> : (
-              <div className="space-y-2 p-2">
-                {tasks.map((task) => (
-                  <div key={task.id} className={clsx("flex items-start gap-3 p-3 rounded-xl border", task.status === "completed" ? "bg-slate-50 border-slate-100" : "bg-white border-slate-200")}>
-                    <button onClick={() => toggleTask(task)} disabled={taskBusy === task.id} className="mt-0.5 flex-shrink-0">
-                      {task.status === "completed" ? <CheckCircle size={18} className="text-emerald-500" /> : <div className="w-[18px] h-[18px] rounded-full border-2 border-slate-300" />}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <div className={clsx("text-sm font-medium", task.status === "completed" ? "line-through text-slate-400" : "text-slate-900")}>{task.task_name || task.taskName}</div>
-                    </div>
-                    <div className="text-xs text-slate-400 flex-shrink-0">{task.deadline ? new Date(task.deadline).toLocaleDateString() : ""}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* ══ ANNOUNCEMENTS TAB ══ */}
         {tab === "announcements" && (
           <div className="card">
             <div className="card-header"><div className="card-title"><Bell size={16} className="text-violet-600" />{ar ? "الإعلانات" : "Announcements"}</div></div>
+            {/* Compose new announcement */}
+            <form onSubmit={submitAnnouncement} className="space-y-3 p-4 rounded-xl border border-slate-200 bg-slate-50 mb-4">
+              <div className="text-sm font-semibold text-slate-700">{ar ? "كتابة إعلان جديد" : "Write a new announcement"}</div>
+              <input className="form-input" placeholder={ar ? "عنوان الإعلان" : "Announcement title"} value={annForm.title} onChange={(e) => setAnnForm((f) => ({ ...f, title: e.target.value }))} />
+              <textarea className="form-textarea" rows={3} placeholder={ar ? "نص الإعلان..." : "Announcement message..."} value={annForm.message} onChange={(e) => setAnnForm((f) => ({ ...f, message: e.target.value }))} />
+              <div className="flex justify-end">
+                <button type="submit" className="btn btn-primary" disabled={annSaving || !annForm.title.trim() || !annForm.message.trim()}>
+                  {annSaving ? <span className="spinner" /> : <Bell size={15} />}{ar ? "نشر الإعلان" : "Publish"}
+                </button>
+              </div>
+            </form>
             {announcements.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{ar ? "لا يوجد إعلانات" : "No announcements"}</div> : (
               <div className="space-y-3">
                 {announcements.map((ann) => (
