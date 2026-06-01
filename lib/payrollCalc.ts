@@ -160,6 +160,21 @@ export function calculateDailyPayroll(
       }
     }
 
+    // Official holidays: paid day off. If the employee actually clocked in/out,
+    // ALL the worked hours count as overtime (paid at the extra rate).
+    for (const holiday of holidaySet) {
+      const record = empAttendance[holiday];
+      if (record && hasValidClock(record)) {
+        const hoursWorked = parseFloat(record.hours_worked ?? record.hoursWorked) || 0;
+        totalHours += hoursWorked;
+        const dayAdjustment = hoursWorked * hourlyRate * extraRate;
+        totalAdjustment += dayAdjustment;
+        dailyBreakdown.push({ date: holiday, hours_worked: hoursWorked, required: 0, diff: parseFloat(hoursWorked.toFixed(4)), adjustment: parseFloat(dayAdjustment.toFixed(4)), status: "holiday", check_in: record.clock_in ?? record.clockIn ?? null, check_out: record.clock_out ?? record.clockOut ?? null });
+      } else {
+        dailyBreakdown.push({ date: holiday, hours_worked: 0, required: 0, diff: 0, adjustment: 0, status: "holiday" });
+      }
+    }
+
     const socialSecurityDeduct = emp.social_security || emp.socialSecurity ? baseSalary * 0.075 : 0;
     let bonusTotal = 0;
     let deductionTotal = 0;
