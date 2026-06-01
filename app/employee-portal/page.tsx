@@ -135,6 +135,12 @@ export default function EmployeePortalPage() {
 
   // ── Permission (short leave) ─────────────────────────────────────────────
   const [permForm, setPermForm] = useState({ date: "", hours: "1", reason: "", attachment: "" });
+  // Salary advance
+  const [advForm, setAdvForm] = useState({ amount: "", reason: "", installments: "1" });
+  const [advances, setAdvances] = useState<any[]>([]);
+  const [advSaving, setAdvSaving] = useState(false);
+  const [advError, setAdvError] = useState("");
+  const [advSuccess, setAdvSuccess] = useState("");
   const [permSaving, setPermSaving] = useState(false);
   const [permError, setPermError] = useState("");
   const [permSuccess, setPermSuccess] = useState("");
@@ -292,6 +298,7 @@ export default function EmployeePortalPage() {
         if (me.subordinates && me.subordinates.length > 0) {
           try { const slRes = await api.patch("/leaves", {}); setSubLeaves(slRes.data || []); } catch { /* no subs */ }
         }
+        try { const advRes = await api.get("/advances"); setAdvances(advRes.data || []); } catch { /* ignore */ }
       } else {
         const [employeesRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes] = await Promise.all([
           api.get("/employees"),
@@ -342,6 +349,20 @@ export default function EmployeePortalPage() {
       setPermSuccess(isRTL ? "تم إرسال طلب المغادرة" : "Permission request sent");
     } catch (err: any) { setPermError(err.message); }
     finally { setPermSaving(false); }
+  };
+
+  const submitAdvance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = parseFloat(advForm.amount);
+    if (!amt || amt <= 0) { setAdvError(isRTL ? "أدخل مبلغاً صحيحاً" : "Enter a valid amount"); return; }
+    setAdvSaving(true); setAdvError(""); setAdvSuccess("");
+    try {
+      const res = await api.post("/advances", { amount: amt, reason: advForm.reason, installments: parseInt(advForm.installments) || 1 });
+      setAdvances((p) => [res.data, ...p]);
+      setAdvForm({ amount: "", reason: "", installments: "1" });
+      setAdvSuccess(isRTL ? "تم إرسال طلب السلفة" : "Advance request sent");
+    } catch (err: any) { setAdvError(err.message); }
+    finally { setAdvSaving(false); }
   };
 
   const submitLeave = async (e: React.FormEvent) => {
@@ -889,6 +910,59 @@ export default function EmployeePortalPage() {
                     {isRTL ? "إرسال طلب المغادرة" : "Send Permission Request"}
                   </button>
                 </form>
+              </div>
+            </div>
+
+            {/* ── Salary advance ─────────────────────────────────────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="card">
+                <div className="card-header"><div className="card-title"><span className="text-base">💵</span>{isRTL ? "طلب سلفة" : "Request Advance"}</div></div>
+                <form onSubmit={submitAdvance} className="space-y-3">
+                  <div>
+                    <label className="form-label">{isRTL ? "المبلغ" : "Amount"} *</label>
+                    <input type="number" min="1" step="0.01" className="form-input" placeholder="0.00" value={advForm.amount} onChange={(e) => setAdvForm((f) => ({ ...f, amount: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="form-label">{isRTL ? "السداد على" : "Repay over"}</label>
+                    <select className="form-input" value={advForm.installments} onChange={(e) => setAdvForm((f) => ({ ...f, installments: e.target.value }))}>
+                      <option value="1">{isRTL ? "دفعة واحدة (الشهر القادم)" : "One-time (next month)"}</option>
+                      {[2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>{n} {isRTL ? "أشهر" : "months"}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="form-label">{isRTL ? "السبب" : "Reason"}</label>
+                    <textarea className="form-textarea" rows={2} placeholder={isRTL ? "سبب السلفة..." : "Reason..."} value={advForm.reason} onChange={(e) => setAdvForm((f) => ({ ...f, reason: e.target.value }))} />
+                  </div>
+                  {advForm.amount && parseFloat(advForm.amount) > 0 && parseInt(advForm.installments) > 1 && (
+                    <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                      {isRTL ? `سيُخصم تقريباً ${(parseFloat(advForm.amount) / parseInt(advForm.installments)).toFixed(2)} شهرياً لمدة ${advForm.installments} أشهر.` : `≈ ${(parseFloat(advForm.amount) / parseInt(advForm.installments)).toFixed(2)} deducted monthly for ${advForm.installments} months.`}
+                    </p>
+                  )}
+                  {advError && <div className="alert alert-error"><AlertTriangle size={14} />{advError}</div>}
+                  {advSuccess && <div className="alert alert-success"><CheckCircle2 size={14} />{advSuccess}</div>}
+                  <button className="btn w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2" disabled={advSaving}>
+                    {advSaving ? <span className="spinner" /> : <Send size={15} />}{isRTL ? "إرسال طلب السلفة" : "Send Advance Request"}
+                  </button>
+                  <p className="text-[11px] text-slate-400 text-center">{isRTL ? "يصل الطلب للموارد البشرية، وعند الموافقة يُخصم من راتبك." : "Goes to HR; once approved it's deducted from your salary."}</p>
+                </form>
+              </div>
+              <div className="card">
+                <div className="card-header"><div className="card-title"><span className="text-base">📋</span>{isRTL ? "سُلَفي" : "My Advances"}</div></div>
+                {advances.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{text.noData}</div> : (
+                  <div className="space-y-2">
+                    {advances.map((a) => (
+                      <div key={a.id} className="flex items-center justify-between gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50">
+                        <div className="min-w-0">
+                          <div className="font-mono font-semibold text-slate-900">{(parseFloat(a.amount) || 0).toFixed(2)}</div>
+                          <div className="text-[11px] text-slate-500 truncate">{a.installments > 1 ? `${a.installments} ${isRTL ? "أشهر" : "months"}` : (isRTL ? "دفعة واحدة" : "One-time")}{a.reason ? ` • ${a.reason}` : ""}</div>
+                        </div>
+                        <span className={`badge ${a.status === "approved" ? "badge-green" : a.status === "rejected" ? "badge-red" : "badge-yellow"}`}>
+                          {a.status === "approved" ? (isRTL ? "موافق عليه" : "Approved") : a.status === "rejected" ? (isRTL ? "مرفوض" : "Rejected") : (isRTL ? "معلّق" : "Pending")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

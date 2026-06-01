@@ -35,6 +35,11 @@ function localizeNotification(msg: string, lang: string): string {
   m = msg.match(/^Payroll run for (\d+)\/(\d+) has been completed\.$/);
   if (m) return `تم احتساب رواتب ${m[1]}/${m[2]}.`;
 
+  m = msg.match(/^(.+) requested a salary advance of ([\d.]+)\.$/);
+  if (m) { const name = m[1] === "An employee" ? "أحد الموظفين" : m[1]; return `${name} طلب سلفة بقيمة ${m[2]}.`; }
+  if (msg === "Your salary advance request has been approved.") return "تمت الموافقة على طلب السلفة.";
+  if (msg === "Your salary advance request has been rejected.") return "تم رفض طلب السلفة.";
+
   return msg;
 }
 
