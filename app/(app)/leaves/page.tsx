@@ -90,7 +90,7 @@ export default function LeavesPage() {
   };
 
   const leaveDate = (l: any) => new Date(l.startDate || l.start_date);
-  const yearOptions = Array.from(new Set(leaves.map((l) => leaveDate(l).getFullYear()).filter((y) => !isNaN(y)))).sort((a, b) => b - a);
+  const yearOptions = Array.from({ length: 2034 - 2026 + 1 }, (_, i) => 2026 + i);
   const filteredLeaves = leaves.filter((l) => {
     if (leaveFilter !== "all" && l.status !== leaveFilter) return false;
     const d = leaveDate(l);
