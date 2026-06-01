@@ -73,6 +73,7 @@ export default function OwnerPortalPage() {
 
   /* ─── employee detail / add / edit ─── */
   const [selectedEmpId, setSelectedEmpId] = useState("");
+  const [lightbox, setLightbox] = useState("");
   const [empDocs,        setEmpDocs]       = useState<any[]>([]);
   const [showAddEmp,  setShowAddEmp]  = useState(false);
   const [addEmpStep,  setAddEmpStep]  = useState(1);
@@ -368,7 +369,16 @@ export default function OwnerPortalPage() {
                           <tr key={emp.employee_id} className={clsx("cursor-pointer", emp.employee_id === selectedEmpId && "bg-violet-50")} onClick={() => setSelectedEmpId(emp.employee_id)}>
                             <td className="pl-3" />
                             <td className="font-mono text-xs text-slate-500">{emp.employee_id}</td>
-                            <td className="font-medium">{emp.name}</td>
+                            <td className="font-medium">
+                              <div className="flex items-center gap-2">
+                                {emp.photo_url ? (
+                                  <img src={emp.photo_url} alt={emp.name} className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+                                ) : (
+                                  <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[11px] font-bold flex-shrink-0">{emp.name?.[0]?.toUpperCase() || "?"}</div>
+                                )}
+                                <span className="truncate">{emp.name}</span>
+                              </div>
+                            </td>
                             <td><div className="truncate text-sm text-slate-500">{emp.email || "-"}</div></td>
                             <td className="text-right font-mono text-sm">{formatCurrency(emp.base_salary)}</td>
                           </tr>
@@ -395,9 +405,13 @@ export default function OwnerPortalPage() {
                 : (
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xl font-bold flex-shrink-0">
-                        {selectedEmp.name?.[0]?.toUpperCase() || "?"}
-                      </div>
+                      {selectedEmp.photo_url ? (
+                        <img src={selectedEmp.photo_url} alt={selectedEmp.name} onClick={() => setLightbox(selectedEmp.photo_url)} className="w-12 h-12 rounded-full object-cover cursor-pointer ring-2 ring-violet-100 flex-shrink-0" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xl font-bold flex-shrink-0">
+                          {selectedEmp.name?.[0]?.toUpperCase() || "?"}
+                        </div>
+                      )}
                       <div className="min-w-0">
                         <div className="font-bold text-slate-900 truncate">{selectedEmp.name}</div>
                         <div className="text-xs font-mono text-slate-400">{selectedEmp.employee_id}</div>
@@ -749,6 +763,11 @@ export default function OwnerPortalPage() {
         </div>
       )}
 
+      {lightbox && (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6" onClick={() => setLightbox("")}>
+          <img src={lightbox} alt="" className="max-w-full max-h-full rounded-xl shadow-2xl object-contain" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }
