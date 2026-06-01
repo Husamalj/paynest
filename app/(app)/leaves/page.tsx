@@ -28,7 +28,7 @@ export default function LeavesPage() {
   const [filterMonth, setFilterMonth] = useState(0); // 0 = all months
   const [filterYear, setFilterYear] = useState(0);   // 0 = all years
   const [leaveForm, setLeaveForm] = useState({ employee_id: "", employee_name: "", leave_type: "annual", start_date: "", end_date: "", days_count: "", reason: "" });
-  const [holidayForm, setHolidayForm] = useState({ name: "", holiday_date: "" });
+  const [holidayForm, setHolidayForm] = useState({ name: "", start_date: "", end_date: "" });
 
   const loadAll = async () => {
     setLoading(true);
@@ -58,11 +58,12 @@ export default function LeavesPage() {
 
   const handleAddHoliday = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!holidayForm.name || !holidayForm.holiday_date) { setError(t("fillRequired")); return; }
+    if (!holidayForm.name || !holidayForm.start_date) { setError(t("fillRequired")); return; }
     try {
-      const res = await api.post("/leaves/holidays", holidayForm);
-      setHolidays((p) => [res.data, ...p]); setSuccess(t("add")); setShowAddHoliday(false);
-      setHolidayForm({ name: "", holiday_date: "" });
+      const res = await api.post("/leaves/holidays", { name: holidayForm.name, start_date: holidayForm.start_date, end_date: holidayForm.end_date || holidayForm.start_date });
+      const created = Array.isArray(res.data) ? res.data : [res.data];
+      setHolidays((p) => [...created, ...p]); setSuccess(t("add")); setShowAddHoliday(false);
+      setHolidayForm({ name: "", start_date: "", end_date: "" });
     } catch (err: any) { setError(err.message); }
   };
 
@@ -260,7 +261,10 @@ export default function LeavesPage() {
             <div className="modal-header"><h3 className="modal-title">{t("addHoliday")}</h3><button className="modal-close" onClick={() => setShowAddHoliday(false)}><X size={18} /></button></div>
             <form onSubmit={handleAddHoliday} className="space-y-4">
               <div><label className="form-label">{t("holidayName")} *</label><input className="form-input" value={holidayForm.name} onChange={(e) => setHolidayForm((f) => ({ ...f, name: e.target.value }))} required /></div>
-              <div><label className="form-label">{t("holidayDate")} *</label><input type="date" className="form-input" value={holidayForm.holiday_date} onChange={(e) => setHolidayForm((f) => ({ ...f, holiday_date: e.target.value }))} required /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="form-label">{t("startDate")} *</label><input type="date" className="form-input" value={holidayForm.start_date} onChange={(e) => setHolidayForm((f) => ({ ...f, start_date: e.target.value }))} required /></div>
+                <div><label className="form-label">{t("endDate")}</label><input type="date" className="form-input" value={holidayForm.end_date} onChange={(e) => setHolidayForm((f) => ({ ...f, end_date: e.target.value }))} /></div>
+              </div>
               <div className="flex justify-end gap-2"><button type="button" className="btn btn-secondary" onClick={() => setShowAddHoliday(false)}>{t("cancel")}</button><button type="submit" className="btn btn-primary">{t("save")}</button></div>
             </form>
           </div>
