@@ -5,16 +5,7 @@ import { logAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
-/** Exclude only owner/super_admin from the org tree. HR can appear and be evaluated. */
-async function getOwnerIds(companyId: number): Promise<string[]> {
-  const users = await prisma.user.findMany({
-    where: { companyId, role: { in: ["owner", "super_admin"] } },
-    select: { employeeNumber: true },
-  });
-  return users.map((u) => u.employeeNumber).filter(Boolean) as string[];
-}
-
-/** GET /api/supervisors - returns all non-owner employees with their multi-supervisor lists */
+/** GET /api/supervisors - returns employees (incl. the owner, flagged) with their multi-supervisor lists */
 export async function GET(req: NextRequest) {
   try {
     const session = await requireAuth(req);
@@ -24,13 +15,19 @@ export async function GET(req: NextRequest) {
     const settings = await prisma.companySettings.findFirst({ where: { companyId: session.companyId } });
     const mode = settings?.systemMode ?? "daily";
 
-    const ownerNums = await getOwnerIds(session.companyId);
+    // Exclude only super_admin; keep the owner but flag them so the UI can mark them.
+    const adminUsers = await prisma.user.findMany({
+      where: { companyId: session.companyId, role: { in: ["owner", "super_admin"] } },
+      select: { employeeNumber: true, role: true },
+    });
+    const superNums = adminUsers.filter((u) => u.role === "super_admin").map((u) => u.employeeNumber).filter(Boolean) as string[];
+    const ownerNums = new Set(adminUsers.filter((u) => u.role === "owner").map((u) => u.employeeNumber).filter(Boolean) as string[]);
 
     const employees = await prisma.employee.findMany({
       where: {
         companyId: session.companyId,
         systemMode: mode,
-        ...(ownerNums.length > 0 ? { NOT: { employeeId: { in: ownerNums } } } : {}),
+        ...(superNums.length > 0 ? { NOT: { employeeId: { in: superNums } } } : {}),
       },
       select: {
         id: true,
@@ -45,11 +42,11 @@ export async function GET(req: NextRequest) {
     });
 
     // Drop stale supervisor references that point to ids not present on this canvas
-    // (other system mode, deleted, or excluded owner) so the chart renders cleanly.
+    // (other system mode or deleted) so the chart renders cleanly. Flag the owner.
     const validIds = new Set(employees.map((e) => e.id));
     const sanitized = employees.map((e) => {
       const ids = (e.supervisorIds || []).filter((x) => validIds.has(x));
-      return { ...e, supervisorIds: ids, supervisorId: ids[0] ?? null };
+      return { ...e, supervisorIds: ids, supervisorId: ids[0] ?? null, isOwner: e.employeeId ? ownerNums.has(e.employeeId) : false };
     });
 
     return NextResponse.json({ employees: sanitized, systemMode: mode });

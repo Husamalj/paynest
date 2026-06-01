@@ -34,6 +34,7 @@ type Emp = {
   phone: string;
   supervisorId: number | null;
   supervisorIds?: number[];
+  isOwner?: boolean;
 };
 
 const NODE_W = 200;
@@ -64,6 +65,11 @@ function EmployeeNode({ data }: NodeProps<Node<{ emp: Emp; subordinateCount: num
       <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold text-slate-900 truncate">{emp.name}</div>
         <div className="text-[11px] text-slate-500 truncate">{emp.employeeId || emp.email}</div>
+        {emp.isOwner && (
+          <div className="mt-0.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold">
+            👑 مالك / Owner
+          </div>
+        )}
         {subordinateCount > 0 && (
           <div className="mt-0.5 inline-flex px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold">
             {subordinateCount} report{subordinateCount === 1 ? "" : "s"}
