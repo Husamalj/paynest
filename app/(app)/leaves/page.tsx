@@ -25,6 +25,8 @@ export default function LeavesPage() {
   const [showAddLeave, setShowAddLeave] = useState(false);
   const [showAddHoliday, setShowAddHoliday] = useState(false);
   const [leaveFilter, setLeaveFilter] = useState("all");
+  const [filterMonth, setFilterMonth] = useState(0); // 0 = all months
+  const [filterYear, setFilterYear] = useState(0);   // 0 = all years
   const [leaveForm, setLeaveForm] = useState({ employee_id: "", employee_name: "", leave_type: "annual", start_date: "", end_date: "", days_count: "", reason: "" });
   const [holidayForm, setHolidayForm] = useState({ name: "", holiday_date: "" });
 
@@ -86,7 +88,15 @@ export default function LeavesPage() {
     catch (err: any) { setError(err.message); }
   };
 
-  const filteredLeaves = leaveFilter === "all" ? leaves : leaves.filter((l) => l.status === leaveFilter);
+  const leaveDate = (l: any) => new Date(l.startDate || l.start_date);
+  const yearOptions = Array.from(new Set(leaves.map((l) => leaveDate(l).getFullYear()).filter((y) => !isNaN(y)))).sort((a, b) => b - a);
+  const filteredLeaves = leaves.filter((l) => {
+    if (leaveFilter !== "all" && l.status !== leaveFilter) return false;
+    const d = leaveDate(l);
+    if (filterMonth && d.getMonth() + 1 !== filterMonth) return false;
+    if (filterYear && d.getFullYear() !== filterYear) return false;
+    return true;
+  });
 
   if (loading) return <div className="flex items-center justify-center py-20 gap-3 text-slate-500"><span className="spinner spinner-dark w-5 h-5" />{t("loadingData")}</div>;
 
@@ -109,7 +119,17 @@ export default function LeavesPage() {
         <div className="card">
           <div className="card-header">
             <div className="card-title"><Palmtree size={16} className="text-brand-600" />{t("requestsTitle")}</div>
-            <div className="tabs"><button className={clsx("tab", leaveFilter === "all" && "tab-active")} onClick={() => setLeaveFilter("all")}>{t("all")}</button><button className={clsx("tab", leaveFilter === "pending" && "tab-active")} onClick={() => setLeaveFilter("pending")}>{t("pending")}</button><button className={clsx("tab", leaveFilter === "approved" && "tab-active")} onClick={() => setLeaveFilter("approved")}>{t("approved")}</button></div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <select className="form-input form-input-sm" value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))}>
+                <option value={0}>All months</option>
+                {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+              </select>
+              <select className="form-input form-input-sm" value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))}>
+                <option value={0}>All years</option>
+                {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <div className="tabs"><button className={clsx("tab", leaveFilter === "all" && "tab-active")} onClick={() => setLeaveFilter("all")}>{t("all")}</button><button className={clsx("tab", leaveFilter === "pending" && "tab-active")} onClick={() => setLeaveFilter("pending")}>{t("pending")}</button><button className={clsx("tab", leaveFilter === "approved" && "tab-active")} onClick={() => setLeaveFilter("approved")}>{t("approved")}</button></div>
+            </div>
           </div>
           {filteredLeaves.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noData")}</div> : (
             <div className="table-wrapper">
