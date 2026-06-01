@@ -21,6 +21,7 @@ function toSnake(e: any) {
     allowance: e.allowance,
     job_title: e.jobTitle,
     nationality: e.nationality,
+    gender: e.gender,
     photo_url: e.photoUrl,
     social_security: e.socialSecurity,
     remote_days: e.remoteDays,
@@ -90,6 +91,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (body.allowance !== undefined) data.allowance = Number(body.allowance) || 0;
     if (body.job_title !== undefined) data.jobTitle = body.job_title || null;
     if (body.nationality !== undefined) data.nationality = body.nationality || null;
+    if (body.gender !== undefined) data.gender = body.gender || null;
     if (body.photo_url !== undefined) data.photoUrl = body.photo_url || null;
     if (body.social_security !== undefined) data.socialSecurity = !!body.social_security;
     if (body.remote_days !== undefined) data.remoteDays = body.remote_days;

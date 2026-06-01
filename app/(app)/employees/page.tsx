@@ -82,7 +82,7 @@ function PhoneInput({ value, onChange, error }: { value: string; onChange: (v: s
   );
 }
 
-const emptyForm = { employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", nationality: "", social_security: false, religion: "" };
+const emptyForm = { employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", nationality: "", gender: "", social_security: false, religion: "" };
 
 export default function EmployeesPage() {
   const { t, lang } = useLanguage();
@@ -118,7 +118,7 @@ export default function EmployeesPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [editForm, setEditForm] = useState({ employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", nationality: "", social_security: false, religion: "", photo_url: "" });
+  const [editForm, setEditForm] = useState({ employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", nationality: "", gender: "", social_security: false, religion: "", photo_url: "" });
 
   // Existing employee documents
   const [empDocs, setEmpDocs] = useState<any[]>([]);
@@ -235,6 +235,7 @@ export default function EmployeesPage() {
       social_security: !!selectedEmployee.social_security,
       religion: selectedEmployee.religion || "",
       nationality: selectedEmployee.nationality || "",
+      gender: selectedEmployee.gender || "",
       photo_url: selectedEmployee.photo_url || "",
     });
     setPhoneError(""); setEmailError("");
@@ -380,6 +381,15 @@ export default function EmployeesPage() {
                     <div className="min-w-0 flex-1">
                       <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{ar ? "الجنسية" : "Nationality"}</div>
                       <div className="text-sm font-medium text-slate-800">{selectedEmployee.nationality}</div>
+                    </div>
+                  </div>
+                )}
+                {selectedEmployee.gender && (
+                  <div className="flex items-start gap-3 py-3">
+                    <Users size={15} className="text-slate-400 mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{ar ? "الجنس" : "Gender"}</div>
+                      <div className="text-sm font-medium text-slate-800">{selectedEmployee.gender === "male" ? (ar ? "ذكر" : "Male") : selectedEmployee.gender === "female" ? (ar ? "أنثى" : "Female") : selectedEmployee.gender}</div>
                     </div>
                   </div>
                 )}
@@ -584,6 +594,7 @@ export default function EmployeesPage() {
                 <div><label className="form-label">{ar ? "العلاوة (Allowance)" : "Allowance"}</label><input type="number" className="form-input" value={form.allowance} onChange={(e) => setForm((f) => ({ ...f, allowance: e.target.value }))} placeholder="0.00" /></div>
                 <div><label className="form-label">{ar ? "المسمى الوظيفي" : "Job Title"}</label><input className="form-input" value={form.job_title} onChange={(e) => setForm((f) => ({ ...f, job_title: e.target.value }))} placeholder={ar ? "مثال: مطور برمجيات" : "e.g. Software Engineer"} /></div>
                 <div><label className="form-label">{ar ? "الجنسية" : "Nationality"}</label><input className="form-input" value={form.nationality} onChange={(e) => setForm((f) => ({ ...f, nationality: e.target.value }))} placeholder={ar ? "مثال: أردني" : "e.g. Jordanian"} /></div>
+                <div><label className="form-label">{ar ? "الجنس" : "Gender"}</label><select className="form-input" value={form.gender} onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))}><option value="">{ar ? "اختر الجنس" : "Select gender"}</option><option value="male">{ar ? "ذكر" : "Male"}</option><option value="female">{ar ? "أنثى" : "Female"}</option></select></div>
                 <div><label className="form-label">{religionTitle}</label><input className="form-input" value={form.religion} onChange={(e) => setForm((f) => ({ ...f, religion: e.target.value }))} placeholder={ar ? "مثال: مسلم" : "e.g. Muslim"} /></div>
                 <div className="flex items-center justify-between"><div className="text-sm font-medium text-slate-700">{t("socialSecurity")}</div><label className="toggle"><input type="checkbox" checked={form.social_security} onChange={(e) => setForm((f) => ({ ...f, social_security: e.target.checked }))} /><span className="toggle-slider" /></label></div>
                 <div className="flex justify-end gap-2">
@@ -709,6 +720,7 @@ export default function EmployeesPage() {
               <div><label className="form-label">{ar ? "العلاوة (Allowance)" : "Allowance"}</label><input type="number" className="form-input" value={editForm.allowance} onChange={(e) => setEditForm((f) => ({ ...f, allowance: e.target.value }))} placeholder="0.00" /></div>
               <div><label className="form-label">{ar ? "المسمى الوظيفي" : "Job Title"}</label><input className="form-input" value={editForm.job_title} onChange={(e) => setEditForm((f) => ({ ...f, job_title: e.target.value }))} placeholder={ar ? "مثال: مطور برمجيات" : "e.g. Software Engineer"} /></div>
               <div><label className="form-label">{ar ? "الجنسية" : "Nationality"}</label><input className="form-input" value={editForm.nationality} onChange={(e) => setEditForm((f) => ({ ...f, nationality: e.target.value }))} placeholder={ar ? "مثال: أردني" : "e.g. Jordanian"} /></div>
+              <div><label className="form-label">{ar ? "الجنس" : "Gender"}</label><select className="form-input" value={editForm.gender} onChange={(e) => setEditForm((f) => ({ ...f, gender: e.target.value }))}><option value="">{ar ? "اختر الجنس" : "Select gender"}</option><option value="male">{ar ? "ذكر" : "Male"}</option><option value="female">{ar ? "أنثى" : "Female"}</option></select></div>
               <div><label className="form-label">{religionTitle}</label><input className="form-input" value={editForm.religion} onChange={(e) => setEditForm((f) => ({ ...f, religion: e.target.value }))} placeholder={ar ? "مثال: مسلم" : "e.g. Muslim"} /></div>
               <div className="flex items-center justify-between"><div className="text-sm font-medium text-slate-700">{t("socialSecurity")}</div><label className="toggle"><input type="checkbox" checked={editForm.social_security} onChange={(e) => setEditForm((f) => ({ ...f, social_security: e.target.checked }))} /><span className="toggle-slider" /></label></div>
               <div className="flex justify-end gap-2"><button type="button" className="btn btn-secondary" onClick={() => setShowEdit(false)}>{t("cancel")}</button><button type="submit" className="btn btn-primary" disabled={savingEdit}>{savingEdit ? <span className="spinner" /> : null}{t("save")}</button></div>
