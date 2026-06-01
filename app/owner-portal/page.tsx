@@ -10,6 +10,7 @@ import {
 import clsx from "clsx";
 import api, { apiPostForm } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import EvaluationModal from "@/components/EvaluationModal";
 
 /* ─── helpers ─── */
 function formatCurrency(val: unknown) {
@@ -46,7 +47,7 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-const TABS = ["employees", "leaves", "tasks", "announcements", "hr_team"] as const;
+const TABS = ["employees", "team", "leaves", "tasks", "announcements", "hr_team"] as const;
 type Tab = typeof TABS[number];
 
 const emptyEmp  = { employee_id: "", name: "", email: "", phone: "", base_salary: "", social_security: false, religion: "" };
@@ -73,6 +74,17 @@ export default function OwnerPortalPage() {
   /* ─── employee detail / add / edit ─── */
   const [selectedEmpId, setSelectedEmpId] = useState("");
   const [lightbox, setLightbox] = useState("");
+
+  /* ─── owner-as-supervisor: my team (subordinates) ─── */
+  const [subordinates, setSubordinates] = useState<any[]>([]);
+  const [evalTarget, setEvalTarget] = useState<any>(null);
+  const now = new Date();
+  const [evalMonth, setEvalMonth] = useState(now.getMonth() + 1);
+  const [evalYear, setEvalYear] = useState(now.getFullYear());
+  const [taskTarget, setTaskTarget] = useState<any>(null);
+  const [taskName, setTaskName] = useState("");
+  const [taskDeadline, setTaskDeadline] = useState("");
+  const [taskSaving, setTaskSaving] = useState(false);
   const [empDocs,        setEmpDocs]       = useState<any[]>([]);
   const [showAddEmp,  setShowAddEmp]  = useState(false);
   const [addEmpStep,  setAddEmpStep]  = useState(1);
@@ -122,8 +134,38 @@ export default function OwnerPortalPage() {
       setHrs(hrList);
       if (!selectedEmpId && list.length) setSelectedEmpId(list[0].employee_id);
       if (!selectedHrId && hrList.length) setSelectedHrId(hrList[0].id);
+
+      // Owner-as-supervisor: figure out who reports to the owner
+      try {
+        const supRes = await api.get("/supervisors");
+        const all = supRes.data?.employees || [];
+        const ownerNode = all.find((e: any) => e.isOwner);
+        if (ownerNode) {
+          const subs = all.filter((e: any) =>
+            (e.supervisorIds || []).includes(ownerNode.id) || e.supervisorId === ownerNode.id
+          );
+          setSubordinates(subs);
+        } else { setSubordinates([]); }
+      } catch { setSubordinates([]); }
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
+  };
+
+  const submitOwnerTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskTarget || !taskName.trim()) return;
+    setTaskSaving(true);
+    try {
+      await api.post("/tasks", {
+        task_name: taskName.trim(),
+        employee_id: taskTarget.employeeId || taskTarget.employee_id,
+        deadline: taskDeadline || null,
+      });
+      setSuccess(ar ? "تم تعيين المهمة" : "Task assigned");
+      setTaskTarget(null); setTaskName(""); setTaskDeadline("");
+      const r = await api.get("/tasks"); setTasks(r.data || []);
+    } catch (err: any) { setError(err.message); }
+    finally { setTaskSaving(false); }
   };
 
   const loadDocs = async (id: string) => {
@@ -260,6 +302,7 @@ export default function OwnerPortalPage() {
 
   const TAB_CONFIG = [
     { key: "employees",     label: ar ? "الموظفون"    : "Employees",     icon: Users,       badge: employees.length },
+    { key: "team",          label: ar ? "فريقي"       : "My Team",       icon: Users,       badge: subordinates.length },
     { key: "hr_team",       label: ar ? "فريق HR"     : "HR Team",       icon: ShieldCheck, badge: hrs.length },
     { key: "leaves",        label: ar ? "الإجازات"    : "Leaves",        icon: Calendar,    badge: pendingLeaves },
     { key: "tasks",         label: ar ? "المهام"      : "Tasks",         icon: CheckSquare, badge: openTasksCount },
@@ -526,6 +569,42 @@ export default function OwnerPortalPage() {
           </div>
         )}
 
+        {/* ══ MY TEAM TAB (owner acts as supervisor) ══ */}
+        {tab === "team" && (
+          <div className="card">
+            <div className="card-header">
+              <div className="card-title"><Users size={16} className="text-violet-600" />{ar ? "فريقي — الموظفون تحت إشرافي" : "My Team — employees I supervise"}</div>
+              <div className="flex items-center gap-2">
+                <select className="form-input w-32" value={evalMonth} onChange={(e) => setEvalMonth(Number(e.target.value))}>
+                  {(ar ? ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"] : ["January","February","March","April","May","June","July","August","September","October","November","December"]).map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                </select>
+                <select className="form-input w-24" value={evalYear} onChange={(e) => setEvalYear(Number(e.target.value))}>
+                  {Array.from({ length: 2034 - 2026 + 1 }, (_, i) => 2026 + i).map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+            </div>
+            {subordinates.length === 0 ? (
+              <div className="text-center py-12 text-sm text-slate-400">
+                {ar ? "لا يوجد موظفون تحت إشرافك. عيّن نفسك كمشرف من صفحة تعيين المشرفين." : "No employees report to you yet. Assign yourself as supervisor in the Supervisor Assignment page."}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {subordinates.map((s) => (
+                  <div key={s.id} className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50">
+                    <div className="w-9 h-9 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-sm font-bold flex-shrink-0">{(s.name || "?").charAt(0).toUpperCase()}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-slate-900 truncate text-sm">{s.name}</div>
+                      <div className="text-[11px] text-slate-500 truncate">{s.employeeId || s.email}</div>
+                    </div>
+                    <button className="btn btn-sm btn-secondary shrink-0" onClick={() => { setTaskTarget(s); setTaskName(""); setTaskDeadline(""); }}><CheckSquare size={13} />{ar ? "مهمة" : "Task"}</button>
+                    <button className="btn btn-sm btn-primary shrink-0" onClick={() => setEvalTarget(s)}><CheckCircle size={13} />{ar ? "تقييم" : "Evaluate"}</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ══ LEAVES TAB ══ */}
         {tab === "leaves" && (
           <div className="card">
@@ -765,6 +844,39 @@ export default function OwnerPortalPage() {
       {lightbox && (
         <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6" onClick={() => setLightbox("")}>
           <img src={lightbox} alt="" className="max-w-full max-h-full rounded-xl shadow-2xl object-contain" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
+
+      {/* Owner evaluation modal */}
+      {evalTarget && (
+        <EvaluationModal
+          employee={evalTarget}
+          month={evalMonth}
+          year={evalYear}
+          isRTL={isRTL}
+          onClose={() => setEvalTarget(null)}
+          onSaved={() => setSuccess(ar ? "تم حفظ التقييم" : "Evaluation saved")}
+        />
+      )}
+
+      {/* Owner assign-task modal */}
+      {taskTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" dir={isRTL ? "rtl" : "ltr"} onClick={(e) => { if (e.target === e.currentTarget) setTaskTarget(null); }}>
+          <form onSubmit={submitOwnerTask} className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <span className="font-bold text-slate-900 flex items-center gap-2"><CheckSquare size={18} className="text-violet-600" />{ar ? "تعيين مهمة" : "Assign Task"}</span>
+              <button type="button" onClick={() => setTaskTarget(null)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="flex items-center gap-2 text-sm text-slate-600"><div className="w-8 h-8 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center font-bold">{(taskTarget.name || "?").charAt(0).toUpperCase()}</div>{taskTarget.name}</div>
+              <div><label className="form-label">{ar ? "اسم المهمة" : "Task name"} *</label><input className="form-input" value={taskName} onChange={(e) => setTaskName(e.target.value)} autoFocus /></div>
+              <div><label className="form-label">{ar ? "الموعد النهائي (اختياري)" : "Deadline (optional)"}</label><input type="date" className="form-input" value={taskDeadline} onChange={(e) => setTaskDeadline(e.target.value)} /></div>
+              <div className="flex justify-end gap-2">
+                <button type="button" className="btn btn-secondary" onClick={() => setTaskTarget(null)}>{ar ? "إلغاء" : "Cancel"}</button>
+                <button type="submit" className="btn btn-primary" disabled={taskSaving || !taskName.trim()}>{taskSaving ? <span className="spinner" /> : <CheckSquare size={15} />}{ar ? "تعيين" : "Assign"}</button>
+              </div>
+            </div>
+          </form>
         </div>
       )}
     </div>
