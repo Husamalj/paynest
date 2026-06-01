@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Users, Wallet, DollarSign, TrendingDown, Gift, Shield, AlertTriangle, MapPin, Bell, Calendar, CheckSquare, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, Wallet, DollarSign, TrendingDown, Gift, Shield, AlertTriangle, MapPin, Bell, Calendar, CheckSquare, ChevronLeft, ChevronRight, Scale } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import StatCard from "@/components/StatCard";
 import api from "@/lib/api";
@@ -178,6 +178,7 @@ export default function DashboardPage() {
         <StatCard title={t("totalEmployees")} value={employees.length} icon={Users} color="brand" />
         <StatCard title={t("totalBaseSalary")} value={formatCurrency(totals.totalBase)} icon={Wallet} color="blue" />
         <StatCard title={t("totalNetPay")} value={formatCurrency(totals.totalNet)} icon={DollarSign} color="green" />
+        <StatCard title={isRTL ? "الفرق عن الأساسي" : "Base − Net Difference"} value={formatCurrency(totals.totalBase - totals.totalNet)} icon={Scale} color="purple" />
         <StatCard title={t("totalDeductions")} value={formatCurrency(totals.totalDeductions)} icon={TrendingDown} color="red" />
         <StatCard title={t("totalBonuses")} value={formatCurrency(totals.totalBonuses)} icon={Gift} color="orange" />
         <StatCard title={t("ssDeductions")} value={formatCurrency(totals.totalSS)} icon={Shield} color="purple" />
