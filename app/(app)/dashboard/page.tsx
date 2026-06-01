@@ -1,10 +1,63 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Users, Wallet, DollarSign, TrendingDown, Gift, Shield, AlertTriangle, MapPin, Bell, Calendar, CheckSquare } from "lucide-react";
+import { Users, Wallet, DollarSign, TrendingDown, Gift, Shield, AlertTriangle, MapPin, Bell, Calendar, CheckSquare, ChevronLeft, ChevronRight } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import StatCard from "@/components/StatCard";
 import api from "@/lib/api";
+
+function MiniCalendar({ leaves, isRTL }: { leaves: any[]; isRTL: boolean }) {
+  const [cursor, setCursor] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
+  const today = new Date();
+  const months = isRTL
+    ? ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"]
+    : ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const dows = isRTL ? ["أحد","إثن","ثلا","أرب","خمي","جمع","سبت"] : ["Su","Mo","Tu","We","Th","Fr","Sa"];
+
+  // Days that have a leave starting in this month
+  const marked = new Set<number>();
+  for (const l of leaves) {
+    const d = new Date(l.startDate || l.start_date);
+    if (!isNaN(d.getTime()) && d.getFullYear() === cursor.y && d.getMonth() === cursor.m) marked.add(d.getDate());
+  }
+
+  const firstDow = new Date(cursor.y, cursor.m, 1).getDay();
+  const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
+  const cells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+  const move = (delta: number) => setCursor((c) => { const d = new Date(c.y, c.m + delta, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
+
+  return (
+    <div className="card">
+      <div className="card-header">
+        <div className="card-title"><Calendar size={16} className="text-brand-600" />{isRTL ? "التقويم" : "Calendar"}</div>
+        <div className="flex items-center gap-1">
+          <button onClick={() => move(-1)} className="p-1 rounded hover:bg-slate-100 text-slate-500"><ChevronLeft size={16} /></button>
+          <span className="text-sm font-semibold text-slate-700 min-w-[110px] text-center">{months[cursor.m]} {cursor.y}</span>
+          <button onClick={() => move(1)} className="p-1 rounded hover:bg-slate-100 text-slate-500"><ChevronRight size={16} /></button>
+        </div>
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center">
+        {dows.map((d) => <div key={d} className="text-[10px] font-semibold text-slate-400 py-1">{d}</div>)}
+        {cells.map((day, i) => {
+          if (day === null) return <div key={i} />;
+          const isToday = day === today.getDate() && cursor.m === today.getMonth() && cursor.y === today.getFullYear();
+          const hasLeave = marked.has(day);
+          return (
+            <div key={i} className={`relative aspect-square flex items-center justify-center text-xs rounded-lg ${isToday ? "bg-brand-600 text-white font-bold" : "text-slate-600 hover:bg-slate-100"}`}>
+              {day}
+              {hasLeave && !isToday && <span className="absolute bottom-1 w-1 h-1 rounded-full bg-amber-500" />}
+              {hasLeave && isToday && <span className="absolute bottom-1 w-1 h-1 rounded-full bg-white" />}
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-2 flex items-center gap-3 text-[10px] text-slate-400">
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-brand-600" />{isRTL ? "اليوم" : "Today"}</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />{isRTL ? "إجازة" : "Leave"}</span>
+      </div>
+    </div>
+  );
+}
 
 function formatCurrency(val: unknown) {
   return (parseFloat(String(val)) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -159,25 +212,28 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-header"><div className="card-title"><Wallet size={16} className="text-brand-600" />{t("recentPayroll")}</div></div>
-        {payroll.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noData")}</div> : (
-          <div className="table-wrapper">
-            <table>
-              <thead><tr><th>{t("name")}</th><th className="text-right">{t("baseSalary")}</th><th className="text-right">{t("netSalary")}</th><th>{t("status")}</th></tr></thead>
-              <tbody>
-                {payroll.slice(0, 8).map((row, idx) => (
-                  <tr key={idx}>
-                    <td className="font-medium text-slate-900">{row.name}</td>
-                    <td className="text-right font-mono">{formatCurrency(row.base_salary)}</td>
-                    <td className="text-right font-mono font-semibold text-brand-700">{formatCurrency(row.net_salary)}</td>
-                    <td>{getStatusBadge(row.status, t)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="card lg:col-span-2">
+          <div className="card-header"><div className="card-title"><Wallet size={16} className="text-brand-600" />{t("recentPayroll")}</div></div>
+          {payroll.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noData")}</div> : (
+            <div className="table-wrapper">
+              <table>
+                <thead><tr><th>{t("name")}</th><th className="text-right">{t("baseSalary")}</th><th className="text-right">{t("netSalary")}</th><th>{t("status")}</th></tr></thead>
+                <tbody>
+                  {payroll.slice(0, 8).map((row, idx) => (
+                    <tr key={idx}>
+                      <td className="font-medium text-slate-900">{row.name}</td>
+                      <td className="text-right font-mono">{formatCurrency(row.base_salary)}</td>
+                      <td className="text-right font-mono font-semibold text-brand-700">{formatCurrency(row.net_salary)}</td>
+                      <td>{getStatusBadge(row.status, t)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        <MiniCalendar leaves={leaves} isRTL={isRTL} />
       </div>
     </div>
   );
