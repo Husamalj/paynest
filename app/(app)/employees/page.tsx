@@ -106,13 +106,19 @@ export default function EmployeesPage() {
   const [docFiles, setDocFiles] = useState<Record<string, File | null>>({});
   const [docUploading, setDocUploading] = useState(false);
   const [docProgress, setDocProgress] = useState<Record<string, boolean>>({});
+  const [addPhoto, setAddPhoto] = useState("");      // base64 profile photo for the new employee
+  const [lightbox, setLightbox] = useState("");       // image URL shown enlarged
+
+  const toBase64 = (file: File): Promise<string> => new Promise((res, rej) => {
+    const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(file);
+  });
 
   // Edit / Delete
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [editForm, setEditForm] = useState({ employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", social_security: false, religion: "" });
+  const [editForm, setEditForm] = useState({ employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", social_security: false, religion: "", photo_url: "" });
 
   // Existing employee documents
   const [empDocs, setEmpDocs] = useState<any[]>([]);
@@ -227,6 +233,7 @@ export default function EmployeesPage() {
       job_title: selectedEmployee.job_title || "",
       social_security: !!selectedEmployee.social_security,
       religion: selectedEmployee.religion || "",
+      photo_url: selectedEmployee.photo_url || "",
     });
     setPhoneError(""); setEmailError("");
     setShowEdit(true);
@@ -279,7 +286,7 @@ export default function EmployeesPage() {
     <div className="space-y-6">
       <div className="page-header">
         <div><h2 className="page-title">{t("employees")}</h2><p className="page-subtitle">{t("employeeManagement")}</p></div>
-        <button className="btn btn-primary" onClick={() => { setShowAdd(true); setAddStep(1); setForm({ ...emptyForm }); setDocFiles({}); setError(""); setPhoneError(""); setEmailError(""); }}>
+        <button className="btn btn-primary" onClick={() => { setShowAdd(true); setAddStep(1); setForm({ ...emptyForm }); setDocFiles({}); setAddPhoto(""); setError(""); setPhoneError(""); setEmailError(""); }}>
           <Plus size={15} /> {t("addEmployee")}
         </button>
       </div>
@@ -303,7 +310,16 @@ export default function EmployeesPage() {
                     <tr key={emp.employee_id} className={clsx("group cursor-pointer", emp.employee_id === selectedId && "bg-brand-50")} onClick={() => setSelectedId(emp.employee_id)}>
                       <td className="pl-3" />
                       <td className="font-mono text-xs text-slate-500">{emp.employee_id}</td>
-                      <td className="font-medium">{emp.name}</td>
+                      <td className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {emp.photo_url ? (
+                            <img src={emp.photo_url} alt={emp.name} className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+                          ) : (
+                            <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[11px] font-bold flex-shrink-0">{emp.name?.[0]?.toUpperCase() || "?"}</div>
+                          )}
+                          <span className="truncate">{emp.name}</span>
+                        </div>
+                      </td>
                       <td className="text-sm text-slate-600 max-w-[180px]"><div className="truncate">{emp.email || "-"}</div></td>
                       <td className="text-right font-mono">{formatCurrency(emp.base_salary)}</td>
                       <td className="text-right">{emp.social_security ? <span className="badge badge-purple"><Shield size={11} /> {t("enabled")}</span> : <span className="badge badge-gray">{t("disabled")}</span>}</td>
@@ -329,9 +345,18 @@ export default function EmployeesPage() {
           {!selectedEmployee ? <div className="text-sm text-slate-400">{t("selectEmployee")}</div> : (
             <div className="space-y-5">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xl font-bold flex-shrink-0">
-                  {selectedEmployee.name?.[0]?.toUpperCase() || "?"}
-                </div>
+                {selectedEmployee.photo_url ? (
+                  <img
+                    src={selectedEmployee.photo_url}
+                    alt={selectedEmployee.name}
+                    onClick={() => setLightbox(selectedEmployee.photo_url)}
+                    className="w-12 h-12 rounded-full object-cover cursor-pointer ring-2 ring-brand-100 flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xl font-bold flex-shrink-0">
+                    {selectedEmployee.name?.[0]?.toUpperCase() || "?"}
+                  </div>
+                )}
                 <div className="min-w-0">
                   <div className="text-base font-bold text-slate-900 truncate">{selectedEmployee.name}</div>
                   <div className="text-xs font-mono text-slate-400">{selectedEmployee.employee_id}</div>
@@ -523,6 +548,27 @@ export default function EmployeesPage() {
             {addStep === 2 && (
               <div className="space-y-4">
                 <p className="text-sm text-slate-500">{ar ? "يرجى رفع الوثائق المطلوبة لكل موظف (PDF أو Word). يمكنك تخطي هذه الخطوة." : "Upload the required documents for this employee (PDF or Word). You may skip this step."}</p>
+                {/* Profile photo */}
+                <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50">
+                  {addPhoto ? (
+                    <img src={addPhoto} alt="" className="w-12 h-12 rounded-full object-cover ring-2 ring-brand-100" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-slate-200 text-slate-400 flex items-center justify-center"><Eye size={18} /></div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-slate-700">{ar ? "الصورة الشخصية" : "Profile Photo"}</div>
+                    <div className="text-xs text-slate-400">{ar ? "تظهر جنب اسم الموظف" : "Shown next to the employee's name"}</div>
+                  </div>
+                  <label className="btn btn-sm btn-secondary cursor-pointer flex-shrink-0">
+                    <Upload size={13} />{addPhoto ? (ar ? "تغيير" : "Change") : (ar ? "رفع" : "Upload")}
+                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                      const f = e.target.files?.[0]; if (!f) return;
+                      if (f.size > 5 * 1024 * 1024) { setError(ar ? "الصورة أكبر من 5MB" : "Image exceeds 5MB"); return; }
+                      const b64 = await toBase64(f); setAddPhoto(b64);
+                      try { await api.put(`/employees/${createdEmpId}`, { photo_url: b64 }); } catch { /* saved on finish */ }
+                    }} />
+                  </label>
+                </div>
                 <div className="space-y-3">
                   {DOC_TYPES.map((dt) => {
                     const file = docFiles[dt.key];
@@ -578,6 +624,26 @@ export default function EmployeesPage() {
           <div className="modal">
             <div className="modal-header"><h3 className="modal-title">{ar ? "تعديل الموظف" : "Edit Employee"}</h3><button className="modal-close" onClick={() => setShowEdit(false)}><X size={18} /></button></div>
             <form onSubmit={handleEdit} className="space-y-4">
+              <div className="flex items-center gap-3">
+                {editForm.photo_url ? (
+                  <img src={editForm.photo_url} alt="" onClick={() => setLightbox(editForm.photo_url)} className="w-14 h-14 rounded-full object-cover ring-2 ring-brand-100 cursor-pointer" />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-lg font-bold">{editForm.name?.[0]?.toUpperCase() || "?"}</div>
+                )}
+                <div className="flex items-center gap-2">
+                  <label className="btn btn-sm btn-secondary cursor-pointer">
+                    <Upload size={13} />{ar ? "تغيير الصورة" : "Change Photo"}
+                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                      const f = e.target.files?.[0]; if (!f) return;
+                      if (f.size > 5 * 1024 * 1024) { setError(ar ? "الصورة أكبر من 5MB" : "Image exceeds 5MB"); return; }
+                      const b64 = await toBase64(f); setEditForm((ff) => ({ ...ff, photo_url: b64 }));
+                    }} />
+                  </label>
+                  {editForm.photo_url && (
+                    <button type="button" className="text-xs text-rose-500 hover:underline" onClick={() => setEditForm((ff) => ({ ...ff, photo_url: "" }))}>{ar ? "إزالة" : "Remove"}</button>
+                  )}
+                </div>
+              </div>
               <div><label className="form-label">{t("employeeId")} *</label><input className="form-input" value={editForm.employee_id} onChange={(e) => setEditForm((f) => ({ ...f, employee_id: e.target.value }))} /></div>
               <div><label className="form-label">{t("name")} *</label><input className="form-input" value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} /></div>
               <div>
@@ -655,6 +721,14 @@ export default function EmployeesPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Photo lightbox */}
+      {lightbox && (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6" onClick={() => setLightbox("")}>
+          <img src={lightbox} alt="" className="max-w-full max-h-full rounded-xl shadow-2xl object-contain" onClick={(e) => e.stopPropagation()} />
+          <button className="absolute top-5 right-5 text-white/90 hover:text-white" onClick={() => setLightbox("")}><X size={28} /></button>
         </div>
       )}
     </div>

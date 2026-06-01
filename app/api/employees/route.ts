@@ -181,6 +181,7 @@ function toSnake(e: any) {
     base_salary: e.baseSalary,
     allowance: e.allowance,
     job_title: e.jobTitle,
+    photo_url: e.photoUrl,
     social_security: e.socialSecurity,
     remote_days: e.remoteDays,
     system_mode: e.systemMode,
