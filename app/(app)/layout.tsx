@@ -7,7 +7,39 @@ import Layout from "@/components/Layout";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 
+// Localize a stored (English) notification message into Arabic when needed.
+function localizeNotification(msg: string, lang: string): string {
+  if (lang !== "ar" || !msg) return msg;
+  const leaveTypeAr: Record<string, string> = {
+    sick: "مرضية", annual: "سنوية", unpaid: "بدون راتب", permission: "مغادرة", leave: "إجازة",
+  };
+  let m: RegExpMatchArray | null;
+
+  if (msg === "Company registered. Awaiting administrator approval.")
+    return "تم تسجيل الشركة. بانتظار موافقة المدير.";
+
+  m = msg.match(/^Leave request for (.+) has been (approved|rejected|pending)\.$/);
+  if (m) {
+    const name = m[1];
+    if (m[2] === "approved") return `تمت الموافقة على طلب إجازة ${name}.`;
+    if (m[2] === "rejected") return `تم رفض طلب إجازة ${name}.`;
+    return `طلب إجازة ${name} قيد الانتظار.`;
+  }
+
+  m = msg.match(/^(.+) submitted a (\w+) request\.$/);
+  if (m) {
+    const name = m[1] === "An employee" ? "أحد الموظفين" : m[1];
+    return `${name} قدّم طلب ${leaveTypeAr[m[2]] || m[2]}.`;
+  }
+
+  m = msg.match(/^Payroll run for (\d+)\/(\d+) has been completed\.$/);
+  if (m) return `تم احتساب رواتب ${m[1]}/${m[2]}.`;
+
+  return msg;
+}
+
 function NotificationBell() {
+  const { lang } = useLanguage();
   const [open, setOpen] = React.useState(false);
   const [notifications, setNotifications] = React.useState<any[]>([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
@@ -64,14 +96,14 @@ function NotificationBell() {
       {open && (
         <div className="absolute end-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-elevated border border-slate-200 z-50">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-            <span className="text-sm font-semibold text-slate-900">Notifications</span>
+            <span className="text-sm font-semibold text-slate-900">{lang === "ar" ? "الإشعارات" : "Notifications"}</span>
             {unreadCount > 0 && (
-              <button onClick={markAllRead} className="text-xs text-brand-600 hover:text-brand-800 font-medium">Mark all read</button>
+              <button onClick={markAllRead} className="text-xs text-brand-600 hover:text-brand-800 font-medium">{lang === "ar" ? "تعليم الكل كمقروء" : "Mark all read"}</button>
             )}
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className="text-center py-8 text-sm text-slate-400">No notifications yet</div>
+              <div className="text-center py-8 text-sm text-slate-400">{lang === "ar" ? "لا إشعارات بعد" : "No notifications yet"}</div>
             ) : (
               notifications.map((n) => (
                 <div
@@ -82,7 +114,7 @@ function NotificationBell() {
                   <div className="flex items-start gap-2">
                     {!n.read && <div className="w-2 h-2 rounded-full bg-brand-500 mt-1.5 shrink-0" />}
                     <div className={!n.read ? "" : "pl-4"}>
-                      <p className="text-sm text-slate-800 leading-snug">{n.message}</p>
+                      <p className="text-sm text-slate-800 leading-snug">{localizeNotification(n.message, lang)}</p>
                       <p className="text-xs text-slate-400 mt-0.5">{new Date(n.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
