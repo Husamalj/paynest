@@ -109,6 +109,7 @@ model Employee {
   remoteDays     Int      @default(0) @map("remote_days")
   allowance      Decimal  @default(0) @db.Decimal(10, 2)
   jobTitle       String?  @map("job_title") @db.VarChar(255)
+  nationality    String?  @map("nationality") @db.VarChar(100)
   photoUrl       String?  @map("photo_url")
   systemMode     String   @default("daily") @map("system_mode") @db.VarChar(20)
   supervisorId   Int?     @map("supervisor_id")
