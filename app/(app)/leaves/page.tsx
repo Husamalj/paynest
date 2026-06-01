@@ -117,18 +117,32 @@ export default function LeavesPage() {
 
       {activeTab === "requests" && (
         <div className="card">
-          <div className="card-header">
+          <div className="card-header flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="card-title"><Palmtree size={16} className="text-brand-600" />{t("requestsTitle")}</div>
             <div className="flex items-center gap-2 flex-wrap">
-              <select className="form-input form-input-sm" value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))}>
+              <select className="form-input h-9 py-0 w-36 text-sm" value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))}>
                 <option value={0}>All months</option>
                 {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
               </select>
-              <select className="form-input form-input-sm" value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))}>
+              <select className="form-input h-9 py-0 w-28 text-sm" value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))}>
                 <option value={0}>All years</option>
                 {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
-              <div className="tabs"><button className={clsx("tab", leaveFilter === "all" && "tab-active")} onClick={() => setLeaveFilter("all")}>{t("all")}</button><button className={clsx("tab", leaveFilter === "pending" && "tab-active")} onClick={() => setLeaveFilter("pending")}>{t("pending")}</button><button className={clsx("tab", leaveFilter === "approved" && "tab-active")} onClick={() => setLeaveFilter("approved")}>{t("approved")}</button></div>
+              <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden h-9 text-sm">
+                {[["all", t("all")], ["pending", t("pending")], ["approved", t("approved")]].map(([key, label], i) => (
+                  <button
+                    key={key}
+                    onClick={() => setLeaveFilter(key)}
+                    className={clsx(
+                      "px-3 font-medium transition-colors",
+                      i > 0 && "border-s border-slate-200",
+                      leaveFilter === key ? "bg-brand-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           {filteredLeaves.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noData")}</div> : (
