@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Palmtree, Trash2, CheckCircle2, XCircle, AlertTriangle, X, Calendar, Check } from "lucide-react";
+import { Plus, Palmtree, Trash2, CheckCircle2, XCircle, AlertTriangle, X, Calendar, Check, Paperclip } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 import clsx from "clsx";
@@ -119,7 +119,14 @@ export default function LeavesPage() {
                   {filteredLeaves.map((leave) => (
                     <tr key={leave.id}>
                       <td className="font-medium">{leave.employeeName || leave.employee_name || leave.employeeId}</td>
-                      <td><span className="badge badge-blue">{leave.leaveType || leave.leave_type}</span></td>
+                      <td>
+                        <span className="badge badge-blue">{leave.leaveType || leave.leave_type}</span>
+                        {(leave.attachmentUrl || leave.attachment_url) && (
+                          <a href={leave.attachmentUrl || leave.attachment_url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-[11px] text-brand-600 hover:underline">
+                            <Paperclip size={11} />View file
+                          </a>
+                        )}
+                      </td>
                       <td className="text-sm">{new Date(leave.startDate || leave.start_date).toLocaleDateString()}</td>
                       <td className="text-sm">{new Date(leave.endDate || leave.end_date).toLocaleDateString()}</td>
                       <td className="font-mono">{leave.daysCount || leave.days_count}</td>

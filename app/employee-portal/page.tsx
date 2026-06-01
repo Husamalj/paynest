@@ -134,7 +134,7 @@ export default function EmployeePortalPage() {
   const [subLeaves, setSubLeaves] = useState<any[]>([]);
 
   // ── Permission (short leave) ─────────────────────────────────────────────
-  const [permForm, setPermForm] = useState({ date: "", hours: "1", reason: "" });
+  const [permForm, setPermForm] = useState({ date: "", hours: "1", reason: "", attachment: "" });
   const [permSaving, setPermSaving] = useState(false);
   const [permError, setPermError] = useState("");
   const [permSuccess, setPermSuccess] = useState("");
@@ -176,6 +176,14 @@ export default function EmployeePortalPage() {
     if (file.size > 5 * 1024 * 1024) { setError(isRTL ? "الملف أكبر من 5MB" : "File exceeds 5MB"); return; }
     const b64 = await toBase64(file);
     setLeaveForm((f) => ({ ...f, attachment: b64 }));
+  };
+
+  const handlePermAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setPermError(isRTL ? "الملف أكبر من 5MB" : "File exceeds 5MB"); return; }
+    const b64 = await toBase64(file);
+    setPermForm((f) => ({ ...f, attachment: b64 }));
   };
 
   const approveSubLeave = async (leaveId: number, approve: boolean) => {
@@ -327,9 +335,10 @@ export default function EmployeePortalPage() {
         end_date: permForm.date,
         days_count: parseInt(permForm.hours),
         reason: permForm.reason,
+        attachment_url: permForm.attachment || null,
       });
       setLeaves((prev) => [res.data, ...prev]);
-      setPermForm({ date: "", hours: "1", reason: "" });
+      setPermForm({ date: "", hours: "1", reason: "", attachment: "" });
       setPermSuccess(isRTL ? "تم إرسال طلب المغادرة" : "Permission request sent");
     } catch (err: any) { setPermError(err.message); }
     finally { setPermSaving(false); }
@@ -849,6 +858,19 @@ export default function EmployeePortalPage() {
                   <div>
                     <label className="form-label">{isRTL ? "السبب" : "Reason"}</label>
                     <textarea className="form-textarea" rows={3} placeholder={isRTL ? "اكتب سبب المغادرة..." : "Enter reason..."} value={permForm.reason} onChange={(e) => setPermForm((f) => ({ ...f, reason: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="form-label flex items-center gap-1.5"><Paperclip size={13} />{isRTL ? "إرفاق ملف (اختياري)" : "Attach file (optional)"}</label>
+                    <label className={`flex items-center gap-2 cursor-pointer border-2 border-dashed rounded-xl px-4 py-3 text-sm transition-all ${permForm.attachment ? "border-emerald-400 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500 hover:border-amber-400"}`}>
+                      <Paperclip size={15} />
+                      {permForm.attachment ? (isRTL ? "✓ تم إرفاق الملف" : "✓ File attached") : (isRTL ? "اضغط لاختيار ملف (صورة أو PDF)" : "Click to choose file (image or PDF)")}
+                      <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handlePermAttachment} />
+                    </label>
+                    {permForm.attachment && (
+                      <button type="button" className="text-xs text-rose-500 mt-1 hover:underline" onClick={() => setPermForm((f) => ({ ...f, attachment: "" }))}>
+                        {isRTL ? "إزالة الملف" : "Remove file"}
+                      </button>
+                    )}
                   </div>
                   {/* note */}
                   <p className="text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 leading-relaxed">
