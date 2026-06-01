@@ -175,6 +175,9 @@ export default function EmployeesPage() {
     return ar ? item.ar : item.en;
   };
 
+  // One field that covers locals (national ID) and non-locals (document/serial no.)
+  const idFieldLabel = () => (ar ? "الرقم الوطني / رقم الوثيقة" : "National ID / Document No.");
+
   const loadEmployees = async () => {
     setLoading(true);
     try {
@@ -417,7 +420,7 @@ export default function EmployeesPage() {
                   <div className="flex items-start gap-3 py-3">
                     <Hash size={15} className="text-slate-400 mt-0.5 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{ar ? "الرقم الوطني" : "National ID"}</div>
+                      <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{idFieldLabel()}</div>
                       <div className="text-sm font-medium text-slate-800">{selectedEmployee.national_id}</div>
                     </div>
                   </div>
@@ -645,7 +648,7 @@ export default function EmployeesPage() {
               <form onSubmit={handleAddStep1} className="space-y-4">
                 <div><label className="form-label">{t("employeeId")} *</label><input className="form-input" value={form.employee_id} onChange={(e) => setForm((f) => ({ ...f, employee_id: e.target.value }))} placeholder="EMP-001" /></div>
                 <div><label className="form-label">{t("name")} *</label><input className="form-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} /></div>
-                <div><label className="form-label">{ar ? "الرقم الوطني" : "National ID"}</label><input className="form-input" value={form.national_id} onChange={(e) => setForm((f) => ({ ...f, national_id: e.target.value }))} placeholder={ar ? "الرقم الوطني / الهوية" : "National ID number"} /></div>
+                <div><label className="form-label">{idFieldLabel()}</label><input className="form-input" value={form.national_id} onChange={(e) => setForm((f) => ({ ...f, national_id: e.target.value }))} placeholder={ar ? "الرقم الوطني أو رقم الوثيقة/الجواز" : "National ID or Document/Passport No."} /></div>
                 <div><label className="form-label">{ar ? "تاريخ الميلاد" : "Date of Birth"}</label><input type="date" className="form-input" value={form.birth_date} onChange={(e) => setForm((f) => ({ ...f, birth_date: e.target.value }))} /></div>
                 <div><label className="form-label">{ar ? "الجنسية" : "Nationality"}</label><input className="form-input" value={form.nationality} onChange={(e) => setForm((f) => ({ ...f, nationality: e.target.value }))} placeholder={ar ? "مثال: أردني" : "e.g. Jordanian"} /></div>
                 <div>
@@ -773,7 +776,7 @@ export default function EmployeesPage() {
               </div>
               <div><label className="form-label">{t("employeeId")} *</label><input className="form-input" value={editForm.employee_id} onChange={(e) => setEditForm((f) => ({ ...f, employee_id: e.target.value }))} /></div>
               <div><label className="form-label">{t("name")} *</label><input className="form-input" value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} /></div>
-              <div><label className="form-label">{ar ? "الرقم الوطني" : "National ID"}</label><input className="form-input" value={editForm.national_id} onChange={(e) => setEditForm((f) => ({ ...f, national_id: e.target.value }))} placeholder={ar ? "الرقم الوطني / الهوية" : "National ID number"} /></div>
+              <div><label className="form-label">{idFieldLabel()}</label><input className="form-input" value={editForm.national_id} onChange={(e) => setEditForm((f) => ({ ...f, national_id: e.target.value }))} placeholder={ar ? "الرقم الوطني أو رقم الوثيقة/الجواز" : "National ID or Document/Passport No."} /></div>
               <div><label className="form-label">{ar ? "تاريخ الميلاد" : "Date of Birth"}</label><input type="date" className="form-input" value={editForm.birth_date} onChange={(e) => setEditForm((f) => ({ ...f, birth_date: e.target.value }))} /></div>
               <div><label className="form-label">{ar ? "الجنسية" : "Nationality"}</label><input className="form-input" value={editForm.nationality} onChange={(e) => setEditForm((f) => ({ ...f, nationality: e.target.value }))} placeholder={ar ? "مثال: أردني" : "e.g. Jordanian"} /></div>
               <div>
