@@ -123,7 +123,13 @@ export default function LeavesPage() {
                       <td className="text-sm">{new Date(leave.startDate || leave.start_date).toLocaleDateString()}</td>
                       <td className="text-sm">{new Date(leave.endDate || leave.end_date).toLocaleDateString()}</td>
                       <td className="font-mono">{leave.daysCount || leave.days_count}</td>
-                      <td><StatusBadge status={leave.status} t={t} /></td>
+                      <td>
+                        <StatusBadge status={leave.status} t={t} />
+                        <div className="flex gap-1 mt-1 text-[10px] text-slate-500">
+                          <span title="Supervisor">👤 {leave.supervisorStatus || leave.supervisor_status || "pending"}</span>
+                          <span title="HR">🏢 {leave.hrStatus || leave.hr_status || "pending"}</span>
+                        </div>
+                      </td>
                       <td className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           {leave.status === "pending" && (<><button className="btn btn-sm btn-success" onClick={() => handleApprove(leave.id)}><Check size={12} />{t("approve")}</button><button className="btn btn-sm btn-danger" onClick={() => handleReject(leave.id)}><XCircle size={12} />{t("reject")}</button></>)}

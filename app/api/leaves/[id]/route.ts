@@ -7,14 +7,14 @@ import { sendLeaveDecision } from "@/lib/email";
 export const runtime = "nodejs";
 
 /**
- * Only supervisor decides. HR can view but never changes the outcome.
- *   supervisor pending  → "pending"
- *   supervisor approved → "approved"
- *   supervisor rejected → "rejected"
+ * Dual approval — BOTH the supervisor AND HR must approve.
+ *   either side rejected            → "rejected"
+ *   both sides approved             → "approved"
+ *   otherwise (any still pending)   → "pending"
  */
-function calcStatus(supervisorStatus: string): string {
-  if (supervisorStatus === "approved") return "approved";
-  if (supervisorStatus === "rejected") return "rejected";
+function calcStatus(supervisorStatus: string, hrStatus: string): string {
+  if (supervisorStatus === "rejected" || hrStatus === "rejected") return "rejected";
+  if (supervisorStatus === "approved" && hrStatus === "approved") return "approved";
   return "pending";
 }
 
@@ -53,13 +53,20 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       });
       if (!subordinate) throw new HttpError(403, "This employee is not your subordinate");
 
+      // Supervisor sets their decision; HR's existing decision stays as-is.
       const newSupervisorStatus = body.supervisor_status ?? body.status;
-      const newStatus = calcStatus(newSupervisorStatus);
+      const newStatus = calcStatus(newSupervisorStatus, existing.hrStatus ?? "pending");
       updateData = { supervisorStatus: newSupervisorStatus, status: newStatus };
     } else {
-      // HR / owner / super_admin — view only, cannot change approval status
-      // They can only add an admin note
-      updateData = { adminNote: body.admin_note ?? null };
+      // HR / owner / super_admin set the HR decision; supervisor's decision stays as-is.
+      const newHrStatus = body.hr_status ?? body.status;
+      if (newHrStatus === "approved" || newHrStatus === "rejected" || newHrStatus === "pending") {
+        const newStatus = calcStatus(existing.supervisorStatus ?? "pending", newHrStatus);
+        updateData = { hrStatus: newHrStatus, status: newStatus, adminNote: body.admin_note ?? existing.adminNote };
+      } else {
+        // No decision supplied — just an admin note update
+        updateData = { adminNote: body.admin_note ?? null };
+      }
     }
 
     const leave = await prisma.leaveRequest.update({
