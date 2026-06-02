@@ -545,7 +545,7 @@ export default function EmployeePortalPage() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-4 lg:p-6 space-y-5">
+      <main className="max-w-7xl mx-auto p-4 lg:p-6 space-y-5">
         {error && <div className="alert alert-error"><AlertTriangle size={16} />{error}</div>}
         {success && <div className="alert alert-success"><CheckCircle2 size={16} />{success}</div>}
         {evalSuccess && <div className="alert alert-success"><CheckCircle2 size={16} />{evalSuccess}</div>}
@@ -556,7 +556,56 @@ export default function EmployeePortalPage() {
             <p className="font-medium text-slate-700">{text.selectFirst}</p>
           </div>
         ) : (
-          <>
+          <div className="flex flex-col xl:flex-row gap-5 items-start">
+          {/* ── Sidebar: requests + on-leave ── */}
+          <aside className="w-full xl:w-72 shrink-0 space-y-3 xl:order-last xl:sticky xl:top-4">
+            <div className="card space-y-2">
+              <div className="text-[11px] font-semibold uppercase text-slate-400 tracking-wide">{isRTL ? "طلب جديد" : "New request"}</div>
+              <button type="button" onClick={() => setShowLeaveModal(true)} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
+                <div className="w-9 h-9 rounded-lg bg-brand-100 text-brand-600 flex items-center justify-center flex-shrink-0"><Palmtree size={18} /></div>
+                <div className="min-w-0"><div className="text-sm font-semibold text-slate-900">{text.requestLeave}</div></div>
+              </button>
+              <button type="button" onClick={() => setShowPermModal(true)} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
+                <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0"><Clock size={18} /></div>
+                <div className="min-w-0"><div className="text-sm font-semibold text-slate-900">{isRTL ? "طلب مغادرة" : "Permission"}</div></div>
+              </button>
+              <button type="button" onClick={() => setShowAdvModal(true)} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
+                <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg">💵</div>
+                <div className="min-w-0"><div className="text-sm font-semibold text-slate-900">{isRTL ? "طلب سلفة" : "Request Advance"}</div></div>
+              </button>
+            </div>
+
+            {onLeave.length > 0 && (
+              <div className="card border-amber-200 bg-amber-50/40">
+                <div className="card-header"><div className="card-title text-sm"><Palmtree size={15} className="text-amber-600" />{isRTL ? "زملاء في إجازة" : "On leave today"}<span className="badge badge-yellow text-[10px]">{onLeave.length}</span></div></div>
+                <div className="space-y-2">
+                  {onLeave.map((l) => (
+                    <div key={l.id} className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{(l.employee_name || "?").charAt(0).toUpperCase()}</div>
+                      <div className="text-sm min-w-0"><div className="font-medium text-slate-900 truncate">{l.employee_name}</div><div className="text-[11px] text-slate-500">{isRTL ? "يعود" : "back"} {l.end_date}</div></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {advances.length > 0 && (
+              <div className="card">
+                <div className="card-header"><div className="card-title text-sm"><span className="text-base">💵</span>{isRTL ? "حالة السلف" : "Advance status"}</div></div>
+                <div className="space-y-2">
+                  {advances.slice(0, 5).map((a) => (
+                    <div key={a.id} className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-sm font-semibold text-slate-900">{(parseFloat(a.amount) || 0).toFixed(2)}</span>
+                      <span className={`badge text-[10px] ${a.status === "approved" ? "badge-green" : a.status === "rejected" ? "badge-red" : "badge-yellow"}`}>{a.status === "approved" ? (isRTL ? "موافق" : "Approved") : a.status === "rejected" ? (isRTL ? "مرفوض" : "Rejected") : (isRTL ? "معلّق" : "Pending")}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </aside>
+
+          {/* ── Main column ── */}
+          <div className="flex-1 min-w-0 space-y-5">
             {/* ── My Tasks card (reusable inline) ── */}
             {(() => {
               const myTasksCard = (
@@ -814,41 +863,6 @@ export default function EmployeePortalPage() {
               )}
             </div>
 
-            {/* ── Who's on leave today (so colleagues don't disturb them) ── */}
-            {onLeave.length > 0 && (
-              <div className="card border-amber-200 bg-amber-50/40">
-                <div className="card-header"><div className="card-title"><Palmtree size={16} className="text-amber-600" />{isRTL ? "زملاء في إجازة اليوم" : "Colleagues on leave today"}<span className="badge badge-yellow text-[10px]">{onLeave.length}</span></div></div>
-                <div className="flex flex-wrap gap-2">
-                  {onLeave.map((l) => (
-                    <div key={l.id} className="flex items-center gap-2 px-3 py-2 rounded-full bg-white border border-amber-200">
-                      <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-bold">{(l.employee_name || "?").charAt(0).toUpperCase()}</div>
-                      <div className="text-sm">
-                        <span className="font-medium text-slate-900">{l.employee_name}</span>
-                        <span className="text-[11px] text-slate-500 ms-1">{isRTL ? "يعود" : "back"} {l.end_date}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[11px] text-amber-700/70 mt-2">{isRTL ? "🌴 هؤلاء الزملاء في إجازة — يُرجى عدم إزعاجهم." : "🌴 These colleagues are on leave — please avoid disturbing them."}</p>
-              </div>
-            )}
-
-            {/* ── Quick actions ───────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <button type="button" onClick={() => setShowLeaveModal(true)} className="card card-interactive flex items-center gap-3 text-start">
-                <div className="w-10 h-10 rounded-xl bg-brand-100 text-brand-600 flex items-center justify-center flex-shrink-0"><Palmtree size={20} /></div>
-                <div className="min-w-0"><div className="font-semibold text-slate-900">{text.requestLeave}</div><div className="text-xs text-slate-500 truncate">{isRTL ? "سنوية / مرضية / بدون راتب" : "Annual / sick / unpaid"}</div></div>
-              </button>
-              <button type="button" onClick={() => setShowPermModal(true)} className="card card-interactive flex items-center gap-3 text-start">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0"><Clock size={20} /></div>
-                <div className="min-w-0"><div className="font-semibold text-slate-900">{isRTL ? "طلب مغادرة" : "Permission"}</div><div className="text-xs text-slate-500 truncate">{isRTL ? "1 / 2 / 3 ساعات" : "1 / 2 / 3 hours"}</div></div>
-              </button>
-              <button type="button" onClick={() => setShowAdvModal(true)} className="card card-interactive flex items-center gap-3 text-start">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg">💵</div>
-                <div className="min-w-0"><div className="font-semibold text-slate-900">{isRTL ? "طلب سلفة" : "Request Advance"}</div><div className="text-xs text-slate-500 truncate">{isRTL ? "تُخصم من الراتب" : "Deducted from salary"}</div></div>
-              </button>
-            </div>
-
             {/* ── Request Leave modal ── */}
             {showLeaveModal && (
             <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowLeaveModal(false); }}>
@@ -1000,26 +1014,6 @@ export default function EmployeePortalPage() {
             </div>
             )}
 
-            {/* My Advances list */}
-            <div className="card">
-                <div className="card-header"><div className="card-title"><span className="text-base">📋</span>{isRTL ? "سُلَفي" : "My Advances"}</div></div>
-                {advances.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{text.noData}</div> : (
-                  <div className="space-y-2">
-                    {advances.map((a) => (
-                      <div key={a.id} className="flex items-center justify-between gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50">
-                        <div className="min-w-0">
-                          <div className="font-mono font-semibold text-slate-900">{(parseFloat(a.amount) || 0).toFixed(2)}</div>
-                          <div className="text-[11px] text-slate-500 truncate">{a.installments > 1 ? `${a.installments} ${isRTL ? "أشهر" : "months"}` : (isRTL ? "دفعة واحدة" : "One-time")}{a.reason ? ` • ${a.reason}` : ""}</div>
-                        </div>
-                        <span className={`badge ${a.status === "approved" ? "badge-green" : a.status === "rejected" ? "badge-red" : "badge-yellow"}`}>
-                          {a.status === "approved" ? (isRTL ? "موافق عليه" : "Approved") : a.status === "rejected" ? (isRTL ? "مرفوض" : "Rejected") : (isRTL ? "معلّق" : "Pending")}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
             <div className="card">
               <div className="card-header"><div className="card-title"><Calendar size={16} className="text-brand-600" />{text.myLeaves}</div></div>
               {myLeaves.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{text.noData}</div> : (
@@ -1064,7 +1058,8 @@ export default function EmployeePortalPage() {
                 </div>
               )}
             </div>
-          </>
+          </div>
+          </div>
         )}
       </main>
 
