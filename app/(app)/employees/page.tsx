@@ -116,6 +116,7 @@ export default function EmployeesPage() {
   // Edit / Delete
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showLetterModal, setShowLetterModal] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editForm, setEditForm] = useState({ employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", nationality: "", gender: "", national_id: "", birth_date: "", social_security: false, religion: "", photo_url: "" });
@@ -329,6 +330,66 @@ export default function EmployeesPage() {
     finally { setDeleting(false); }
   };
 
+  // ── Official letters ──────────────────────────────────────────────
+  const printLetter = (kind: "salary" | "experience" | "noobjection") => {
+    const e = selectedEmployee;
+    if (!e) return;
+    const u = (() => { try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; } })();
+    const company = u.company_name || "PayNest";
+    const today = new Date().toLocaleDateString(ar ? "ar-EG" : "en-GB");
+    const salary = (parseFloat(e.base_salary) || 0).toFixed(2);
+    const job = e.job_title || (ar ? "موظف" : "Employee");
+    const idNo = e.national_id || e.employee_id;
+
+    const titles: Record<string, string> = {
+      salary: ar ? "شهادة راتب" : "Salary Certificate",
+      experience: ar ? "شهادة خبرة" : "Experience Certificate",
+      noobjection: ar ? "كتاب عدم ممانعة" : "No-Objection Letter",
+    };
+    let body = "";
+    if (kind === "salary") {
+      body = ar
+        ? `تشهد شركة <b>${company}</b> بأن السيد/ة <b>${e.name}</b> (الرقم: ${idNo}) يعمل/تعمل لدينا بوظيفة <b>${job}</b> براتب أساسي شهري قدره <b>${salary}</b> دينار أردني.<br/><br/>وقد مُنحت هذه الشهادة بناءً على طلبه/طلبها لتقديمها إلى الجهة المعنية (البنك) دون أدنى مسؤولية على الشركة.`
+        : `This is to certify that <b>${e.name}</b> (ID: ${idNo}) is employed at <b>${company}</b> as <b>${job}</b> with a monthly basic salary of <b>${salary} JOD</b>.<br/><br/>This certificate is issued upon their request to be submitted to the concerned party (bank), without any liability on the company.`;
+    } else if (kind === "experience") {
+      body = ar
+        ? `تشهد شركة <b>${company}</b> بأن السيد/ة <b>${e.name}</b> (الرقم: ${idNo}) قد عمل/عملت لدينا بوظيفة <b>${job}</b>، وقد أبدى/أبدت خلال فترة عمله/عملها كفاءةً عالية وحُسن سيرة وسلوك.<br/><br/>وقد مُنحت هذه الشهادة بناءً على طلبه/طلبها دون أدنى مسؤولية على الشركة.`
+        : `This is to certify that <b>${e.name}</b> (ID: ${idNo}) has worked at <b>${company}</b> as <b>${job}</b>, demonstrating high competence and good conduct throughout the period of employment.<br/><br/>This certificate is issued upon their request without any liability on the company.`;
+    } else {
+      body = ar
+        ? `لا تمانع شركة <b>${company}</b> قيام موظفها السيد/ة <b>${e.name}</b> (الرقم: ${idNo})، بوظيفة <b>${job}</b>، بإنهاء معاملاته/معاملاتها لدى الجهة المعنية.<br/><br/>وقد مُنح هذا الكتاب بناءً على طلبه/طلبها دون أدنى مسؤولية على الشركة.`
+        : `<b>${company}</b> has no objection to its employee <b>${e.name}</b> (ID: ${idNo}), working as <b>${job}</b>, completing their procedures with the concerned party.<br/><br/>This letter is issued upon their request without any liability on the company.`;
+    }
+
+    const html = `<!doctype html><html dir="${ar ? "rtl" : "ltr"}" lang="${ar ? "ar" : "en"}"><head><meta charset="utf-8"><title>${titles[kind]} - ${e.name}</title>
+      <style>
+        @page { margin: 2.5cm; }
+        body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; color:#0f172a; line-height:2; }
+        .head { display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid #0c8ce8; padding-bottom:14px; margin-bottom:30px; }
+        .logo { width:46px;height:46px;border-radius:10px;background:linear-gradient(135deg,#1aa0f2,#075a9e); }
+        .cname { font-size:22px; font-weight:800; }
+        .date { color:#64748b; font-size:13px; }
+        h1 { text-align:center; font-size:24px; margin:10px 0 28px; text-decoration:underline; }
+        .body { font-size:16px; }
+        .sign { margin-top:70px; }
+        .sign .line { width:200px; border-top:1px solid #0f172a; padding-top:6px; font-size:13px; }
+        .footer { margin-top:50px; border-top:1px solid #e2e8f0; padding-top:10px; color:#94a3b8; font-size:11px; text-align:center; }
+      </style></head><body>
+      <div class="head"><div><div class="cname">${company}</div><div class="date">${ar ? "التاريخ" : "Date"}: ${today}</div></div><div class="logo"></div></div>
+      <h1>${titles[kind]}</h1>
+      <div class="body">${body}</div>
+      <div class="sign"><div class="line">${ar ? "التوقيع والختم — إدارة الموارد البشرية" : "Signature & Stamp — HR Department"}</div></div>
+      <div class="footer">${company} • ${ar ? "صدر هذا المستند إلكترونياً عبر PayNest" : "Generated electronically via PayNest"}</div>
+      <script>window.onload=function(){window.print();}</script>
+    </body></html>`;
+
+    const w = window.open("", "_blank", "width=800,height=900");
+    if (!w) { setError(ar ? "فضلاً اسمح بالنوافذ المنبثقة" : "Please allow pop-ups"); return; }
+    w.document.write(html);
+    w.document.close();
+    setShowLetterModal(false);
+  };
+
   if (loading) return <div className="flex items-center justify-center py-20 gap-3 text-slate-500"><span className="spinner spinner-dark w-5 h-5" />{t("loadingData")}</div>;
 
   const emailTitle = ar ? "البريد الإلكتروني" : "Email";
@@ -390,6 +451,7 @@ export default function EmployeesPage() {
             <div className="card-title">{t("employeeDetails")}</div>
             {selectedEmployee && (
               <div className="flex items-center gap-2">
+                <button className="btn btn-sm btn-secondary" onClick={() => setShowLetterModal(true)}><FileText size={13} />{ar ? "خطاب" : "Letter"}</button>
                 <button className="btn btn-sm btn-secondary" onClick={openEdit}><Edit2 size={13} />{ar ? "تعديل" : "Edit"}</button>
                 <button className="btn btn-sm btn-danger" onClick={() => setShowDeleteConfirm(true)}><Trash2 size={13} />{ar ? "حذف" : "Delete"}</button>
               </div>
@@ -854,6 +916,33 @@ export default function EmployeesPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official letter chooser */}
+      {showLetterModal && selectedEmployee && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowLetterModal(false); }}>
+          <div className="modal max-w-md">
+            <div className="modal-header">
+              <h3 className="modal-title">{ar ? "إصدار خطاب رسمي" : "Issue Official Letter"}</h3>
+              <button className="modal-close" onClick={() => setShowLetterModal(false)}><X size={18} /></button>
+            </div>
+            <p className="text-sm text-slate-500 mb-3">{ar ? `للموظف: ${selectedEmployee.name}` : `For: ${selectedEmployee.name}`}</p>
+            <div className="space-y-2">
+              {[
+                { k: "salary", icon: "🏦", ar: "شهادة راتب (للبنك)", en: "Salary Certificate (for bank)" },
+                { k: "experience", icon: "💼", ar: "شهادة خبرة", en: "Experience Certificate" },
+                { k: "noobjection", icon: "✅", ar: "كتاب عدم ممانعة", en: "No-Objection Letter" },
+              ].map((o) => (
+                <button key={o.k} onClick={() => printLetter(o.k as any)} className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-brand-400 hover:bg-brand-50/40 text-start transition-all">
+                  <span className="text-xl">{o.icon}</span>
+                  <span className="font-medium text-slate-800">{ar ? o.ar : o.en}</span>
+                  <ChevronRight size={16} className={clsx("ms-auto text-slate-400", ar && "rotate-180")} />
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-3">{ar ? "ستفتح نافذة الطباعة — اختر «حفظ كـ PDF»." : "A print dialog opens — choose “Save as PDF”."}</p>
           </div>
         </div>
       )}
