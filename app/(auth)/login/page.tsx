@@ -91,7 +91,7 @@ export default function StaffLoginPage() {
       {/* Slim header */}
       <header className="relative bg-white border-b border-slate-200 px-6 h-14 flex items-center justify-between">
         <button
-          onClick={() => router.push("/portal-select")}
+          onClick={() => router.push("/")}
           className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition-colors"
         >
           <Back size={16} />
