@@ -639,7 +639,7 @@ export default function EmployeePortalPage() {
                   data={{
                     employeeName: employee?.name || "",
                     employeeId: String(employeeId),
-                    companyName: typeof window !== "undefined" ? localStorage.getItem("companyName") || "PayNest" : "PayNest",
+                    companyName: savedUser.company_name || savedUser.companyName || (typeof window !== "undefined" ? localStorage.getItem("companyName") : "") || "PayNest",
                     month: myPayroll.periodMonth || myPayroll.period_month,
                     year: myPayroll.periodYear || myPayroll.period_year,
                     baseSalary: myPayroll.baseSalary || myPayroll.base_salary,
