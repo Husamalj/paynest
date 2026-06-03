@@ -49,7 +49,7 @@ function PayslipDocument({ data }: { data: PayslipData }) {
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.brand}>PayNest</Text>
+          <Text style={styles.brand}>{data.companyName || "PayNest"}</Text>
           <Text style={styles.subhead}>Payslip — {MONTHS[data.month - 1]} {data.year}</Text>
         </View>
 
