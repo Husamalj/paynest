@@ -10,7 +10,7 @@ const DownloadPayslipButton = dynamic(
 import {
   AlertTriangle, Bell, Calendar, CheckCircle2, CheckSquare, ChevronDown,
   ClipboardList, Clock, KeyRound, Languages, LogOut, Palmtree, Paperclip, Send,
-  ThumbsDown, ThumbsUp, User, UserCheck, Users, X,
+  ThumbsDown, ThumbsUp, User, UserCheck, Users, X, Plus,
 } from "lucide-react";
 import { useRef } from "react";
 import api from "@/lib/api";
@@ -143,6 +143,7 @@ export default function EmployeePortalPage() {
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showPermModal, setShowPermModal] = useState(false);
   const [showAdvModal, setShowAdvModal] = useState(false);
+  const [reqOpen, setReqOpen] = useState(false);
   const [advSaving, setAdvSaving] = useState(false);
   const [advError, setAdvError] = useState("");
   const [advSuccess, setAdvSuccess] = useState("");
@@ -559,20 +560,28 @@ export default function EmployeePortalPage() {
           <div className="flex flex-col xl:flex-row gap-5 items-start">
           {/* ── Sidebar: requests + on-leave ── */}
           <aside className="w-full xl:w-72 shrink-0 space-y-3 xl:order-last xl:sticky xl:top-4">
-            <div className="card space-y-2">
-              <div className="text-[11px] font-semibold uppercase text-slate-400 tracking-wide">{isRTL ? "طلب جديد" : "New request"}</div>
-              <button type="button" onClick={() => setShowLeaveModal(true)} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
-                <div className="w-9 h-9 rounded-lg bg-brand-100 text-brand-600 flex items-center justify-center flex-shrink-0"><Palmtree size={18} /></div>
-                <div className="min-w-0"><div className="text-sm font-semibold text-slate-900">{text.requestLeave}</div></div>
+            <div className="card p-2">
+              <button type="button" onClick={() => setReqOpen((o) => !o)} className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 text-start font-semibold text-slate-900">
+                <Plus size={18} className="text-brand-600 flex-shrink-0" />
+                <span className="flex-1">{isRTL ? "تقديم طلب" : "Request"}</span>
+                <ChevronDown size={16} className={clsx("text-slate-400 transition-transform", reqOpen && "rotate-180")} />
               </button>
-              <button type="button" onClick={() => setShowPermModal(true)} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
-                <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0"><Clock size={18} /></div>
-                <div className="min-w-0"><div className="text-sm font-semibold text-slate-900">{isRTL ? "طلب مغادرة" : "Permission"}</div></div>
-              </button>
-              <button type="button" onClick={() => setShowAdvModal(true)} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
-                <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg">💵</div>
-                <div className="min-w-0"><div className="text-sm font-semibold text-slate-900">{isRTL ? "طلب سلفة" : "Request Advance"}</div></div>
-              </button>
+              {reqOpen && (
+                <div className="mt-1 space-y-1">
+                  <button type="button" onClick={() => { setShowLeaveModal(true); setReqOpen(false); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
+                    <div className="w-8 h-8 rounded-lg bg-brand-100 text-brand-600 flex items-center justify-center flex-shrink-0"><Palmtree size={16} /></div>
+                    <div className="text-sm font-medium text-slate-900">{text.requestLeave}</div>
+                  </button>
+                  <button type="button" onClick={() => { setShowPermModal(true); setReqOpen(false); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
+                    <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0"><Clock size={16} /></div>
+                    <div className="text-sm font-medium text-slate-900">{isRTL ? "طلب مغادرة" : "Permission"}</div>
+                  </button>
+                  <button type="button" onClick={() => { setShowAdvModal(true); setReqOpen(false); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-base">💵</div>
+                    <div className="text-sm font-medium text-slate-900">{isRTL ? "طلب سلفة" : "Request Advance"}</div>
+                  </button>
+                </div>
+              )}
             </div>
 
             {onLeave.length > 0 && (
