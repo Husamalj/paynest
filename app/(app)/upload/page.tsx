@@ -279,7 +279,7 @@ export default function UploadPage() {
         </div>
 
         <div className="card">
-          <div className="card-header"><div className="card-title"><span className="text-base">⚠️</span>{ar ? "بصمات ناقصة" : "Missing Punches"}{missing.length > 0 && <span className="badge badge-yellow text-[10px]">{missing.length}</span>}</div></div>
+          <div className="card-header"><div className="card-title"><span className="text-base">⚠️</span>{ar ? "بصمات ناقصة" : "Missing Punches"} <span className="text-[11px] font-normal text-slate-400">— {months[periodMonth - 1]} {periodYear}</span>{missing.length > 0 && <span className="badge badge-yellow text-[10px]">{missing.length}</span>}</div></div>
           {missing.length === 0 ? (
             <div className="text-center py-8 text-sm text-slate-400">{ar ? "لا يوجد بصمات ناقصة لهذا الشهر 👍" : "No missing punches this month 👍"}</div>
           ) : (
