@@ -15,6 +15,7 @@ import {
 import { useRef } from "react";
 import api from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import OrgChart, { type OrgEmp } from "@/components/OrgChart";
 import clsx from "clsx";
 
 const EVAL_CRITERIA = [
@@ -144,6 +145,8 @@ export default function EmployeePortalPage() {
   const [showPermModal, setShowPermModal] = useState(false);
   const [showAdvModal, setShowAdvModal] = useState(false);
   const [reqOpen, setReqOpen] = useState(false);
+  const [showOrg, setShowOrg] = useState(false);
+  const [orgEmployees, setOrgEmployees] = useState<OrgEmp[]>([]);
   const [advSaving, setAdvSaving] = useState(false);
   const [advError, setAdvError] = useState("");
   const [advSuccess, setAdvSuccess] = useState("");
@@ -306,6 +309,7 @@ export default function EmployeePortalPage() {
         }
         try { const advRes = await api.get("/advances"); setAdvances(advRes.data || []); } catch { /* ignore */ }
         try { const olRes = await api.get("/leaves/on-leave"); setOnLeave(olRes.data || []); } catch { /* ignore */ }
+        try { const orgRes = await api.get("/company-structure"); setOrgEmployees(orgRes.data || []); } catch { /* ignore */ }
       } else {
         const [employeesRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes] = await Promise.all([
           api.get("/employees"),
@@ -583,6 +587,13 @@ export default function EmployeePortalPage() {
                 </div>
               )}
             </div>
+
+            {orgEmployees.length > 0 && (
+              <button type="button" onClick={() => setShowOrg(true)} className="card p-2 w-full flex items-center gap-2 hover:bg-slate-50 text-start">
+                <Users size={18} className="text-brand-600 flex-shrink-0" />
+                <span className="font-semibold text-slate-900">{isRTL ? "هيكل الشركة" : "Company Structure"}</span>
+              </button>
+            )}
 
             {onLeave.length > 0 && (
               <div className="card border-amber-200 bg-amber-50/40">
@@ -1071,6 +1082,21 @@ export default function EmployeePortalPage() {
           </div>
         )}
       </main>
+
+      {/* Company structure modal */}
+      {showOrg && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setShowOrg(false); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden" dir={isRTL ? "rtl" : "ltr"}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+              <div className="flex items-center gap-2 font-bold text-slate-900"><Users size={18} className="text-brand-600" />{isRTL ? "هيكل الشركة" : "Company Structure"}</div>
+              <button onClick={() => setShowOrg(false)} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
+            </div>
+            <div className="flex-1 min-h-0">
+              <OrgChart employees={orgEmployees} isRTL={isRTL} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Evaluation Modal */}
       {showEvalModal && evalSub && (
