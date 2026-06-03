@@ -12,6 +12,7 @@ export type AuditEntity =
   | "evaluation"
   | "announcement"
   | "holiday"
+  | "attendance"
   | "company"
   | "payroll"
   | "upload"

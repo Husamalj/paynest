@@ -62,7 +62,39 @@ export default function UploadPage() {
   const months = ar ? MONTHS_AR : MONTHS_EN;
   const yearOptions = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1];
 
-  useEffect(() => { loadUploadedFiles(); }, []);
+  // Manual attendance + missing punches
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [missing, setMissing] = useState<any[]>([]);
+  const [manualForm, setManualForm] = useState({ employee_id: "", work_date: "", clock_in: "", clock_out: "" });
+  const [manualSaving, setManualSaving] = useState(false);
+
+  const loadMissing = async (m: number, y: number) => {
+    try { const r = await api.get(`/attendance/missing?month=${m}&year=${y}`); setMissing(r.data || []); } catch { setMissing([]); }
+  };
+
+  useEffect(() => { loadUploadedFiles(); api.get("/employees").then((r) => setEmployees(r.data || [])).catch(() => {}); }, []);
+  useEffect(() => { loadMissing(periodMonth, periodYear); }, [periodMonth, periodYear]);
+
+  const submitManual = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualForm.employee_id || !manualForm.work_date || (!manualForm.clock_in && !manualForm.clock_out)) {
+      setError(ar ? "اختر الموظف والتاريخ وأدخل وقت دخول أو خروج" : "Pick employee, date and at least one time");
+      return;
+    }
+    setManualSaving(true); setError(""); setSuccess("");
+    try {
+      await api.post("/attendance/manual", manualForm);
+      setSuccess(ar ? "تم تسجيل الحضور — لا تنسَ إعادة حساب الرواتب" : "Attendance saved — remember to recalculate payroll");
+      setManualForm({ employee_id: "", work_date: "", clock_in: "", clock_out: "" });
+      await loadMissing(periodMonth, periodYear);
+    } catch (err: any) { setError(err.message); }
+    finally { setManualSaving(false); }
+  };
+
+  const completeMissing = (row: any) => {
+    setManualForm({ employee_id: row.employee_id, work_date: row.work_date, clock_in: row.clock_in || "", clock_out: row.clock_out || "" });
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const loadUploadedFiles = async () => {
     try {
@@ -219,6 +251,48 @@ export default function UploadPage() {
               <button className="btn btn-success w-full mt-2" disabled={uploading !== ""} onClick={() => handleUpload(salaryFiles, "salary")}>
                 {uploading === "salary" ? <><span className="spinner" /> {t("uploading")}</> : <><UploadIcon size={15} />{t("uploadBtn")} ({salaryFiles.length})</>}
               </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Manual attendance + missing punches ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="card">
+          <div className="card-header"><div className="card-title"><span className="text-base">✍️</span>{ar ? "تسجيل حضور يدوي" : "Manual Attendance"}</div></div>
+          <form onSubmit={submitManual} className="space-y-3">
+            <div>
+              <label className="form-label">{ar ? "الموظف" : "Employee"} *</label>
+              <select className="form-select" value={manualForm.employee_id} onChange={(e) => setManualForm((f) => ({ ...f, employee_id: e.target.value }))}>
+                <option value="">{ar ? "اختر الموظف" : "Select employee"}</option>
+                {employees.map((emp) => <option key={emp.employee_id} value={emp.employee_id}>{emp.name} — {emp.employee_id}</option>)}
+              </select>
+            </div>
+            <div><label className="form-label">{ar ? "التاريخ" : "Date"} *</label><input type="date" className="form-input" value={manualForm.work_date} onChange={(e) => setManualForm((f) => ({ ...f, work_date: e.target.value }))} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="form-label">{ar ? "الدخول" : "Check In"}</label><input type="time" className="form-input" value={manualForm.clock_in} onChange={(e) => setManualForm((f) => ({ ...f, clock_in: e.target.value }))} /></div>
+              <div><label className="form-label">{ar ? "الخروج" : "Check Out"}</label><input type="time" className="form-input" value={manualForm.clock_out} onChange={(e) => setManualForm((f) => ({ ...f, clock_out: e.target.value }))} /></div>
+            </div>
+            <p className="text-[11px] text-slate-400">{ar ? "تكتب الناقص فقط — الموجود يبقى كما هو. ثم أعد حساب الرواتب." : "Enter only the missing side — the existing one stays. Then recalculate payroll."}</p>
+            <button className="btn btn-primary w-full" disabled={manualSaving}>{manualSaving ? <span className="spinner" /> : null}{ar ? "حفظ" : "Save"}</button>
+          </form>
+        </div>
+
+        <div className="card">
+          <div className="card-header"><div className="card-title"><span className="text-base">⚠️</span>{ar ? "بصمات ناقصة" : "Missing Punches"}{missing.length > 0 && <span className="badge badge-yellow text-[10px]">{missing.length}</span>}</div></div>
+          {missing.length === 0 ? (
+            <div className="text-center py-8 text-sm text-slate-400">{ar ? "لا يوجد بصمات ناقصة لهذا الشهر 👍" : "No missing punches this month 👍"}</div>
+          ) : (
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {missing.map((r) => (
+                <div key={r.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-amber-200 bg-amber-50/40">
+                  <div className="min-w-0 text-sm">
+                    <div className="font-medium text-slate-900 truncate">{r.employee_name} <span className="text-[11px] text-slate-400">{r.work_date}</span></div>
+                    <div className="text-[11px] text-slate-500">{ar ? "دخول" : "In"}: {r.clock_in || "—"} • {ar ? "خروج" : "Out"}: {r.clock_out || "—"} <span className="text-rose-500 font-medium">({r.missing === "in" ? (ar ? "ناقص دخول" : "missing in") : (ar ? "ناقص خروج" : "missing out")})</span></div>
+                  </div>
+                  <button className="btn btn-sm btn-secondary shrink-0" onClick={() => completeMissing(r)}>{ar ? "إكمال" : "Complete"}</button>
+                </div>
+              ))}
             </div>
           )}
         </div>
