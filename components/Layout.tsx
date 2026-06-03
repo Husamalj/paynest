@@ -167,26 +167,26 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
 
       <aside
         className={clsx(
-          "fixed top-0 bottom-0 z-40 w-64 bg-white border-slate-200 transition-transform duration-200 ease-out flex flex-col",
+          "group fixed top-0 bottom-0 z-40 w-64 lg:w-[68px] lg:hover:w-64 lg:hover:shadow-2xl bg-white border-slate-200 transition-all duration-300 ease-out flex flex-col",
           isRTL
             ? "right-0 border-l " + (sidebarOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0")
             : "left-0 border-r " + (sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0")
         )}
       >
-        <div className="px-5 py-5 border-b border-slate-100">
-          <div className="flex items-center gap-3">
+        <div className="h-[72px] flex items-center px-3 lg:justify-center lg:group-hover:justify-start lg:group-hover:px-5 border-b border-slate-100">
+          <div className="flex items-center gap-3 w-full">
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white shadow-sm flex-shrink-0">
               <Building2 size={18} strokeWidth={2.5} />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 lg:hidden lg:group-hover:block">
               <div className="text-[15px] font-bold text-slate-900 truncate">{companyName}</div>
               <div className="text-[11px] text-slate-500 font-medium">HR & Payroll</div>
             </div>
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 overflow-y-auto">
-          <div className="text-[11px] font-semibold uppercase text-slate-400 tracking-wider px-3 mb-2">{t("overview")}</div>
+        <nav className="flex-1 px-3 py-4 overflow-x-hidden overflow-y-auto">
+          <div className="text-[11px] font-semibold uppercase text-slate-400 tracking-wider px-3 mb-2 lg:hidden lg:group-hover:block">{t("overview")}</div>
           <div className="space-y-0.5">
             {navItems.filter((i) => i.key !== "settings").map((item) => {
               const Icon = item.icon as React.ElementType;
@@ -198,16 +198,16 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
                     <button
                       onClick={() => setExpandedKeys((s) => ({ ...s, [item.key]: !s[item.key] }))}
                       className={clsx(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                        "w-full h-10 flex items-center gap-3 px-3 rounded-lg text-sm font-medium transition-all lg:justify-center lg:group-hover:justify-start",
                         isActive ? "bg-brand-50 text-brand-700 shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                       )}
                     >
                       <Icon size={17} className={clsx("flex-shrink-0", isActive ? "text-brand-600" : "text-slate-400")} />
-                      <span className="flex-1 text-left">{t(item.key)}</span>
-                      <ChevronDown size={14} className={clsx("text-slate-400 transition-transform", isExpanded && "rotate-180")} />
+                      <span className="flex-1 text-left whitespace-nowrap lg:hidden lg:group-hover:block">{t(item.key)}</span>
+                      <ChevronDown size={14} className={clsx("text-slate-400 transition-transform lg:hidden lg:group-hover:block", isExpanded && "rotate-180")} />
                     </button>
                     {isExpanded && (
-                      <div className="mt-1 pl-8 space-y-1">
+                      <div className="mt-1 pl-8 space-y-1 lg:hidden lg:group-hover:block">
                         {item.children!.map((ch) => {
                           const isChActive = pathname === ch.path || (ch.path !== "/employees" && pathname.startsWith(ch.path));
                           return (
@@ -237,13 +237,12 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
                   href={item.path}
                   onClick={() => setSidebarOpen(false)}
                   className={clsx(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                    item.key === "settings" && "mt-2 border-t border-slate-100 pt-3",
+                    "h-10 flex items-center gap-3 px-3 rounded-lg text-sm font-medium transition-all lg:justify-center lg:group-hover:justify-start",
                     isActive ? "bg-brand-50 text-brand-700 shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   )}
                 >
                   <Icon size={17} strokeWidth={isActive ? 2.5 : 2} className={clsx("flex-shrink-0", isActive ? "text-brand-600" : "text-slate-400")} />
-                  <span>{t(item.key)}</span>
+                  <span className="whitespace-nowrap lg:hidden lg:group-hover:block">{t(item.key)}</span>
                 </Link>
               );
             })}
@@ -251,31 +250,31 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
         </nav>
 
         {/* Pinned bottom: Settings + Contact us */}
-        <div className="px-3 py-3 border-t border-slate-100 space-y-0.5">
+        <div className="px-3 py-3 border-t border-slate-100 space-y-0.5 overflow-x-hidden">
           {navItems.some((i) => i.key === "settings") && (
             <Link
               href="/settings"
               onClick={() => setSidebarOpen(false)}
               className={clsx(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                "h-10 flex items-center gap-3 px-3 rounded-lg text-sm font-medium transition-all lg:justify-center lg:group-hover:justify-start",
                 pathname.startsWith("/settings") ? "bg-brand-50 text-brand-700 shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               )}
             >
               <SettingsIcon size={17} className={clsx("flex-shrink-0", pathname.startsWith("/settings") ? "text-brand-600" : "text-slate-400")} />
-              <span>{t("settings")}</span>
+              <span className="whitespace-nowrap lg:hidden lg:group-hover:block">{t("settings")}</span>
             </Link>
           )}
           <a
             href="mailto:support@paynest.app"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all"
+            className="h-10 flex items-center gap-3 px-3 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all lg:justify-center lg:group-hover:justify-start"
           >
             <Mail size={17} strokeWidth={2} className="text-slate-400 flex-shrink-0" />
-            <span>{isRTL ? "تواصل معنا" : "Contact us"}</span>
+            <span className="whitespace-nowrap lg:hidden lg:group-hover:block">{isRTL ? "تواصل معنا" : "Contact us"}</span>
           </a>
         </div>
       </aside>
 
-      <div className={clsx("min-h-screen flex flex-col transition-all", isRTL ? "lg:mr-64" : "lg:ml-64")}>
+      <div className={clsx("min-h-screen flex flex-col transition-all", isRTL ? "lg:mr-[68px]" : "lg:ml-[68px]")}>
         <header className="sticky top-0 z-20 h-16 bg-white/90 backdrop-blur border-b border-slate-200 px-4 lg:px-6 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <button className="lg:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg" onClick={() => setSidebarOpen(true)}>
