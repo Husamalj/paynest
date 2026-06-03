@@ -22,6 +22,7 @@ import {
   LogOut,
   ShieldCheck,
   Network,
+  GitBranch,
   ScrollText,
   FileText,
   Mail,
@@ -64,6 +65,7 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   { key: "supervisorAssignment", path: "/supervisor-assignment", icon: Network },
+  { key: "companyStructure", path: "/company-structure", icon: GitBranch },
   { key: "evaluations", path: "/evaluations", icon: ClipboardList },
   {
     key: "requests",
