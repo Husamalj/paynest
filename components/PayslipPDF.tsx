@@ -92,18 +92,28 @@ function PayslipDocument({ data }: { data: PayslipData }) {
   );
 }
 
-export function DownloadPayslipButton({ data, filename }: { data: PayslipData; filename: string }) {
+export function DownloadPayslipButton({ data, filename, compact }: { data: PayslipData; filename: string; compact?: boolean }) {
   return (
     <PDFDownloadLink document={<PayslipDocument data={data} />} fileName={filename}>
-      {({ loading }: { loading: boolean }) => (
-        <button
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-white border border-slate-200 rounded-lg text-slate-700 hover:border-brand-400 hover:text-brand-700 transition-all disabled:opacity-50"
-          disabled={loading}
-        >
-          <Download size={14} />
-          {loading ? "Preparing…" : "PDF"}
-        </button>
-      )}
+      {({ loading }: { loading: boolean }) =>
+        compact ? (
+          <button
+            title="Download payslip (PDF)"
+            className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-500 hover:border-brand-400 hover:text-brand-700 transition-all disabled:opacity-50"
+            disabled={loading}
+          >
+            <Download size={13} />
+          </button>
+        ) : (
+          <button
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-white border border-slate-200 rounded-lg text-slate-700 hover:border-brand-400 hover:text-brand-700 transition-all disabled:opacity-50"
+            disabled={loading}
+          >
+            <Download size={14} />
+            {loading ? "Preparing…" : "PDF"}
+          </button>
+        )
+      }
     </PDFDownloadLink>
   );
 }

@@ -628,32 +628,35 @@ export default function EmployeePortalPage() {
           <div className="flex-1 min-w-0 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.base}</div><div className="text-xl font-bold text-slate-900">{formatCurrency(myPayroll?.baseSalary || myPayroll?.base_salary || employee.baseSalary || employee.base_salary)}</div></div>
-              <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.net}</div><div className="text-xl font-bold text-emerald-700">{formatCurrency(myPayroll?.netSalary || myPayroll?.net_salary)}</div></div>
+              <div className="card relative">
+                <div className="text-xs font-semibold text-slate-500 mb-1">{text.net}</div>
+                <div className="text-xl font-bold text-emerald-700">{formatCurrency(myPayroll?.netSalary || myPayroll?.net_salary)}</div>
+                {myPayroll && (
+                  <div className="absolute top-2 end-2">
+                    <DownloadPayslipButton
+                      compact
+                      data={{
+                        employeeName: employee?.name || "",
+                        employeeId: String(employeeId),
+                        companyName: savedUser.company_name || savedUser.companyName || (typeof window !== "undefined" ? localStorage.getItem("companyName") : "") || "PayNest",
+                        month: myPayroll.periodMonth || myPayroll.period_month,
+                        year: myPayroll.periodYear || myPayroll.period_year,
+                        baseSalary: myPayroll.baseSalary || myPayroll.base_salary,
+                        totalHours: myPayroll.totalHours || myPayroll.total_hours,
+                        adjustment: myPayroll.adjustment,
+                        bonusTotal: myPayroll.bonusTotal || myPayroll.bonus_total,
+                        deductionTotal: myPayroll.deductionTotal || myPayroll.deduction_total,
+                        socialSecurityDeduct: myPayroll.socialSecurityDeduct || myPayroll.social_security_deduct,
+                        netSalary: myPayroll.netSalary || myPayroll.net_salary,
+                      }}
+                      filename={`payslip-${myPayroll.periodMonth || myPayroll.period_month}-${myPayroll.periodYear || myPayroll.period_year}.pdf`}
+                    />
+                  </div>
+                )}
+              </div>
               <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.deductions}</div><div className="text-xl font-bold text-rose-700">{formatCurrency(Math.max(0, -(parseFloat(myPayroll?.adjustment) || 0)) + (parseFloat(myPayroll?.deductionTotal || myPayroll?.deduction_total) || 0) + (parseFloat(myPayroll?.socialSecurityDeduct || myPayroll?.social_security_deduct) || 0))}</div></div>
               <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.hoursDiff}</div><div className={clsx("text-xl font-bold", parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff || 0) < 0 ? "text-rose-700" : "text-emerald-700")}>{(parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff) || 0).toFixed(2)}</div></div>
             </div>
-
-            {myPayroll && (
-              <div className="flex justify-end">
-                <DownloadPayslipButton
-                  data={{
-                    employeeName: employee?.name || "",
-                    employeeId: String(employeeId),
-                    companyName: savedUser.company_name || savedUser.companyName || (typeof window !== "undefined" ? localStorage.getItem("companyName") : "") || "PayNest",
-                    month: myPayroll.periodMonth || myPayroll.period_month,
-                    year: myPayroll.periodYear || myPayroll.period_year,
-                    baseSalary: myPayroll.baseSalary || myPayroll.base_salary,
-                    totalHours: myPayroll.totalHours || myPayroll.total_hours,
-                    adjustment: myPayroll.adjustment,
-                    bonusTotal: myPayroll.bonusTotal || myPayroll.bonus_total,
-                    deductionTotal: myPayroll.deductionTotal || myPayroll.deduction_total,
-                    socialSecurityDeduct: myPayroll.socialSecurityDeduct || myPayroll.social_security_deduct,
-                    netSalary: myPayroll.netSalary || myPayroll.net_salary,
-                  }}
-                  filename={`payslip-${myPayroll.periodMonth || myPayroll.period_month}-${myPayroll.periodYear || myPayroll.period_year}.pdf`}
-                />
-              </div>
-            )}
 
             {/* ── My Tasks card (reusable inline) ── */}
             {(() => {
