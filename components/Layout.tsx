@@ -180,7 +180,7 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
         <nav className="flex-1 px-3 py-4 overflow-y-auto">
           <div className="text-[11px] font-semibold uppercase text-slate-400 tracking-wider px-3 mb-2 lg:hidden lg:group-hover:block">{t("overview")}</div>
           <div className="space-y-0.5">
-            {navItems.map((item) => {
+            {navItems.filter((i) => i.key !== "settings").map((item) => {
               const Icon = item.icon as React.ElementType;
               if (item.children) {
                 const isActive = pathname.startsWith(item.path);
@@ -239,18 +239,32 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
                 </Link>
               );
             })}
-
-            {/* Contact us — below Settings */}
-            <a
-              href="mailto:support@paynest.app"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all lg:justify-center lg:group-hover:justify-start"
-            >
-              <Mail size={17} strokeWidth={2} className="text-slate-400 flex-shrink-0" />
-              <span className="lg:hidden lg:group-hover:block">{isRTL ? "تواصل معنا" : "Contact us"}</span>
-            </a>
           </div>
         </nav>
 
+        {/* Pinned bottom: Settings + Contact us */}
+        <div className="px-3 py-3 border-t border-slate-100 space-y-0.5">
+          {navItems.some((i) => i.key === "settings") && (
+            <Link
+              href="/settings"
+              onClick={() => setSidebarOpen(false)}
+              className={clsx(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all lg:justify-center lg:group-hover:justify-start",
+                pathname.startsWith("/settings") ? "bg-brand-50 text-brand-700 shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              )}
+            >
+              <SettingsIcon size={17} className={clsx("flex-shrink-0", pathname.startsWith("/settings") ? "text-brand-600" : "text-slate-400")} />
+              <span className="lg:hidden lg:group-hover:block">{t("settings")}</span>
+            </Link>
+          )}
+          <a
+            href="mailto:support@paynest.app"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all lg:justify-center lg:group-hover:justify-start"
+          >
+            <Mail size={17} strokeWidth={2} className="text-slate-400 flex-shrink-0" />
+            <span className="lg:hidden lg:group-hover:block">{isRTL ? "تواصل معنا" : "Contact us"}</span>
+          </a>
+        </div>
       </aside>
 
       <div className={clsx("min-h-screen flex flex-col transition-all", isRTL ? "lg:mr-16" : "lg:ml-16")}>
