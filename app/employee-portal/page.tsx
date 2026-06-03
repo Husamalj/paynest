@@ -756,88 +756,6 @@ export default function EmployeePortalPage() {
               );
             })()}
 
-            {/* ── Subordinate leave requests (supervisor view) ────────── */}
-            {subLeaves.length > 0 && (
-              <div className="card">
-                <div className="card-header">
-                  <div className="card-title">
-                    <Calendar size={16} className="text-brand-600" />
-                    {isRTL ? "طلبات إجازة موظفيك" : "Team Leave Requests"}
-                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold">
-                      {subLeaves.filter((l) => l.supervisorStatus === "pending").length} {isRTL ? "بانتظار موافقتك" : "pending"}
-                    </span>
-                  </div>
-                </div>
-                <div className="table-wrapper">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>{isRTL ? "الموظف" : "Employee"}</th>
-                        <th>{isRTL ? "النوع" : "Type"}</th>
-                        <th>{isRTL ? "من" : "From"}</th>
-                        <th>{isRTL ? "إلى" : "To"}</th>
-                        <th>{isRTL ? "المدة" : "Duration"}</th>
-                        <th>{isRTL ? "حالة HR" : "HR"}</th>
-                        <th>{isRTL ? "إجراء" : "Action"}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {subLeaves.map((leave) => {
-                        const isPerm = leave.leaveType === "permission" || leave.leave_type === "permission";
-                        const lType  = leave.leaveType || leave.leave_type || "";
-                        const typeLabel = isPerm ? (isRTL ? "إذن مغادرة" : "Permission")
-                          : lType === "annual" ? (isRTL ? "سنوية" : "Annual")
-                          : lType === "sick"   ? (isRTL ? "مرضية" : "Sick")
-                          : lType === "unpaid" ? (isRTL ? "بدون راتب" : "Unpaid")
-                          : lType;
-                        const dc = leave.daysCount ?? leave.days_count ?? 0;
-                        const duration = isPerm
-                          ? `${dc} ${isRTL ? (dc === 1 ? "ساعة" : "ساعات") : (dc === 1 ? "hr" : "hrs")}`
-                          : `${dc} ${isRTL ? "يوم" : "days"}`;
-                        const supStatus = leave.supervisorStatus ?? leave.supervisor_status ?? "pending";
-                        const hrStatus  = leave.hrStatus ?? leave.hr_status ?? "pending";
-                        const attUrl    = leave.attachmentUrl ?? leave.attachment_url;
-                        return (
-                          <tr key={leave.id}>
-                            <td className="font-medium">{leave.employeeName || leave.employee_name || leave.employeeId}</td>
-                            <td>{typeLabel}</td>
-                            <td>{formatDate(leave.startDate || leave.start_date)}</td>
-                            <td>{isPerm ? "-" : formatDate(leave.endDate || leave.end_date)}</td>
-                            <td>{duration}</td>
-                            <td>
-                              <span className={`badge ${hrStatus === "approved" ? "badge-green" : hrStatus === "rejected" ? "badge-red" : "badge-yellow"}`}>
-                                {hrStatus === "approved" ? (isRTL ? "وافق" : "OK") : hrStatus === "rejected" ? (isRTL ? "رفض" : "Rej") : (isRTL ? "انتظار" : "Wait")}
-                              </span>
-                            </td>
-                            <td>
-                              {attUrl && (
-                                <a href={attUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-brand-600 text-xs hover:underline me-2">
-                                  <Paperclip size={11} />{isRTL ? "ملف" : "File"}
-                                </a>
-                              )}
-                              {supStatus === "pending" ? (
-                                <div className="flex gap-1">
-                                  <button onClick={() => approveSubLeave(leave.id, true)} className="btn btn-sm bg-emerald-500 hover:bg-emerald-600 text-white gap-1">
-                                    <ThumbsUp size={12} />{isRTL ? "موافق" : "Approve"}
-                                  </button>
-                                  <button onClick={() => approveSubLeave(leave.id, false)} className="btn btn-sm bg-rose-500 hover:bg-rose-600 text-white gap-1">
-                                    <ThumbsDown size={12} />{isRTL ? "رفض" : "Reject"}
-                                  </button>
-                                </div>
-                              ) : (
-                                <span className={`badge ${supStatus === "approved" ? "badge-green" : "badge-red"}`}>
-                                  {supStatus === "approved" ? (isRTL ? "وافقت" : "Approved") : (isRTL ? "رفضت" : "Rejected")}
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.base}</div><div className="text-xl font-bold text-slate-900">{formatCurrency(myPayroll?.baseSalary || myPayroll?.base_salary || employee.baseSalary || employee.base_salary)}</div></div>
@@ -1032,6 +950,89 @@ export default function EmployeePortalPage() {
                 </form>
               </div>
             </div>
+            )}
+
+            {/* ── Subordinate leave requests (supervisor view) ────────── */}
+            {subLeaves.length > 0 && (
+              <div className="card">
+                <div className="card-header">
+                  <div className="card-title">
+                    <Calendar size={16} className="text-brand-600" />
+                    {isRTL ? "طلبات إجازة موظفيك" : "Team Leave Requests"}
+                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold">
+                      {subLeaves.filter((l) => l.supervisorStatus === "pending").length} {isRTL ? "بانتظار موافقتك" : "pending"}
+                    </span>
+                  </div>
+                </div>
+                <div className="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>{isRTL ? "الموظف" : "Employee"}</th>
+                        <th>{isRTL ? "النوع" : "Type"}</th>
+                        <th>{isRTL ? "من" : "From"}</th>
+                        <th>{isRTL ? "إلى" : "To"}</th>
+                        <th>{isRTL ? "المدة" : "Duration"}</th>
+                        <th>{isRTL ? "حالة HR" : "HR"}</th>
+                        <th>{isRTL ? "إجراء" : "Action"}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {subLeaves.map((leave) => {
+                        const isPerm = leave.leaveType === "permission" || leave.leave_type === "permission";
+                        const lType  = leave.leaveType || leave.leave_type || "";
+                        const typeLabel = isPerm ? (isRTL ? "إذن مغادرة" : "Permission")
+                          : lType === "annual" ? (isRTL ? "سنوية" : "Annual")
+                          : lType === "sick"   ? (isRTL ? "مرضية" : "Sick")
+                          : lType === "unpaid" ? (isRTL ? "بدون راتب" : "Unpaid")
+                          : lType;
+                        const dc = leave.daysCount ?? leave.days_count ?? 0;
+                        const duration = isPerm
+                          ? `${dc} ${isRTL ? (dc === 1 ? "ساعة" : "ساعات") : (dc === 1 ? "hr" : "hrs")}`
+                          : `${dc} ${isRTL ? "يوم" : "days"}`;
+                        const supStatus = leave.supervisorStatus ?? leave.supervisor_status ?? "pending";
+                        const hrStatus  = leave.hrStatus ?? leave.hr_status ?? "pending";
+                        const attUrl    = leave.attachmentUrl ?? leave.attachment_url;
+                        return (
+                          <tr key={leave.id}>
+                            <td className="font-medium">{leave.employeeName || leave.employee_name || leave.employeeId}</td>
+                            <td>{typeLabel}</td>
+                            <td>{formatDate(leave.startDate || leave.start_date)}</td>
+                            <td>{isPerm ? "-" : formatDate(leave.endDate || leave.end_date)}</td>
+                            <td>{duration}</td>
+                            <td>
+                              <span className={`badge ${hrStatus === "approved" ? "badge-green" : hrStatus === "rejected" ? "badge-red" : "badge-yellow"}`}>
+                                {hrStatus === "approved" ? (isRTL ? "وافق" : "OK") : hrStatus === "rejected" ? (isRTL ? "رفض" : "Rej") : (isRTL ? "انتظار" : "Wait")}
+                              </span>
+                            </td>
+                            <td>
+                              {attUrl && (
+                                <a href={attUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-brand-600 text-xs hover:underline me-2">
+                                  <Paperclip size={11} />{isRTL ? "ملف" : "File"}
+                                </a>
+                              )}
+                              {supStatus === "pending" ? (
+                                <div className="flex gap-1">
+                                  <button onClick={() => approveSubLeave(leave.id, true)} className="btn btn-sm bg-emerald-500 hover:bg-emerald-600 text-white gap-1">
+                                    <ThumbsUp size={12} />{isRTL ? "موافق" : "Approve"}
+                                  </button>
+                                  <button onClick={() => approveSubLeave(leave.id, false)} className="btn btn-sm bg-rose-500 hover:bg-rose-600 text-white gap-1">
+                                    <ThumbsDown size={12} />{isRTL ? "رفض" : "Reject"}
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className={`badge ${supStatus === "approved" ? "badge-green" : "badge-red"}`}>
+                                  {supStatus === "approved" ? (isRTL ? "وافقت" : "Approved") : (isRTL ? "رفضت" : "Rejected")}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             )}
 
             <div className="card">
