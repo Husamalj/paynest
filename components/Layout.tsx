@@ -173,7 +173,7 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
             : "left-0 border-r " + (sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0")
         )}
       >
-        <div className="px-3 lg:px-2 lg:group-hover:px-5 py-5 border-b border-slate-100">
+        <div className="h-[84px] flex flex-col justify-center px-3 lg:px-2 lg:group-hover:px-5 border-b border-slate-100">
           <div className="flex items-center gap-3 lg:justify-center lg:group-hover:justify-start">
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white shadow-sm flex-shrink-0">
               <Building2 size={18} strokeWidth={2.5} />
