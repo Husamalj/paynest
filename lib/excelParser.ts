@@ -163,6 +163,30 @@ export interface EmployeeRecord {
   name: string;
   base_salary: number;
   social_security: boolean;
+  email?: string | null;
+  department?: string | null;
+  join_date?: string | null;
+  contract_end_date?: string | null;
+}
+
+/**
+ * Detect the new SANA salary workbook (المصنف المحدث): header on row 1 with
+ * "الرقم الوظيفي" + "تاريخ بدء العقد", data starting row 4. Columns by letter:
+ *   B=id  C=name  D=contract start (join)  E=contract end (leave)
+ *   M=email  N=department  O=base salary
+ * Returns the 0-based header row index, or -1 if not this format.
+ */
+function findSalaryV2HeaderRow(rows: unknown[][]): number {
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+    if (!rows[i]) continue;
+    const cells = rows[i].map(normalizeHeader);
+    const joined = cells.join("|");
+    const hasId = joined.includes("الرقم الوظيفي") || joined.includes("الرقم الوظ");
+    const hasContractStart = joined.includes("تاريخ بدء العقد") || joined.includes("بدء العقد");
+    const hasEmail = joined.includes("البريد") || joined.includes("الالكتروني");
+    if (hasId && hasContractStart && hasEmail) return i;
+  }
+  return -1;
 }
 
 export function parseAttendanceFile(buffer: Buffer, batchId: string): AttendanceRecord[] & { employeeCount?: number } {
@@ -240,6 +264,12 @@ export function parseSalaryFile(buffer: Buffer): EmployeeRecord[] {
   const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" });
   if (!rows.length) return [];
 
+  // ── New SANA workbook format (header row 1, data from row 4) ──────────────
+  const v2HeaderRow = findSalaryV2HeaderRow(rows);
+  if (v2HeaderRow >= 0) {
+    return parseSalaryV2(rows, v2HeaderRow);
+  }
+
   const headerRow = findSalaryHeaderRow(rows);
   const employees: EmployeeRecord[] = [];
   const seen = new Set<string>();
@@ -281,6 +311,66 @@ export function parseSalaryFile(buffer: Buffer): EmployeeRecord[] {
 }
 
 /**
+ * Parse the new SANA salary workbook. Header is on `headerRow` (row 1); the
+ * key headers all live on that row, so we locate columns by header text and
+ * read every following row that carries a real employee id.
+ */
+function parseSalaryV2(rows: unknown[][], headerRow: number): EmployeeRecord[] {
+  const headers = rows[headerRow].map(normalizeHeader);
+  const col = (...keys: string[]) => findHeaderIndex(headers, keys);
+
+  const iId      = col("الرقم الوظيفي", "الرقم الوظ", "employee id", "id");
+  const iName    = col("اسم الموظف", "الاسم", "اسم", "name");
+  const iStart   = col("تاريخ بدء العقد", "بدء العقد");
+  const iEnd     = col("تاريخ انتهاء العقد", "انتهاء العقد");
+  const iEmail   = col("البريد الالكتروني", "البريد", "email");
+  const iDept    = col("القسم التابع له", "القسم", "department");
+  const iSalary  = col("الراتب الأساسي", "الراتب الاساسي", "الراتب", "base salary", "basic salary");
+  const iGuar    = col("راتب الضمان", "الضمان الاجتماعي", "نسبة الضمان");
+
+  const employees: EmployeeRecord[] = [];
+  const seen = new Set<string>();
+
+  for (let i = headerRow + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.every((c) => c == null || c === "")) continue;
+
+    const id = iId >= 0 ? normalizeId(row[iId]) : "";
+    const name = iName >= 0 ? normalizeName(row[iName]) : "";
+    // Sub-header rows (2-3) and totals have no real id+name pair — skip them.
+    if (!id && !name) continue;
+    if (!name) continue;
+    const lower = name.toLowerCase();
+    if (lower === "total" || lower.startsWith("الإجمالي") || lower.startsWith("المجموع")) continue;
+
+    const salary = iSalary >= 0 ? parseSalaryValue(row[iSalary]) : 0;
+    const employee_id = id || name;
+    if (seen.has(employee_id)) continue;
+    seen.add(employee_id);
+
+    const email = iEmail >= 0 ? String(row[iEmail] || "").trim() : "";
+    const department = iDept >= 0 ? String(row[iDept] || "").trim() : "";
+    const join_date = iStart >= 0 ? parseDateValue(row[iStart]) : null;
+    const contract_end_date = iEnd >= 0 ? parseDateValue(row[iEnd]) : null;
+    const social_security =
+      iGuar >= 0 && row[iGuar] != null && parseSalaryValue(row[iGuar]) > 0;
+
+    employees.push({
+      employee_id,
+      name,
+      base_salary: salary,
+      social_security,
+      email: email || null,
+      department: department || null,
+      join_date,
+      contract_end_date,
+    });
+  }
+
+  return employees;
+}
+
+/**
  * Detect whether an uploaded workbook looks like an attendance (time/hours)
  * file or a salary file — used to warn when a file is dropped in the wrong box.
  * Returns "attendance" | "salary" | "unknown".
@@ -293,6 +383,7 @@ export function detectFileKind(buffer: Buffer): "attendance" | "salary" | "unkno
       if (!ws) continue;
       const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "", raw: true });
       if (!rows.length) continue;
+      if (findSalaryV2HeaderRow(rows) >= 0) return "salary";
       if (findAttendanceHeaderRow(rows) >= 0) return "attendance";
       if (findSalaryHeaderRow(rows) >= 0) return "salary";
     }

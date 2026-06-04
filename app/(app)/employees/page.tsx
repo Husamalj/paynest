@@ -544,6 +544,20 @@ export default function EmployeesPage() {
                     <div className="text-sm font-mono font-semibold text-slate-900">{formatCurrency(selectedEmployee.base_salary)}</div>
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-4 py-3 border-t border-slate-50">
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{ar ? "القسم" : "Department"}</div>
+                    <div className="text-sm font-medium text-slate-800">{selectedEmployee.department || "-"}</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{ar ? "تاريخ الانضمام" : "Join Date"}</div>
+                    <div className="text-sm font-medium text-slate-800">{selectedEmployee.join_date ? String(selectedEmployee.join_date).substring(0, 10) : "-"}</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{ar ? "تاريخ انتهاء العقد" : "Contract End"}</div>
+                    <div className="text-sm font-medium text-slate-800">{selectedEmployee.contract_end_date ? String(selectedEmployee.contract_end_date).substring(0, 10) : "-"}</div>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-4 py-3">
                   <div>
                     <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{religionTitle}</div>

@@ -228,7 +228,9 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // 2. Batch upsert all employees — one transaction
+          // 2. Batch upsert all employees — one transaction.
+          //    New SANA format also carries email / department / contract dates.
+          const toDate = (d?: string | null) => (d ? new Date(d) : null);
           await prisma.$transaction(
             emps.map((emp) =>
               prisma.employee.upsert({
@@ -238,6 +240,10 @@ export async function POST(req: NextRequest) {
                   name: emp.name,
                   baseSalary: emp.base_salary,
                   socialSecurity: emp.social_security,
+                  email: emp.email ?? "",
+                  department: emp.department ?? null,
+                  joinDate: toDate(emp.join_date),
+                  contractEndDate: toDate(emp.contract_end_date),
                   systemMode,
                   companyId,
                 },
@@ -245,6 +251,10 @@ export async function POST(req: NextRequest) {
                   name: emp.name,
                   baseSalary: emp.base_salary,
                   socialSecurity: emp.social_security,
+                  ...(emp.email ? { email: emp.email } : {}),
+                  ...(emp.department ? { department: emp.department } : {}),
+                  ...(emp.join_date ? { joinDate: toDate(emp.join_date) } : {}),
+                  ...(emp.contract_end_date ? { contractEndDate: toDate(emp.contract_end_date) } : {}),
                 },
               })
             )

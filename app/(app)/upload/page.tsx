@@ -33,7 +33,7 @@ function FileDropZone({ label, icon: Icon, accent, onFiles, accept, uploading }:
       <p className="font-semibold text-slate-900 mb-1">{label}</p>
       <p className="text-[13px] text-slate-500 mb-1">{t("dragDrop")}</p>
       <p className="text-[11px] text-slate-400">{t("supportedFormats")}</p>
-      <input ref={inputRef} type="file" multiple={accept === "attendance"} accept=".xlsx,.xls,.csv" className="hidden"
+      <input ref={inputRef} type="file" multiple={accept === "attendance"} accept=".xlsx,.xlsm,.xls,.csv" className="hidden"
         onChange={(e) => { const files = Array.from(e.target.files || []); if (files.length) onFiles(files); e.target.value = ""; }} />
     </div>
   );

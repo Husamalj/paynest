@@ -5,6 +5,7 @@ import { Users, Wallet, DollarSign, TrendingDown, Gift, Shield, AlertTriangle, M
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import StatCard from "@/components/StatCard";
 import api from "@/lib/api";
+import clsx from "clsx";
 
 function MiniCalendar({ leaves, isRTL }: { leaves: any[]; isRTL: boolean }) {
   const [cursor, setCursor] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
@@ -197,6 +198,21 @@ export default function DashboardPage() {
 
   const pendingLeaves = leaves.filter((l) => l.status === "pending").length;
   const openTasks = tasks.filter((t) => t.status !== "completed").length;
+
+  // Employees whose contract ends within the next 30 days (soonest first).
+  const expiringContracts = useMemo(() => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const horizon = new Date(today); horizon.setDate(horizon.getDate() + 30);
+    return employees
+      .filter((e) => e.contract_end_date)
+      .map((e) => {
+        const end = new Date(String(e.contract_end_date).substring(0, 10));
+        const days = Math.ceil((end.getTime() - today.getTime()) / 86400000);
+        return { ...e, _end: end, _days: days };
+      })
+      .filter((e) => !isNaN(e._end.getTime()) && e._end >= today && e._end <= horizon)
+      .sort((a, b) => a._days - b._days);
+  }, [employees]);
   const remoteWorkEmployees = useMemo(() => {
     const seen = new Set<string>();
     return remoteAssignments.filter((a) => { const k = `${a.emp_id}|${a.start_date}|${a.end_date}`; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 5);
@@ -261,18 +277,24 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="card lg:col-span-2">
-          <div className="card-header"><div className="card-title"><Wallet size={16} className="text-brand-600" />{t("recentPayroll")}</div></div>
-          {payroll.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noData")}</div> : (
+          <div className="card-header"><div className="card-title"><Calendar size={16} className="text-amber-500" />{isRTL ? "تنبيهات انتهاء العقود" : "Contract Expiry Reminders"}</div></div>
+          {expiringContracts.length === 0 ? (
+            <div className="text-center py-12 text-sm text-slate-400">{isRTL ? "لا توجد عقود تنتهي خلال 30 يومًا" : "No contracts ending within 30 days"}</div>
+          ) : (
             <div className="table-wrapper">
               <table>
-                <thead><tr><th>{t("name")}</th><th className="text-right">{t("baseSalary")}</th><th className="text-right">{t("netSalary")}</th><th>{t("status")}</th></tr></thead>
+                <thead><tr><th>{t("name")}</th><th>{isRTL ? "القسم" : "Department"}</th><th>{isRTL ? "تاريخ الانتهاء" : "Contract End"}</th><th className="text-right">{isRTL ? "المتبقي" : "Remaining"}</th></tr></thead>
                 <tbody>
-                  {payroll.slice(0, 8).map((row, idx) => (
+                  {expiringContracts.slice(0, 8).map((row, idx) => (
                     <tr key={idx}>
                       <td className="font-medium text-slate-900">{row.name}</td>
-                      <td className="text-right font-mono">{formatCurrency(row.base_salary)}</td>
-                      <td className="text-right font-mono font-semibold text-brand-700">{formatCurrency(row.net_salary)}</td>
-                      <td>{getStatusBadge(row.status, t)}</td>
+                      <td className="text-slate-600">{row.department || "-"}</td>
+                      <td className="font-mono text-slate-600">{String(row.contract_end_date).substring(0, 10)}</td>
+                      <td className="text-right">
+                        <span className={clsx("badge", row._days <= 7 ? "badge-red" : row._days <= 14 ? "badge-yellow" : "badge-gray")}>
+                          {row._days} {isRTL ? "يوم" : "days"}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

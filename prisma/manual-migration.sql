@@ -46,3 +46,8 @@ CREATE TABLE IF NOT EXISTS job_offers (
   created_at           TIMESTAMP NOT NULL DEFAULT now(),
   updated_at           TIMESTAMP NOT NULL DEFAULT now()
 );
+
+-- 4) New salary-file fields on employees (email already exists)
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS join_date DATE;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS contract_end_date DATE;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS department VARCHAR(50);
