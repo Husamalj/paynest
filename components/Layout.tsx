@@ -196,12 +196,12 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
             : "left-0 border-r " + (sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0")
         )}
       >
-        <div className="h-[72px] flex items-center px-3 lg:justify-center lg:group-hover:justify-start lg:group-hover:px-5 border-b border-slate-100">
+        <div className="h-[72px] flex items-center px-3 lg:justify-center lg:group-hover:justify-start lg:group-hover:px-5 bg-[#0A233A]">
           <div className="flex items-center gap-3 w-full">
             <img src="/paynest-emblem.png" alt="PayNest" className="w-9 h-9 rounded-lg object-cover shadow-sm flex-shrink-0" />
             <div className="flex-1 min-w-0 lg:hidden lg:group-hover:block">
-              <div className="text-[15px] font-bold text-slate-900 truncate">Pay<span className="text-brand-600">Nest</span></div>
-              <div className="text-[11px] text-slate-500 font-medium">HR & Payroll</div>
+              <img src="/paynest-wordmark.png" alt="PayNest" className="h-5 object-contain object-left" />
+              <div className="text-[10px] text-slate-400 font-medium mt-0.5">HR & Payroll</div>
             </div>
           </div>
         </div>
