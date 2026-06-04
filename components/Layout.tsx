@@ -62,10 +62,10 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { key: "employeeManagement", path: "/employees" },
       { key: "remoteMenu", path: "/employees/remote" },
+      { key: "companyStructure", path: "/company-structure" },
     ],
   },
   { key: "supervisorAssignment", path: "/supervisor-assignment", icon: Network },
-  { key: "companyStructure", path: "/company-structure", icon: GitBranch },
   { key: "evaluations", path: "/evaluations", icon: ClipboardList },
   {
     key: "requests",
