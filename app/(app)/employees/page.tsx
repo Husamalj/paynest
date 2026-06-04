@@ -568,11 +568,19 @@ export default function EmployeesPage() {
                     <div>{selectedEmployee.social_security ? <span className="badge badge-purple"><Shield size={11} /> {t("enabled")}</span> : <span className="badge badge-gray">{t("disabled")}</span>}</div>
                   </div>
                 </div>
-                <div className="py-3">
-                  <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{ar ? "الإجازات السنوية المتبقية" : "Annual Leave Remaining"}</div>
-                  <span className={clsx("badge", Number(selectedBalance?.annual_remaining ?? 14) > 5 ? "badge-green" : Number(selectedBalance?.annual_remaining ?? 14) > 0 ? "badge-yellow" : "badge-red")}>
-                    <Calendar size={11} />{selectedBalance?.annual_remaining ?? 14} {ar ? "يوم" : "days"}
-                  </span>
+                <div className="grid grid-cols-2 gap-4 py-3">
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{ar ? "الإجازات السنوية المتبقية" : "Annual Leave Remaining"}</div>
+                    <span className={clsx("badge", Number(selectedBalance?.annual_remaining ?? 14) > 5 ? "badge-green" : Number(selectedBalance?.annual_remaining ?? 14) > 0 ? "badge-yellow" : "badge-red")}>
+                      <Calendar size={11} />{selectedBalance?.annual_remaining ?? 14} {ar ? "يوم" : "days"}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{ar ? "الإجازات المرضية المتبقية" : "Sick Leave Remaining"}</div>
+                    <span className={clsx("badge", Number(selectedBalance?.sick_remaining ?? 14) > 5 ? "badge-green" : Number(selectedBalance?.sick_remaining ?? 14) > 0 ? "badge-yellow" : "badge-red")}>
+                      <Calendar size={11} />{selectedBalance?.sick_remaining ?? 14} {ar ? "يوم" : "days"}
+                    </span>
+                  </div>
                 </div>
                 {/* Documents — view / replace / delete each one */}
                 <div className="py-3">
