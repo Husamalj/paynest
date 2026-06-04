@@ -179,7 +179,7 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
               <Building2 size={18} strokeWidth={2.5} />
             </div>
             <div className="flex-1 min-w-0 lg:hidden lg:group-hover:block">
-              <div className="text-[15px] font-bold text-slate-900 truncate">{companyName}</div>
+              <div className="text-[15px] font-bold text-slate-900 truncate">Pay<span className="text-brand-600">Nest</span></div>
               <div className="text-[11px] text-slate-500 font-medium">HR & Payroll</div>
             </div>
           </div>
@@ -290,8 +290,13 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
             </div>
           </div>
 
-          {/* Right side: bell + profile, tightly grouped */}
+          {/* Right side: company + bell + profile, tightly grouped */}
           <div className="flex items-center gap-2">
+          {/* Company name — always visible next to the user */}
+          <div className="hidden md:flex items-center gap-1.5 me-1 px-2.5 py-1 rounded-lg bg-brand-50 text-brand-700 text-sm font-semibold">
+            <Building2 size={14} className="text-brand-600" />
+            <span className="truncate max-w-[160px]">{companyName}</span>
+          </div>
           {/* Notification Bell */}
           {NotificationBell && <NotificationBell />}
 
