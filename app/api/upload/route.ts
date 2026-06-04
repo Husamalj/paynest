@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 import { parseAttendanceFile, parseSalaryFile, detectFileKind } from "@/lib/excelParser";
@@ -259,6 +260,34 @@ export async function POST(req: NextRequest) {
               })
             )
           );
+
+          // 3. Auto-create login accounts for employees that have an email and
+          //    don't already have a user. Temp password "123456" + forced change.
+          const withEmail = emps.filter((e) => e.email && e.email.includes("@"));
+          if (withEmail.length > 0) {
+            const emails = withEmail.map((e) => e.email as string);
+            const existingUsers = await prisma.user.findMany({
+              where: { email: { in: emails } },
+              select: { email: true },
+            });
+            const haveAccount = new Set(existingUsers.map((u) => u.email));
+            const tempHash = await bcrypt.hash("123456", 10);
+            const toCreate = withEmail.filter((e) => !haveAccount.has(e.email as string));
+            if (toCreate.length > 0) {
+              await prisma.user.createMany({
+                data: toCreate.map((e) => ({
+                  name: e.name,
+                  email: e.email as string,
+                  password: tempHash,
+                  role: "employee",
+                  companyId,
+                  employeeNumber: e.employee_id,
+                  mustChangePassword: true,
+                })),
+                skipDuplicates: true,
+              });
+            }
+          }
         }
       }
 
