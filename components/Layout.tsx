@@ -280,13 +280,20 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
             <button className="lg:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg" onClick={() => setSidebarOpen(true)}>
               <Menu size={20} />
             </button>
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center flex-shrink-0">
                 <CurrentIcon size={16} strokeWidth={2.5} />
               </div>
-              <h1 className="text-[15px] font-semibold text-slate-900 truncate">
-                {t((currentNav?.key || "dashboard") as TranslationKey)}
-              </h1>
+              <div className="min-w-0">
+                <h1 className="text-[15px] font-semibold text-slate-900 truncate leading-tight">
+                  {t((currentNav?.key || "dashboard") as TranslationKey)}
+                </h1>
+                {pathname === "/dashboard" && (
+                  <p className="text-[10px] text-slate-400 truncate leading-tight">
+                    <span className="font-semibold text-slate-500">{companyName}</span> • HR, payroll, attendance, and employee requests
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
