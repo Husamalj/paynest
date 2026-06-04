@@ -198,9 +198,7 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
       >
         <div className="h-[72px] flex items-center px-3 lg:justify-center lg:group-hover:justify-start lg:group-hover:px-5 border-b border-slate-100">
           <div className="flex items-center gap-3 w-full">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white shadow-sm flex-shrink-0">
-              <Building2 size={18} strokeWidth={2.5} />
-            </div>
+            <img src="/paynest-emblem.png" alt="PayNest" className="w-9 h-9 rounded-lg object-cover shadow-sm flex-shrink-0" />
             <div className="flex-1 min-w-0 lg:hidden lg:group-hover:block">
               <div className="text-[15px] font-bold text-slate-900 truncate">Pay<span className="text-brand-600">Nest</span></div>
               <div className="text-[11px] text-slate-500 font-medium">HR & Payroll</div>
