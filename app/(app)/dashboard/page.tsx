@@ -156,11 +156,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="page-header">
-        <div>
-          <h2 className="page-title">{t("dashboard")}</h2>
-          <p className="page-subtitle">{settings?.company_name || "PayNest"} • HR, payroll, attendance, and employee requests</p>
-        </div>
+      <div className="mb-1">
+        <p className="text-sm text-slate-500"><span className="font-semibold text-slate-700">{settings?.company_name || "PayNest"}</span> • HR, payroll, attendance, and employee requests</p>
       </div>
 
       {error && <div className="alert alert-error"><AlertTriangle size={16} />{error}</div>}
