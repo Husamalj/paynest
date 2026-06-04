@@ -87,6 +87,15 @@
       "namedRegex": "^/api/employees/(?<nxtPid>[^/]+?)/documents(?:/)?$"
     },
     {
+      "page": "/api/employees/[id]/documents/[type]",
+      "regex": "^/api/employees/([^/]+?)/documents/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid",
+        "nxtPtype": "nxtPtype"
+      },
+      "namedRegex": "^/api/employees/(?<nxtPid>[^/]+?)/documents/(?<nxtPtype>[^/]+?)(?:/)?$"
+    },
+    {
       "page": "/api/employees/[id]/remote-assignments",
       "regex": "^/api/employees/([^/]+?)/remote\\-assignments(?:/)?$",
       "routeKeys": {

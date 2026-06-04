@@ -271,11 +271,16 @@
   .page-header {
     @apply flex flex-wrap items-center justify-between gap-3 mb-6;
   }
-  .page-title {
-    @apply text-xl font-bold text-slate-900 tracking-tight;
-  }
+  /* The page name already shows in the top header bar, so the big in-body
+     title/subtitle are redundant. Hide them across ALL pages while keeping
+     any action buttons that live in the header row. */
+  .page-title,
   .page-subtitle {
-    @apply text-sm text-slate-500 mt-0.5;
+    @apply hidden;
+  }
+  /* Title-only headers (no buttons/links) collapse entirely to avoid a gap. */
+  .page-header:not(:has(button)):not(:has(a)) {
+    @apply hidden;
   }
 
   .upload-zone {

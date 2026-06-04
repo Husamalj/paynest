@@ -51,6 +51,7 @@
   "/api/companies/onboarding-status/route": "/api/companies/onboarding-status",
   "/api/companies/route": "/api/companies",
   "/api/copilot/ask/route": "/api/copilot/ask",
+  "/api/employees/[id]/documents/[type]/route": "/api/employees/[id]/documents/[type]",
   "/api/employees/[id]/documents/route": "/api/employees/[id]/documents",
   "/api/employees/[id]/remote-assignments/[rid]/route": "/api/employees/[id]/remote-assignments/[rid]",
   "/api/employees/[id]/remote-assignments/route": "/api/employees/[id]/remote-assignments",

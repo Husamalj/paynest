@@ -25,6 +25,7 @@
     "/api/employees": {},
     "/api/employees/[id]": {},
     "/api/employees/[id]/documents": {},
+    "/api/employees/[id]/documents/[type]": {},
     "/api/employees/[id]/remote-assignments": {},
     "/api/employees/[id]/remote-assignments/[rid]": {},
     "/api/employees/me": {},

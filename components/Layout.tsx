@@ -159,6 +159,29 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
   );
   const CurrentIcon = (currentNav?.icon || LayoutDashboard) as React.ElementType;
 
+  // Short descriptor shown under each page title in the top header (like the dashboard).
+  const PAGE_SUBTITLES: Record<string, { en: string; ar: string }> = {
+    "/dashboard": { en: "HR, payroll, attendance, and employee requests", ar: "الموارد البشرية والرواتب والحضور وطلبات الموظفين" },
+    "/employees": { en: "Add, edit, and manage employee records", ar: "إضافة وتعديل وإدارة بيانات الموظفين" },
+    "/company-structure": { en: "Read-only org chart", ar: "الهيكل الإداري للشركة" },
+    "/payroll": { en: "Calculate and review monthly salaries", ar: "احتساب ومراجعة الرواتب الشهرية" },
+    "/leaves": { en: "Leaves, departures, and holidays", ar: "الإجازات والمغادرات والعطل الرسمية" },
+    "/advances": { en: "Advance requests — auto-deducted from salary", ar: "طلبات السلف — تُخصم من الراتب تلقائياً" },
+    "/upload": { en: "Upload attendance and salary files first", ar: "ارفع ملفات الحضور والرواتب أولاً" },
+    "/reports": { en: "Export payroll and attendance reports", ar: "تصدير تقارير الرواتب والحضور" },
+    "/bonuses": { en: "Bonuses and deductions", ar: "المكافآت والخصومات" },
+    "/tasks": { en: "Assign and track team tasks", ar: "إسناد ومتابعة مهام الفريق" },
+    "/announcements": { en: "Company-wide announcements", ar: "إعلانات الشركة" },
+    "/hr-team": { en: "Manage HR users", ar: "إدارة مستخدمي الموارد البشرية" },
+    "/supervisor-assignment": { en: "Build the org tree", ar: "بناء شجرة الإشراف" },
+    "/settings": { en: "System and company settings", ar: "إعدادات النظام والشركة" },
+    "/employees/remote": { en: "Manage remote and online work", ar: "إدارة العمل عن بُعد" },
+  };
+  const subKey = Object.keys(PAGE_SUBTITLES)
+    .sort((a, b) => b.length - a.length)
+    .find((k) => (k === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(k)));
+  const pageSub = subKey ? PAGE_SUBTITLES[subKey] : null;
+
   return (
     <div className="min-h-screen bg-slate-50">
       {sidebarOpen && (
@@ -288,9 +311,11 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
                 <h1 className="text-[15px] font-semibold text-slate-900 truncate leading-tight">
                   {t((currentNav?.key || "dashboard") as TranslationKey)}
                 </h1>
-                {pathname === "/dashboard" && (
+                {pageSub && (
                   <p className="text-[10px] text-slate-400 truncate leading-tight">
-                    <span className="font-semibold text-slate-500">{companyName}</span> • HR, payroll, attendance, and employee requests
+                    {pathname === "/dashboard" && <span className="font-semibold text-slate-500">{companyName}</span>}
+                    {pathname === "/dashboard" ? " • " : ""}
+                    {isRTL ? pageSub.ar : pageSub.en}
                   </p>
                 )}
               </div>

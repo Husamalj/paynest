@@ -104,7 +104,7 @@
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "C:\\Users\\ashra\\Desktop\\paynest-clone",
+    "outputFileTracingRoot": "C:\\paynest",
     "cacheComponents": false,
     "cacheLife": {
       "default": {
@@ -166,7 +166,7 @@
       "proxyPrefetch": "flexible",
       "optimisticClientCache": true,
       "manualClientBasePath": false,
-      "cpus": 19,
+      "cpus": 7,
       "memoryBasedWorkersCount": false,
       "imgOptConcurrency": null,
       "imgOptTimeoutInSeconds": 7,
@@ -309,11 +309,11 @@
     "bundlePagesRouterDependencies": false,
     "configFileName": "next.config.ts",
     "turbopack": {
-      "root": "C:\\Users\\ashra\\Desktop\\paynest-clone"
+      "root": "C:\\paynest"
     },
     "distDirRoot": ".next"
   },
-  "appDir": "C:\\Users\\ashra\\Desktop\\paynest-clone",
+  "appDir": "C:\\paynest",
   "relativeAppDir": "",
   "files": [
     ".next\\routes-manifest.json",

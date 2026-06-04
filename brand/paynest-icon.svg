@@ -1,0 +1,32 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="96" y1="40" x2="416" y2="472" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1AA0F2"/>
+      <stop offset="0.55" stop-color="#0C8CE8"/>
+      <stop offset="1" stop-color="#075A9E"/>
+    </linearGradient>
+    <linearGradient id="coin" x1="178" y1="112" x2="334" y2="268" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E3F1FC"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#04335C" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- app tile -->
+  <rect x="16" y="16" width="480" height="480" rx="118" fill="url(#bg)"/>
+
+  <!-- nest (layered arcs cradling the coin) -->
+  <g stroke-linecap="round" fill="none" filter="url(#soft)">
+    <path d="M101 206 Q256 474 411 206" stroke="#A9D6F7" stroke-width="30"/>
+    <path d="M133 212 Q256 430 379 212" stroke="#D6ECFB" stroke-width="26"/>
+    <path d="M163 216 Q256 392 349 216" stroke="#FFFFFF" stroke-width="22"/>
+  </g>
+
+  <!-- coin -->
+  <circle cx="256" cy="188" r="80" fill="url(#coin)" filter="url(#soft)"/>
+  <circle cx="256" cy="188" r="60" fill="none" stroke="#7CC7FC" stroke-width="7"/>
+  <text x="256" y="190" font-family="Segoe UI, Arial, sans-serif" font-size="104" font-weight="800" fill="#0C8CE8" text-anchor="middle" dominant-baseline="central">$</text>
+  <ellipse cx="230" cy="156" rx="15" ry="8" fill="#FFFFFF" opacity="0.7" transform="rotate(-30 230 156)"/>
+</svg>
