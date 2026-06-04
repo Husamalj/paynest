@@ -1,30 +1,53 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Users, Wallet, DollarSign, TrendingDown, Gift, Shield, AlertTriangle, MapPin, Bell, Calendar, CheckSquare, ChevronLeft, ChevronRight, Scale } from "lucide-react";
+import { Users, Wallet, DollarSign, TrendingDown, Gift, Shield, AlertTriangle, MapPin, Bell, Calendar, CheckSquare, ChevronLeft, ChevronRight, Scale, X } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import StatCard from "@/components/StatCard";
 import api from "@/lib/api";
 
 function MiniCalendar({ leaves, isRTL }: { leaves: any[]; isRTL: boolean }) {
   const [cursor, setCursor] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
+  const [events, setEvents] = useState<{ id: number; date: string; title: string }[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [newTitle, setNewTitle] = useState("");
+  const [saving, setSaving] = useState(false);
   const today = new Date();
   const months = isRTL
     ? ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"]
     : ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const dows = isRTL ? ["أحد","إثن","ثلا","أرب","خمي","جمع","سبت"] : ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
-  // Days that have a leave starting in this month
-  const marked = new Set<number>();
+  const loadEvents = (y: number, m: number) => {
+    api.get(`/events?month=${m + 1}&year=${y}`).then((r) => setEvents(r.data || [])).catch(() => setEvents([]));
+  };
+  useEffect(() => { loadEvents(cursor.y, cursor.m); setSelected(null); }, [cursor.y, cursor.m]);
+
+  const leaveDays = new Set<number>();
   for (const l of leaves) {
     const d = new Date(l.startDate || l.start_date);
-    if (!isNaN(d.getTime()) && d.getFullYear() === cursor.y && d.getMonth() === cursor.m) marked.add(d.getDate());
+    if (!isNaN(d.getTime()) && d.getFullYear() === cursor.y && d.getMonth() === cursor.m) leaveDays.add(d.getDate());
   }
+  const eventDays = new Set<number>(events.map((e) => parseInt(e.date.substring(8, 10), 10)));
+  const dateStr = (day: number) => `${cursor.y}-${String(cursor.m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const selectedEvents = selected ? events.filter((e) => e.date === selected) : [];
 
   const firstDow = new Date(cursor.y, cursor.m, 1).getDay();
   const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
   const cells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
   const move = (delta: number) => setCursor((c) => { const d = new Date(c.y, c.m + delta, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
+
+  const addEvent = async () => {
+    if (!selected || !newTitle.trim()) return;
+    setSaving(true);
+    try {
+      const r = await api.post("/events", { date: selected, title: newTitle.trim() });
+      setEvents((p) => [...p, r.data]); setNewTitle("");
+    } catch { /* ignore */ } finally { setSaving(false); }
+  };
+  const delEvent = async (id: number) => {
+    try { await api.delete(`/events?id=${id}`); setEvents((p) => p.filter((e) => e.id !== id)); } catch { /* ignore */ }
+  };
 
   return (
     <div className="card">
@@ -41,20 +64,47 @@ function MiniCalendar({ leaves, isRTL }: { leaves: any[]; isRTL: boolean }) {
         {cells.map((day, i) => {
           if (day === null) return <div key={i} />;
           const isToday = day === today.getDate() && cursor.m === today.getMonth() && cursor.y === today.getFullYear();
-          const hasLeave = marked.has(day);
+          const isSel = selected === dateStr(day);
+          const hasLeave = leaveDays.has(day);
+          const hasEvent = eventDays.has(day);
           return (
-            <div key={i} className={`relative aspect-square flex items-center justify-center text-xs rounded-lg ${isToday ? "bg-brand-600 text-white font-bold" : "text-slate-600 hover:bg-slate-100"}`}>
+            <button key={i} onClick={() => setSelected(dateStr(day))}
+              className={`relative aspect-square flex items-center justify-center text-xs rounded-lg transition-colors ${isToday ? "bg-brand-600 text-white font-bold" : isSel ? "bg-brand-50 ring-1 ring-brand-300 text-brand-700 font-semibold" : "text-slate-600 hover:bg-slate-100"}`}>
               {day}
-              {hasLeave && !isToday && <span className="absolute bottom-1 w-1 h-1 rounded-full bg-amber-500" />}
-              {hasLeave && isToday && <span className="absolute bottom-1 w-1 h-1 rounded-full bg-white" />}
-            </div>
+              <span className="absolute bottom-1 flex gap-0.5">
+                {hasLeave && <span className={`w-1 h-1 rounded-full ${isToday ? "bg-white" : "bg-amber-500"}`} />}
+                {hasEvent && <span className={`w-1 h-1 rounded-full ${isToday ? "bg-white" : "bg-emerald-500"}`} />}
+              </span>
+            </button>
           );
         })}
       </div>
       <div className="mt-2 flex items-center gap-3 text-[10px] text-slate-400">
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-brand-600" />{isRTL ? "اليوم" : "Today"}</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />{isRTL ? "إجازة" : "Leave"}</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" />{isRTL ? "حدث" : "Event"}</span>
       </div>
+
+      {selected && (
+        <div className="mt-3 pt-3 border-t border-slate-100">
+          <div className="text-xs font-semibold text-slate-700 mb-2">{isRTL ? "أحداث يوم" : "Events on"} {selected}</div>
+          <div className="space-y-1 mb-2">
+            {selectedEvents.length === 0 ? (
+              <div className="text-[11px] text-slate-400">{isRTL ? "لا يوجد أحداث" : "No events"}</div>
+            ) : selectedEvents.map((e) => (
+              <div key={e.id} className="flex items-center justify-between gap-2 text-xs bg-emerald-50 border border-emerald-100 rounded-lg px-2 py-1.5">
+                <span className="text-slate-800 truncate">{e.title}</span>
+                <button onClick={() => delEvent(e.id)} className="text-rose-400 hover:text-rose-600 flex-shrink-0"><X size={13} /></button>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input className="form-input form-input-sm flex-1" placeholder={isRTL ? "أضف حدث / مناسبة..." : "Add an event..."} value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addEvent(); }} />
+            <button onClick={addEvent} disabled={saving || !newTitle.trim()} className="btn btn-sm btn-primary">{isRTL ? "إضافة" : "Add"}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

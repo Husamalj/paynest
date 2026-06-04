@@ -442,3 +442,13 @@ model AdvanceRequest {
 
   @@map("advance_requests")
 }
+
+model CompanyEvent {
+  id        Int      @id @default(autoincrement())
+  companyId Int      @map("company_id")
+  eventDate DateTime @map("event_date") @db.Date
+  title     String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("company_events")
+}
