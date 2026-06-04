@@ -71,6 +71,37 @@ function StatusBadge({ status, isRTL }: { status: string; isRTL: boolean }) {
   return <span className={`badge ${cls[status] || "badge-gray"}`}>{labels[status] || status}</span>;
 }
 
+/** Inline measurable-target progress bar with editable current value. */
+function TargetProgress({ task, isRTL, onSave }: { task: any; isRTL: boolean; onSave: (v: number) => void }) {
+  const tgt = Number(task.targetValue ?? task.target_value);
+  if (!tgt || tgt <= 0) return null;
+  const cur = Number(task.currentValue ?? task.current_value ?? 0);
+  const pct = Math.min(100, Math.round((cur / tgt) * 100));
+  const [val, setVal] = useState(String(cur));
+  useEffect(() => { setVal(String(cur)); }, [cur]);
+  const unit = task.unit ? ` ${task.unit}` : "";
+  return (
+    <div className="mt-2 w-full">
+      <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+        <span>{isRTL ? "الإنجاز" : "Progress"}: {cur}/{tgt}{unit}</span>
+        <span className={`font-bold ${pct >= 100 ? "text-emerald-600" : "text-brand-600"}`}>{pct}%</span>
+      </div>
+      <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-emerald-500" : "bg-brand-500"}`} style={{ width: `${pct}%` }} />
+      </div>
+      <div className="flex items-center gap-1.5 mt-1.5">
+        <input
+          type="number" step="any" value={val} onChange={(e) => setVal(e.target.value)}
+          className="w-20 px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+        />
+        <button type="button" className="btn btn-sm btn-secondary" onClick={() => onSave(Number(val) || 0)}>
+          {isRTL ? "تحديث" : "Update"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function EmployeePortalPage() {
   const { lang, toggleLanguage } = useLanguage();
   const isRTL = lang === "ar";
@@ -173,6 +204,8 @@ export default function EmployeePortalPage() {
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [taskName, setTaskName] = useState("");
   const [taskDeadline, setTaskDeadline] = useState("");
+  const [taskTarget, setTaskTarget] = useState("");
+  const [taskUnit, setTaskUnit] = useState("");
   const [taskSaving, setTaskSaving] = useState(false);
   const [taskError, setTaskError] = useState("");
   const [taskSuccess, setTaskSuccess] = useState("");
@@ -212,6 +245,8 @@ export default function EmployeePortalPage() {
     setTaskSub(sub);
     setTaskName("");
     setTaskDeadline("");
+    setTaskTarget("");
+    setTaskUnit("");
     setTaskError("");
     setTaskSuccess("");
     setShowTaskModal(true);
@@ -225,12 +260,15 @@ export default function EmployeePortalPage() {
     setTaskSuccess("");
     try {
       const empId = taskSub.employeeId || taskSub.employee_id;
-      await api.post("/tasks", {
+      const res = await api.post("/tasks", {
         task_name: taskName.trim(),
         employee_id: empId,
         deadline: taskDeadline || null,
         status: "pending",
+        target_value: taskTarget || null,
+        unit: taskUnit || null,
       });
+      setTasks((prev) => [res.data, ...prev]);
       setTaskSuccess(isRTL ? "تمت إضافة المهمة بنجاح" : "Task assigned successfully");
       setTimeout(() => setShowTaskModal(false), 1200);
     } catch (err: any) {
@@ -334,6 +372,15 @@ export default function EmployeePortalPage() {
   }, [employeeId, payroll]);
 
   const myTasks = useMemo(() => tasks.filter((task) => (task.employeeId || task.employee_id) === employeeId), [tasks, employeeId]);
+  // Subordinates' tasks that have a measurable target (for supervisor tracking)
+  const teamTargets = useMemo(() => {
+    const subIds = new Set((employee?.subordinates || []).map((s: any) => s.employeeId || s.employee_id));
+    return tasks.filter((task) => {
+      const eid = task.employeeId || task.employee_id;
+      const tgt = Number(task.targetValue ?? task.target_value);
+      return subIds.has(eid) && tgt > 0;
+    });
+  }, [tasks, employee]);
   const myLeaves = useMemo(() => leaves.filter((leave) => (leave.employeeId || leave.employee_id) === employeeId), [leaves, employeeId]);
   const myBalance = useMemo(() => balances.find((b) => (b.employeeId || b.employee_id) === employeeId) || null, [balances, employeeId]);
 
@@ -405,6 +452,13 @@ export default function EmployeePortalPage() {
   const updateTaskStatus = async (taskId: number, status: string) => {
     try {
       const res = await api.put(`/tasks/${taskId}`, { status });
+      setTasks((prev) => prev.map((task) => (task.id === taskId ? res.data : task)));
+    } catch (err: any) { setError(err.message); }
+  };
+
+  const updateTaskProgress = async (taskId: number, current_value: number) => {
+    try {
+      const res = await api.put(`/tasks/${taskId}`, { current_value });
       setTasks((prev) => prev.map((task) => (task.id === taskId ? res.data : task)));
     } catch (err: any) { setError(err.message); }
   };
@@ -666,17 +720,20 @@ export default function EmployeePortalPage() {
                   {myTasks.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{text.noData}</div> : (
                     <div className="space-y-3">
                       {myTasks.map((task) => (
-                        <div key={task.id} className="rounded-lg border border-slate-200 bg-white p-3 flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <div className="font-semibold text-slate-900">{task.task_name || task.taskName}</div>
-                            <div className="text-xs text-slate-500 flex items-center gap-1 mt-1"><Clock size={12} />{formatDate(task.deadline)}</div>
+                        <div key={task.id} className="rounded-lg border border-slate-200 bg-white p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <div className="font-semibold text-slate-900">{task.task_name || task.taskName}</div>
+                              <div className="text-xs text-slate-500 flex items-center gap-1 mt-1"><Clock size={12} />{formatDate(task.deadline)}</div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <StatusBadge status={task.status} isRTL={isRTL} />
+                              {task.status !== "completed" && (
+                                <button className="btn btn-sm btn-success" onClick={() => updateTaskStatus(task.id, "completed")}>{isRTL ? "تم" : "Done"}</button>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <StatusBadge status={task.status} isRTL={isRTL} />
-                            {task.status !== "completed" && (
-                              <button className="btn btn-sm btn-success" onClick={() => updateTaskStatus(task.id, "completed")}>{isRTL ? "تم" : "Done"}</button>
-                            )}
-                          </div>
+                          <TargetProgress task={task} isRTL={isRTL} onSave={(v) => updateTaskProgress(task.id, v)} />
                         </div>
                       ))}
                     </div>
@@ -775,6 +832,32 @@ export default function EmployeePortalPage() {
                                   <ClipboardList size={13} />
                                   {isDone ? (isRTL ? "تعديل" : "Edit") : (isRTL ? "تقييم" : "Evaluate")}
                                 </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {teamTargets.length > 0 && (
+                      <div className="card">
+                        <div className="card-header">
+                          <div className="card-title">
+                            <CheckSquare size={16} className="text-brand-600" />
+                            {isRTL ? "أهداف الفريق" : "Team Targets"}
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          {teamTargets.map((task: any) => {
+                            const eid = task.employeeId || task.employee_id;
+                            const sub = (employee.subordinates || []).find((s: any) => (s.employeeId || s.employee_id) === eid);
+                            return (
+                              <div key={task.id} className="rounded-lg border border-slate-200 bg-white p-3">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="font-semibold text-slate-900 text-sm">{task.task_name || task.taskName}</div>
+                                  <StatusBadge status={task.status} isRTL={isRTL} />
+                                </div>
+                                <div className="text-[11px] text-slate-500 truncate">{sub?.name || eid}</div>
+                                <TargetProgress task={task} isRTL={isRTL} onSave={(v) => updateTaskProgress(task.id, v)} />
                               </div>
                             );
                           })}
@@ -1277,6 +1360,32 @@ export default function EmployeePortalPage() {
                   onChange={(e) => setTaskDeadline(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
                 />
+              </div>
+
+              {/* Measurable target (optional) — independent of evaluation */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                    {isRTL ? "هدف رقمي (اختياري)" : "Target value (optional)"}
+                  </label>
+                  <input
+                    type="number" step="any" value={taskTarget}
+                    onChange={(e) => setTaskTarget(e.target.value)}
+                    placeholder={isRTL ? "مثال: 10" : "e.g. 10"}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                    {isRTL ? "الوحدة (اختياري)" : "Unit (optional)"}
+                  </label>
+                  <input
+                    type="text" value={taskUnit}
+                    onChange={(e) => setTaskUnit(e.target.value)}
+                    placeholder={isRTL ? "مثال: مبيعات" : "e.g. sales"}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+                  />
+                </div>
               </div>
 
               {taskError && (

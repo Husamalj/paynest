@@ -12,7 +12,25 @@ export async function GET(req: NextRequest) {
 
     const where: any = { companyId: session.companyId };
     if (session.role === "employee") {
-      where.employeeId = session.employeeNumber;
+      // Own tasks + tasks of direct subordinates (so a supervisor sees & tracks team targets)
+      const me = await prisma.employee.findFirst({
+        where: { employeeId: session.employeeNumber ?? "", companyId: session.companyId },
+        select: { id: true },
+      });
+      const subEmpIds = me
+        ? (
+            await prisma.employee.findMany({
+              where: {
+                companyId: session.companyId,
+                OR: [{ supervisorId: me.id }, { supervisorIds: { has: me.id } }],
+              },
+              select: { employeeId: true },
+            })
+          )
+            .map((e) => e.employeeId)
+            .filter(Boolean)
+        : [];
+      where.employeeId = { in: [session.employeeNumber, ...subEmpIds].filter(Boolean) as string[] };
     }
 
     const tasks = await prisma.task.findMany({ where, orderBy: { createdAt: "desc" } });
@@ -28,7 +46,7 @@ export async function POST(req: NextRequest) {
     requireRole(session, ["owner", "hr", "super_admin", "employee"]);
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
-    const { task_name, employee_id, deadline, status } = await req.json();
+    const { task_name, employee_id, deadline, status, target_value, unit } = await req.json();
     if (!task_name || !employee_id) throw new HttpError(400, "Task name and employee are required");
 
     // Employees can only assign tasks to their direct subordinates
@@ -59,6 +77,8 @@ export async function POST(req: NextRequest) {
         employeeId: employee_id,
         deadline: deadline ? new Date(deadline) : null,
         status: status ?? "pending",
+        targetValue: target_value != null && target_value !== "" ? Number(target_value) : null,
+        unit: unit?.trim() || null,
       },
     });
     return NextResponse.json(task);

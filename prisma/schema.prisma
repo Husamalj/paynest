@@ -272,15 +272,19 @@ model OfficialHoliday {
 }
 
 model Task {
-  id         Int       @id @default(autoincrement())
-  companyId  Int       @default(1) @map("company_id")
-  taskName   String    @map("task_name") @db.VarChar(255)
-  employeeId String?   @map("employee_id") @db.VarChar(50)
-  deadline   DateTime? @db.Date
-  status     String    @default("pending") @db.VarChar(50)
-  systemMode String    @default("daily") @map("system_mode") @db.VarChar(20)
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at")
+  id           Int       @id @default(autoincrement())
+  companyId    Int       @default(1) @map("company_id")
+  taskName     String    @map("task_name") @db.VarChar(255)
+  employeeId   String?   @map("employee_id") @db.VarChar(50)
+  deadline     DateTime? @db.Date
+  status       String    @default("pending") @db.VarChar(50)
+  // Optional measurable target (independent of evaluation/bonus)
+  targetValue  Float?    @map("target_value")
+  currentValue Float     @default(0) @map("current_value")
+  unit         String?   @db.VarChar(30)
+  systemMode   String    @default("daily") @map("system_mode") @db.VarChar(20)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
 
   company Company @relation(fields: [companyId], references: [id])
 

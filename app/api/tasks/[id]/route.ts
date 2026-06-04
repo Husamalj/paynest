@@ -13,11 +13,30 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const body = await req.json();
 
     if (session.role === "employee") {
-      const task = await prisma.task.updateMany({
-        where: { id: Number(id), companyId: session.companyId, employeeId: session.employeeNumber },
-        data: { status: body.status ?? "completed" },
+      // An employee may update their own task OR a direct subordinate's task (progress/status)
+      const me = await prisma.employee.findFirst({
+        where: { employeeId: session.employeeNumber ?? "", companyId: session.companyId },
+        select: { id: true },
       });
-      if (task.count === 0) throw new HttpError(404, "Task not found");
+      const allowedIds = new Set<string>([session.employeeNumber ?? ""]);
+      if (me) {
+        const subs = await prisma.employee.findMany({
+          where: {
+            companyId: session.companyId,
+            OR: [{ supervisorId: me.id }, { supervisorIds: { has: me.id } }],
+          },
+          select: { employeeId: true },
+        });
+        subs.forEach((s) => s.employeeId && allowedIds.add(s.employeeId));
+      }
+      const target = await prisma.task.findFirst({ where: { id: Number(id), companyId: session.companyId } });
+      if (!target || !target.employeeId || !allowedIds.has(target.employeeId)) throw new HttpError(404, "Task not found");
+
+      const empData: Record<string, unknown> = {};
+      if (body.current_value !== undefined) empData.currentValue = Number(body.current_value) || 0;
+      if (body.status !== undefined) empData.status = body.status;
+      if (Object.keys(empData).length === 0) empData.status = "completed";
+      await prisma.task.update({ where: { id: Number(id) }, data: empData });
       return NextResponse.json(await prisma.task.findUnique({ where: { id: Number(id) } }));
     }
 
@@ -26,6 +45,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (body.employee_id !== undefined) data.employeeId = body.employee_id;
     if (body.deadline !== undefined) data.deadline = body.deadline ? new Date(body.deadline) : null;
     if (body.status !== undefined) data.status = body.status;
+    if (body.target_value !== undefined) data.targetValue = body.target_value != null && body.target_value !== "" ? Number(body.target_value) : null;
+    if (body.current_value !== undefined) data.currentValue = Number(body.current_value) || 0;
+    if (body.unit !== undefined) data.unit = body.unit?.trim() || null;
 
     if (Object.keys(data).length === 0) throw new HttpError(400, "No fields to update");
 

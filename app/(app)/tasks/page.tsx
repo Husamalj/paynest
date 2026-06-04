@@ -19,7 +19,7 @@ export default function TasksPage() {
   const [success, setSuccess] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
-  const [form, setForm] = useState({ task_name: "", employee_id: "", deadline: "", status: "pending" });
+  const [form, setForm] = useState({ task_name: "", employee_id: "", deadline: "", status: "pending", target_value: "", unit: "" });
 
   const loadTasks = async () => { try { const res = await api.get("/tasks"); setTasks(res.data || []); } catch (err: any) { setError(err.message); } };
   const loadEmployees = async () => { try { const res = await api.get("/employees"); setEmployees(res.data || []); } catch { } };
@@ -33,7 +33,7 @@ export default function TasksPage() {
       const empName = employees.find((e) => e.employee_id === form.employee_id)?.name || "";
       const res = await api.post("/tasks", { ...form, employee_name: empName });
       setTasks((p) => [res.data, ...p]);
-      setSuccess(t("taskAdded")); setShowAdd(false); setForm({ task_name: "", employee_id: "", deadline: "", status: "pending" });
+      setSuccess(t("taskAdded")); setShowAdd(false); setForm({ task_name: "", employee_id: "", deadline: "", status: "pending", target_value: "", unit: "" });
     } catch (err: any) { setError(err.message); }
   };
 
@@ -71,13 +71,25 @@ export default function TasksPage() {
         {filtered.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noTasks")}</div> : (
           <div className="table-wrapper">
             <table>
-              <thead><tr><th>{t("taskName")}</th><th>{t("assignTo")}</th><th>{t("deadline")}</th><th>{t("taskStatus")}</th><th className="text-right">{t("actions")}</th></tr></thead>
+              <thead><tr><th>{t("taskName")}</th><th>{t("assignTo")}</th><th>{t("deadline")}</th><th>{t("target")}</th><th>{t("taskStatus")}</th><th className="text-right">{t("actions")}</th></tr></thead>
               <tbody>
                 {filtered.map((task) => (
                   <tr key={task.id}>
                     <td className="font-medium">{task.taskName || task.task_name}</td>
                     <td className="text-sm text-slate-600"><span className="flex items-center gap-1"><User size={13} />{task.employeeName || task.employee_name || task.employeeId}</span></td>
                     <td className="text-sm text-slate-500">{task.deadline ? <span className="flex items-center gap-1"><Calendar size={13} />{new Date(task.deadline).toLocaleDateString()}</span> : "-"}</td>
+                    <td className="text-sm text-slate-600 min-w-[140px]">{(() => {
+                      const tgt = Number(task.targetValue ?? task.target_value);
+                      if (!tgt || tgt <= 0) return <span className="text-slate-300">-</span>;
+                      const cur = Number(task.currentValue ?? task.current_value ?? 0);
+                      const pct = Math.min(100, Math.round((cur / tgt) * 100));
+                      return (
+                        <div>
+                          <div className="flex justify-between text-[11px] text-slate-500 mb-0.5"><span>{cur}/{tgt}{task.unit ? ` ${task.unit}` : ""}</span><span className={`font-bold ${pct >= 100 ? "text-emerald-600" : "text-brand-600"}`}>{pct}%</span></div>
+                          <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden"><div className={`h-full rounded-full ${pct >= 100 ? "bg-emerald-500" : "bg-brand-500"}`} style={{ width: `${pct}%` }} /></div>
+                        </div>
+                      );
+                    })()}</td>
                     <td><span className={`badge ${getStatusColor(task.status)}`}>{task.status === "pending" ? t("pending") : task.status === "in_progress" ? t("inProgress") : t("completed")}</span></td>
                     <td className="text-right"><button className="btn btn-sm btn-danger" onClick={() => handleDelete(task.id)}><Trash2 size={13} />{t("delete")}</button></td>
                   </tr>
@@ -96,6 +108,10 @@ export default function TasksPage() {
               <div><label className="form-label">{t("taskName")} *</label><input className="form-input" value={form.task_name} onChange={(e) => setForm((f) => ({ ...f, task_name: e.target.value }))} required /></div>
               <div><label className="form-label">{t("assignTo")} *</label><select className="form-input" value={form.employee_id} onChange={(e) => setForm((f) => ({ ...f, employee_id: e.target.value }))}><option value="">{t("selectEmployee")}</option>{employees.map((e) => <option key={e.employee_id} value={e.employee_id}>{e.name}</option>)}</select></div>
               <div><label className="form-label">{t("deadline")}</label><input type="date" className="form-input" value={form.deadline} onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="form-label">{t("targetValueOptional")}</label><input type="number" step="any" className="form-input" placeholder={t("egTen")} value={form.target_value} onChange={(e) => setForm((f) => ({ ...f, target_value: e.target.value }))} /></div>
+                <div><label className="form-label">{t("unitOptional")}</label><input type="text" className="form-input" placeholder={t("egSales")} value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} /></div>
+              </div>
               <div className="flex justify-end gap-2"><button type="button" className="btn btn-secondary" onClick={() => setShowAdd(false)}>{t("cancel")}</button><button type="submit" className="btn btn-primary">{t("save")}</button></div>
             </form>
           </div>
