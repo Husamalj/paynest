@@ -209,6 +209,7 @@ export default function EmployeePortalPage() {
   const [taskAttachment, setTaskAttachment] = useState("");
   const [taskAttachmentName, setTaskAttachmentName] = useState("");
   const [expandedSub, setExpandedSub] = useState<string | null>(null);
+  const [showDoneMine, setShowDoneMine] = useState(false);
   const [taskSaving, setTaskSaving] = useState(false);
   const [taskError, setTaskError] = useState("");
   const [taskSuccess, setTaskSuccess] = useState("");
@@ -756,47 +757,89 @@ export default function EmployeePortalPage() {
 
             {/* ── My Tasks card (reusable inline) ── */}
             {(() => {
+              const activeMine = myTasks.filter((t) => t.status !== "completed");
+              const doneMine = myTasks.filter((t) => t.status === "completed");
+
+              const fullTaskCard = (task: any) => (
+                <div key={task.id} className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-slate-900">{task.task_name || task.taskName}</div>
+                      <div className="text-xs text-slate-500 flex items-center gap-1 mt-1"><Clock size={12} />{formatDate(task.deadline)}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={task.status} isRTL={isRTL} />
+                      {task.status !== "completed" && (
+                        <button className="btn btn-sm btn-success" onClick={() => updateTaskStatus(task.id, "completed")}>{isRTL ? "تم" : "Done"}</button>
+                      )}
+                    </div>
+                  </div>
+                  <TargetProgress task={task} isRTL={isRTL} onSave={(v) => updateTaskProgress(task.id, v)} />
+                  <div className="flex items-center gap-3 mt-2">
+                    {task.attachment ? (
+                      <button type="button" onClick={() => openAttachment(task.attachment, task.attachmentName || task.attachment_name)}
+                        className="text-[11px] text-brand-600 hover:underline flex items-center gap-1">
+                        <Paperclip size={11} />{task.attachmentName || task.attachment_name || (isRTL ? "عرض الملف" : "View file")}
+                      </button>
+                    ) : (
+                      <label className="text-[11px] text-slate-400 hover:text-brand-600 cursor-pointer flex items-center gap-1">
+                        <Paperclip size={11} />{isRTL ? "إرفاق ملف" : "Attach file"}
+                        <input type="file" className="hidden" onChange={async (e) => {
+                          const f = e.target.files?.[0]; if (!f) return;
+                          if (f.size > 5 * 1024 * 1024) { setError(isRTL ? "الملف أكبر من 5MB" : "File exceeds 5MB"); return; }
+                          const b64 = await toBase64(f);
+                          const res = await api.put(`/tasks/${task.id}`, { attachment: b64, attachment_name: f.name });
+                          setTasks((prev) => prev.map((t) => (t.id === task.id ? res.data : t)));
+                        }} />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              );
+
               const myTasksCard = (
                 <div className="card h-full">
-                  <div className="card-header"><div className="card-title"><CheckSquare size={16} className="text-brand-600" />{text.myTasks}</div></div>
+                  <div className="card-header"><div className="card-title"><CheckSquare size={16} className="text-brand-600" />{text.myTasks}</div>
+                    {myTasks.length > 0 && <span className="text-[11px] text-slate-400">{activeMine.length} {isRTL ? "نشطة" : "active"}</span>}
+                  </div>
                   {myTasks.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{text.noData}</div> : (
                     <div className="space-y-3">
-                      {myTasks.map((task) => (
-                        <div key={task.id} className="rounded-lg border border-slate-200 bg-white p-3">
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                              <div className="font-semibold text-slate-900">{task.task_name || task.taskName}</div>
-                              <div className="text-xs text-slate-500 flex items-center gap-1 mt-1"><Clock size={12} />{formatDate(task.deadline)}</div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <StatusBadge status={task.status} isRTL={isRTL} />
-                              {task.status !== "completed" && (
-                                <button className="btn btn-sm btn-success" onClick={() => updateTaskStatus(task.id, "completed")}>{isRTL ? "تم" : "Done"}</button>
-                              )}
-                            </div>
-                          </div>
-                          <TargetProgress task={task} isRTL={isRTL} onSave={(v) => updateTaskProgress(task.id, v)} />
-                          <div className="flex items-center gap-3 mt-2">
-                            {task.attachment ? (
-                              <button type="button" onClick={() => openAttachment(task.attachment, task.attachmentName || task.attachment_name)}
-                                className="text-[11px] text-brand-600 hover:underline flex items-center gap-1">
-                                <Paperclip size={11} />{task.attachmentName || task.attachment_name || (isRTL ? "عرض الملف" : "View file")}
-                              </button>
-                            ) : (
-                              <label className="text-[11px] text-slate-400 hover:text-brand-600 cursor-pointer flex items-center gap-1">
-                                <Paperclip size={11} />{isRTL ? "إرفاق ملف" : "Attach file"}
-                                <input type="file" className="hidden" onChange={async (e) => {
-                                  const f = e.target.files?.[0]; if (!f) return;
-                                  if (f.size > 5 * 1024 * 1024) { setError(isRTL ? "الملف أكبر من 5MB" : "File exceeds 5MB"); return; }
-                                  const b64 = await toBase64(f);
-                                  const res = await api.put(`/tasks/${task.id}`, { attachment: b64, attachment_name: f.name });
-                                  setTasks((prev) => prev.map((t) => (t.id === task.id ? res.data : t)));
-                                }} />
-                              </label>
-                            )}
-                          </div>
+                      {activeMine.length === 0 && (
+                        <div className="text-center py-5 text-sm text-emerald-600 flex items-center justify-center gap-1.5">
+                          <CheckCircle2 size={15} />{isRTL ? "خلّصت كل مهامك! 🎉" : "All tasks done! 🎉"}
                         </div>
-                      ))}
+                      )}
+                      {activeMine.map(fullTaskCard)}
+
+                      {/* Completed — collapsed compact list */}
+                      {doneMine.length > 0 && (
+                        <div className="rounded-lg border border-slate-200 overflow-hidden">
+                          <button type="button" onClick={() => setShowDoneMine((v) => !v)}
+                            className="w-full flex items-center gap-2 p-2.5 hover:bg-slate-50 transition-colors text-start">
+                            <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
+                            <span className="text-sm font-semibold text-slate-700 flex-1">{isRTL ? "المنجزة" : "Completed"} ({doneMine.length})</span>
+                            <ChevronDown size={16} className={`text-slate-400 shrink-0 transition-transform ${showDoneMine ? "rotate-180" : ""}`} />
+                          </button>
+                          {showDoneMine && (
+                            <div className="border-t border-slate-100 bg-slate-50/60 divide-y divide-slate-100">
+                              {doneMine.map((task) => {
+                                const tgt = Number(task.targetValue ?? task.target_value);
+                                const cur = Number(task.currentValue ?? task.current_value ?? 0);
+                                return (
+                                  <div key={task.id} className="flex items-center gap-2 px-3 py-2 text-sm">
+                                    <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                                    <span className="flex-1 min-w-0 truncate text-slate-700">{task.task_name || task.taskName}</span>
+                                    {tgt > 0 && <span className="text-[11px] text-slate-400 shrink-0">{cur}/{tgt}{task.unit ? ` ${task.unit}` : ""}</span>}
+                                    {task.attachment && (
+                                      <button type="button" onClick={() => openAttachment(task.attachment, task.attachmentName || task.attachment_name)} className="text-brand-500 shrink-0"><Paperclip size={12} /></button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
