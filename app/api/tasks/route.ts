@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     requireRole(session, ["owner", "hr", "super_admin", "employee"]);
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
-    const { task_name, employee_id, deadline, status, target_value, unit } = await req.json();
+    const { task_name, employee_id, deadline, status, target_value, unit, attachment, attachment_name } = await req.json();
     if (!task_name || !employee_id) throw new HttpError(400, "Task name and employee are required");
 
     // Employees can only assign tasks to their direct subordinates
@@ -79,6 +79,8 @@ export async function POST(req: NextRequest) {
         status: status ?? "pending",
         targetValue: target_value != null && target_value !== "" ? Number(target_value) : null,
         unit: unit?.trim() || null,
+        attachment: attachment || null,
+        attachmentName: attachment_name || null,
       },
     });
     return NextResponse.json(task);

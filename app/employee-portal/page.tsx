@@ -206,6 +206,9 @@ export default function EmployeePortalPage() {
   const [taskDeadline, setTaskDeadline] = useState("");
   const [taskTarget, setTaskTarget] = useState("");
   const [taskUnit, setTaskUnit] = useState("");
+  const [taskAttachment, setTaskAttachment] = useState("");
+  const [taskAttachmentName, setTaskAttachmentName] = useState("");
+  const [expandedSub, setExpandedSub] = useState<string | null>(null);
   const [taskSaving, setTaskSaving] = useState(false);
   const [taskError, setTaskError] = useState("");
   const [taskSuccess, setTaskSuccess] = useState("");
@@ -224,6 +227,28 @@ export default function EmployeePortalPage() {
     if (file.size > 5 * 1024 * 1024) { setError(isRTL ? "الملف أكبر من 5MB" : "File exceeds 5MB"); return; }
     const b64 = await toBase64(file);
     setLeaveForm((f) => ({ ...f, attachment: b64 }));
+  };
+
+  const handleTaskAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setTaskError(isRTL ? "الملف أكبر من 5MB" : "File exceeds 5MB"); return; }
+    setTaskAttachment(await toBase64(file));
+    setTaskAttachmentName(file.name);
+  };
+
+  const openAttachment = (dataUrl: string, name?: string) => {
+    try {
+      const [meta, b64] = dataUrl.split(",");
+      const mime = (meta.match(/data:(.*?);/) || [])[1] || "application/octet-stream";
+      const bin = atob(b64); const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([arr], { type: mime }));
+      const a = document.createElement("a"); a.href = url; a.target = "_blank";
+      if (!mime.startsWith("image/") && mime !== "application/pdf") a.download = name || "attachment";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch { window.open(dataUrl, "_blank"); }
   };
 
   const handlePermAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -247,6 +272,8 @@ export default function EmployeePortalPage() {
     setTaskDeadline("");
     setTaskTarget("");
     setTaskUnit("");
+    setTaskAttachment("");
+    setTaskAttachmentName("");
     setTaskError("");
     setTaskSuccess("");
     setShowTaskModal(true);
@@ -267,6 +294,8 @@ export default function EmployeePortalPage() {
         status: "pending",
         target_value: taskTarget || null,
         unit: taskUnit || null,
+        attachment: taskAttachment || null,
+        attachment_name: taskAttachmentName || null,
       });
       setTasks((prev) => [res.data, ...prev]);
       setTaskSuccess(isRTL ? "تمت إضافة المهمة بنجاح" : "Task assigned successfully");
@@ -372,14 +401,27 @@ export default function EmployeePortalPage() {
   }, [employeeId, payroll]);
 
   const myTasks = useMemo(() => tasks.filter((task) => (task.employeeId || task.employee_id) === employeeId), [tasks, employeeId]);
-  // Subordinates' tasks that have a measurable target (for supervisor tracking)
-  const teamTargets = useMemo(() => {
-    const subIds = new Set((employee?.subordinates || []).map((s: any) => s.employeeId || s.employee_id));
-    return tasks.filter((task) => {
-      const eid = task.employeeId || task.employee_id;
-      const tgt = Number(task.targetValue ?? task.target_value);
-      return subIds.has(eid) && tgt > 0;
-    });
+  // All subordinate tasks grouped by employee (for tidy supervisor tracking)
+  const teamBySub = useMemo(() => {
+    const subs = (employee?.subordinates || []) as any[];
+    return subs
+      .map((sub) => {
+        const eid = sub.employeeId || sub.employee_id;
+        const subTasks = tasks.filter((t) => (t.employeeId || t.employee_id) === eid);
+        if (subTasks.length === 0) return null;
+        const measurable = subTasks.filter((t) => Number(t.targetValue ?? t.target_value) > 0);
+        const avgPct = measurable.length
+          ? Math.round(
+              measurable.reduce((a, t) => {
+                const tgt = Number(t.targetValue ?? t.target_value);
+                return a + Math.min(100, (Number(t.currentValue ?? t.current_value ?? 0) / tgt) * 100);
+              }, 0) / measurable.length
+            )
+          : null;
+        const doneCount = subTasks.filter((t) => t.status === "completed").length;
+        return { sub, eid, tasks: subTasks, avgPct, doneCount, total: subTasks.length };
+      })
+      .filter(Boolean) as any[];
   }, [tasks, employee]);
   const myLeaves = useMemo(() => leaves.filter((leave) => (leave.employeeId || leave.employee_id) === employeeId), [leaves, employeeId]);
   const myBalance = useMemo(() => balances.find((b) => (b.employeeId || b.employee_id) === employeeId) || null, [balances, employeeId]);
@@ -734,6 +776,25 @@ export default function EmployeePortalPage() {
                             </div>
                           </div>
                           <TargetProgress task={task} isRTL={isRTL} onSave={(v) => updateTaskProgress(task.id, v)} />
+                          <div className="flex items-center gap-3 mt-2">
+                            {task.attachment ? (
+                              <button type="button" onClick={() => openAttachment(task.attachment, task.attachmentName || task.attachment_name)}
+                                className="text-[11px] text-brand-600 hover:underline flex items-center gap-1">
+                                <Paperclip size={11} />{task.attachmentName || task.attachment_name || (isRTL ? "عرض الملف" : "View file")}
+                              </button>
+                            ) : (
+                              <label className="text-[11px] text-slate-400 hover:text-brand-600 cursor-pointer flex items-center gap-1">
+                                <Paperclip size={11} />{isRTL ? "إرفاق ملف" : "Attach file"}
+                                <input type="file" className="hidden" onChange={async (e) => {
+                                  const f = e.target.files?.[0]; if (!f) return;
+                                  if (f.size > 5 * 1024 * 1024) { setError(isRTL ? "الملف أكبر من 5MB" : "File exceeds 5MB"); return; }
+                                  const b64 = await toBase64(f);
+                                  const res = await api.put(`/tasks/${task.id}`, { attachment: b64, attachment_name: f.name });
+                                  setTasks((prev) => prev.map((t) => (t.id === task.id ? res.data : t)));
+                                }} />
+                              </label>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -838,26 +899,65 @@ export default function EmployeePortalPage() {
                         </div>
                       </div>
                     )}
-                    {teamTargets.length > 0 && (
+                    {teamBySub.length > 0 && (
                       <div className="card">
                         <div className="card-header">
                           <div className="card-title">
                             <CheckSquare size={16} className="text-brand-600" />
-                            {isRTL ? "أهداف الفريق" : "Team Targets"}
+                            {isRTL ? "مهام وأهداف الفريق" : "Team Tasks & Targets"}
                           </div>
                         </div>
-                        <div className="space-y-3">
-                          {teamTargets.map((task: any) => {
-                            const eid = task.employeeId || task.employee_id;
-                            const sub = (employee.subordinates || []).find((s: any) => (s.employeeId || s.employee_id) === eid);
+                        <div className="space-y-2">
+                          {teamBySub.map(({ sub, eid, tasks: subTasks, avgPct, doneCount, total }: any) => {
+                            const open = expandedSub === eid;
                             return (
-                              <div key={task.id} className="rounded-lg border border-slate-200 bg-white p-3">
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="font-semibold text-slate-900 text-sm">{task.task_name || task.taskName}</div>
-                                  <StatusBadge status={task.status} isRTL={isRTL} />
-                                </div>
-                                <div className="text-[11px] text-slate-500 truncate">{sub?.name || eid}</div>
-                                <TargetProgress task={task} isRTL={isRTL} onSave={(v) => updateTaskProgress(task.id, v)} />
+                              <div key={eid} className="rounded-lg border border-slate-200 overflow-hidden">
+                                {/* Employee row (click to expand) */}
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedSub(open ? null : eid)}
+                                  className="w-full flex items-center gap-2.5 p-2.5 hover:bg-slate-50 transition-colors text-start"
+                                >
+                                  <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                    {(sub.name || "?").charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="font-semibold text-slate-900 text-sm truncate">{sub.name}</div>
+                                    <div className="text-[11px] text-slate-500">
+                                      {total} {isRTL ? "مهمة" : "tasks"} · {doneCount} {isRTL ? "منجزة" : "done"}
+                                      {avgPct != null && <span className="text-brand-600 font-semibold"> · {avgPct}%</span>}
+                                    </div>
+                                  </div>
+                                  {avgPct != null && (
+                                    <div className="w-14 h-1.5 rounded-full bg-slate-100 overflow-hidden hidden sm:block">
+                                      <div className={`h-full rounded-full ${avgPct >= 100 ? "bg-emerald-500" : "bg-brand-500"}`} style={{ width: `${avgPct}%` }} />
+                                    </div>
+                                  )}
+                                  <ChevronDown size={16} className={`text-slate-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+                                </button>
+                                {/* Expanded: that employee's tasks */}
+                                {open && (
+                                  <div className="border-t border-slate-100 bg-slate-50/60 p-2.5 space-y-2">
+                                    {subTasks.map((task: any) => (
+                                      <div key={task.id} className="rounded-lg border border-slate-200 bg-white p-2.5">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <div className="font-semibold text-slate-900 text-sm">{task.task_name || task.taskName}</div>
+                                          <StatusBadge status={task.status} isRTL={isRTL} />
+                                        </div>
+                                        {task.deadline && (
+                                          <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5"><Clock size={11} />{formatDate(task.deadline)}</div>
+                                        )}
+                                        {(task.attachment) && (
+                                          <button type="button" onClick={() => openAttachment(task.attachment, task.attachmentName || task.attachment_name)}
+                                            className="text-[11px] text-brand-600 hover:underline flex items-center gap-1 mt-1">
+                                            <Paperclip size={11} />{task.attachmentName || task.attachment_name || (isRTL ? "عرض الملف" : "View file")}
+                                          </button>
+                                        )}
+                                        <TargetProgress task={task} isRTL={isRTL} onSave={(v) => updateTaskProgress(task.id, v)} />
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
@@ -1386,6 +1486,23 @@ export default function EmployeePortalPage() {
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
                   />
                 </div>
+              </div>
+
+              {/* Attachment (any file type) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                  {isRTL ? "إرفاق ملف (اختياري)" : "Attach file (optional)"}
+                </label>
+                <label className={`flex items-center gap-2 cursor-pointer border-2 border-dashed rounded-xl px-4 py-2.5 text-sm transition-all ${taskAttachment ? "border-emerald-400 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500 hover:border-brand-400"}`}>
+                  <Paperclip size={15} />
+                  {taskAttachment ? `✓ ${taskAttachmentName}` : (isRTL ? "اضغط لاختيار ملف (أي نوع)" : "Click to choose a file (any type)")}
+                  <input type="file" className="hidden" onChange={handleTaskAttachment} />
+                </label>
+                {taskAttachment && (
+                  <button type="button" className="text-xs text-rose-500 mt-1 hover:underline" onClick={() => { setTaskAttachment(""); setTaskAttachmentName(""); }}>
+                    {isRTL ? "حذف الملف" : "Remove file"}
+                  </button>
+                )}
               </div>
 
               {taskError && (

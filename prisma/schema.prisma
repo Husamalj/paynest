@@ -285,6 +285,8 @@ model Task {
   targetValue  Float?    @map("target_value")
   currentValue Float     @default(0) @map("current_value")
   unit         String?   @db.VarChar(30)
+  attachment     String? @db.Text
+  attachmentName String? @map("attachment_name") @db.VarChar(255)
   systemMode   String    @default("daily") @map("system_mode") @db.VarChar(20)
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")

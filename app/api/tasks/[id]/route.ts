@@ -35,6 +35,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       const empData: Record<string, unknown> = {};
       if (body.current_value !== undefined) empData.currentValue = Number(body.current_value) || 0;
       if (body.status !== undefined) empData.status = body.status;
+      if (body.attachment !== undefined) { empData.attachment = body.attachment || null; empData.attachmentName = body.attachment_name || null; }
       if (Object.keys(empData).length === 0) empData.status = "completed";
       await prisma.task.update({ where: { id: Number(id) }, data: empData });
       return NextResponse.json(await prisma.task.findUnique({ where: { id: Number(id) } }));
@@ -48,6 +49,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (body.target_value !== undefined) data.targetValue = body.target_value != null && body.target_value !== "" ? Number(body.target_value) : null;
     if (body.current_value !== undefined) data.currentValue = Number(body.current_value) || 0;
     if (body.unit !== undefined) data.unit = body.unit?.trim() || null;
+    if (body.attachment !== undefined) { data.attachment = body.attachment || null; data.attachmentName = body.attachment_name || null; }
 
     if (Object.keys(data).length === 0) throw new HttpError(400, "No fields to update");
 
