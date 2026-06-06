@@ -420,7 +420,9 @@ export default function EmployeePortalPage() {
             )
           : null;
         const doneCount = subTasks.filter((t) => t.status === "completed").length;
-        return { sub, eid, tasks: subTasks, avgPct, doneCount, total: subTasks.length };
+        const deadlines = subTasks.map((t) => t.deadline).filter(Boolean).sort();
+        const nextDeadline = deadlines[0] || null;
+        return { sub, eid, tasks: subTasks, avgPct, doneCount, total: subTasks.length, nextDeadline };
       })
       .filter(Boolean) as any[];
   }, [tasks, employee]);
@@ -951,7 +953,7 @@ export default function EmployeePortalPage() {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          {teamBySub.map(({ sub, eid, tasks: subTasks, avgPct, doneCount, total }: any) => {
+                          {teamBySub.map(({ sub, eid, tasks: subTasks, avgPct, doneCount, total, nextDeadline }: any) => {
                             const open = expandedSub === eid;
                             return (
                               <div key={eid} className="rounded-lg border border-slate-200 overflow-hidden">
@@ -970,6 +972,9 @@ export default function EmployeePortalPage() {
                                       {total} {isRTL ? "مهمة" : "tasks"} · {doneCount} {isRTL ? "منجزة" : "done"}
                                       {avgPct != null && <span className="text-brand-600 font-semibold"> · {avgPct}%</span>}
                                     </div>
+                                    {nextDeadline && (
+                                      <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5"><Clock size={10} />{isRTL ? "أقرب موعد:" : "Next:"} {formatDate(nextDeadline)}</div>
+                                    )}
                                   </div>
                                   {avgPct != null && (
                                     <div className="w-14 h-1.5 rounded-full bg-slate-100 overflow-hidden hidden sm:block">
