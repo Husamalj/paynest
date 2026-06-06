@@ -210,6 +210,8 @@ export default function EmployeePortalPage() {
   const [taskAttachmentName, setTaskAttachmentName] = useState("");
   const [expandedSub, setExpandedSub] = useState<string | null>(null);
   const [showDoneMine, setShowDoneMine] = useState(false);
+  const [teamMonth, setTeamMonth] = useState(new Date().getMonth() + 1);
+  const [teamYear, setTeamYear] = useState(new Date().getFullYear());
   const [taskSaving, setTaskSaving] = useState(false);
   const [taskError, setTaskError] = useState("");
   const [taskSuccess, setTaskSuccess] = useState("");
@@ -408,7 +410,12 @@ export default function EmployeePortalPage() {
     return subs
       .map((sub) => {
         const eid = sub.employeeId || sub.employee_id;
-        const subTasks = tasks.filter((t) => (t.employeeId || t.employee_id) === eid);
+        const subTasks = tasks.filter((t) => {
+          if ((t.employeeId || t.employee_id) !== eid) return false;
+          if (!t.deadline) return true; // tasks without a date always show
+          const d = new Date(t.deadline);
+          return d.getMonth() + 1 === teamMonth && d.getFullYear() === teamYear;
+        });
         if (subTasks.length === 0) return null;
         const measurable = subTasks.filter((t) => Number(t.targetValue ?? t.target_value) > 0);
         const avgPct = measurable.length
@@ -425,7 +432,7 @@ export default function EmployeePortalPage() {
         return { sub, eid, tasks: subTasks, avgPct, doneCount, total: subTasks.length, nextDeadline };
       })
       .filter(Boolean) as any[];
-  }, [tasks, employee]);
+  }, [tasks, employee, teamMonth, teamYear]);
   const myLeaves = useMemo(() => leaves.filter((leave) => (leave.employeeId || leave.employee_id) === employeeId), [leaves, employeeId]);
   const myBalance = useMemo(() => balances.find((b) => (b.employeeId || b.employee_id) === employeeId) || null, [balances, employeeId]);
 
@@ -944,14 +951,25 @@ export default function EmployeePortalPage() {
                         </div>
                       </div>
                     )}
-                    {teamBySub.length > 0 && (
+                    {(
                       <div className="card">
-                        <div className="card-header">
+                        <div className="card-header flex-wrap gap-2">
                           <div className="card-title">
                             <CheckSquare size={16} className="text-brand-600" />
                             {isRTL ? "مهام وأهداف الفريق" : "Team Tasks & Targets"}
                           </div>
+                          <div className="flex items-center gap-1.5 ms-auto">
+                            <select className="form-select text-xs py-1 px-2 h-7 w-24" value={teamMonth} onChange={(e) => setTeamMonth(+e.target.value)}>
+                              {(isRTL ? MONTHS_AR : MONTHS_EN).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                            </select>
+                            <select className="form-select text-xs py-1 px-2 h-7 w-20" value={teamYear} onChange={(e) => setTeamYear(+e.target.value)}>
+                              {[teamYear - 1, teamYear, teamYear + 1].map((y) => <option key={y} value={y}>{y}</option>)}
+                            </select>
+                          </div>
                         </div>
+                        {teamBySub.length === 0 && (
+                          <div className="text-center py-6 text-sm text-slate-400">{isRTL ? "لا مهام في هذا الشهر" : "No tasks this month"}</div>
+                        )}
                         <div className="space-y-2">
                           {teamBySub.map(({ sub, eid, tasks: subTasks, avgPct, doneCount, total, nextDeadline }: any) => {
                             const open = expandedSub === eid;
