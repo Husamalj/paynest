@@ -162,6 +162,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [settings, setSettings] = useState<any>(null);
+  const [onDuty, setOnDuty] = useState<any[]>([]);
   const [payrollPeriod, setPayrollPeriod] = useState<{ month: number | null; year: number | null }>({ month: null, year: null });
 
   useEffect(() => {
@@ -173,8 +174,9 @@ export default function DashboardPage() {
       api.get("/tasks"),
       api.get("/announcements"),
       api.get("/settings"),
+      api.get("/dashboard/on-duty").catch(() => ({ data: { on_duty: [] } })),
     ])
-      .then(([prRes, empRes, raRes, leavesRes, tasksRes, annRes, setRes]) => {
+      .then(([prRes, empRes, raRes, leavesRes, tasksRes, annRes, setRes, dutyRes]) => {
         setPayroll(prRes.data.results || []);
         setPayrollPeriod({ month: prRes.data.period_month ?? null, year: prRes.data.period_year ?? null });
         setEmployees(empRes.data || []);
@@ -183,6 +185,7 @@ export default function DashboardPage() {
         setTasks(tasksRes.data || []);
         setAnnouncements(annRes.data || []);
         setSettings(setRes.data);
+        setOnDuty(dutyRes.data?.on_duty || []);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -234,6 +237,33 @@ export default function DashboardPage() {
         <StatCard title={t("totalBonuses")} value={formatCurrency(totals.totalBonuses)} icon={Gift} color="orange" />
         <StatCard title={t("ssDeductions")} value={formatCurrency(totals.totalSS)} icon={Shield} color="purple" />
         <StatCard title={isRTL ? "إجازات معلقة" : "Pending Leaves"} value={pendingLeaves} icon={Calendar} color="orange" />
+      </div>
+
+      {/* Working today */}
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title"><Users size={16} className="text-emerald-600" />{isRTL ? "المداومون اليوم" : "Working Today"}
+            <span className="ms-2 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">{onDuty.length}</span>
+          </div>
+          <span className="text-xs text-slate-400">{new Date().toLocaleDateString(isRTL ? "ar" : "en", { weekday: "long", day: "numeric", month: "short" })}</span>
+        </div>
+        {onDuty.length === 0 ? (
+          <div className="text-center py-8 text-sm text-slate-400">{isRTL ? "لا أحد مداوم اليوم" : "No one scheduled today"}</div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {onDuty.map((e) => (
+              <div key={e.employee_id} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full ps-1 pe-3 py-1">
+                {e.photo_url
+                  ? <img src={e.photo_url} alt="" className="w-7 h-7 rounded-full object-cover" />
+                  : <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">{(e.name || "?").charAt(0).toUpperCase()}</div>}
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-slate-800 leading-tight truncate max-w-[140px]">{e.name}</div>
+                  {e.job_title && <div className="text-[10px] text-slate-400 leading-tight truncate max-w-[140px]">{e.job_title}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
