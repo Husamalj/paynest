@@ -100,13 +100,11 @@ export function calculateDailyPayroll(
   leaveMap: Record<string, Record<string, string>>
 ) {
   const { month, year } = period;
-  const workdayNames = settings.workdays
+  const companyWorkdayNames = settings.workdays
     ? settings.workdays.split(",").map((s: string) => s.trim())
     : ["Sun", "Mon", "Tue", "Wed", "Thu"];
   const holidaySet = new Set<string>(Array.isArray(settings.holidays) ? settings.holidays : []);
-  // Official holidays are paid days off — drop them from the working days
-  const workdays = getWorkdaysInMonth(year, month, workdayNames).filter((d) => !holidaySet.has(d));
-  const reqHours = parseFloat(settings.req_hours ?? settings.reqHours) || 8;
+  const companyReqHours = parseFloat(settings.req_hours ?? settings.reqHours) || 8;
   const monthDays = parseFloat(settings.month_days ?? settings.monthDays) || 26;
   const lateTolerance = parseFloat(settings.late_tolerance ?? settings.lateTolerance) || 0;
   const deductionRate = parseFloat(settings.deduction_rate ?? settings.deductionRate) || 1.0;
@@ -114,11 +112,22 @@ export function calculateDailyPayroll(
 
   return employees.map((emp) => {
     const baseSalary = parseFloat(emp.base_salary ?? emp.baseSalary) || 0;
-    const hourlyRate = baseSalary / (monthDays * reqHours);
     const empId = emp.employee_id ?? emp.employeeId;
     const empAttendance = attendanceMap[empId] || {};
     const empBonuses = bonusesMap[empId] || [];
     const empLeaves = (leaveMap && leaveMap[empId]) || {};
+
+    // Per-employee schedule (override company defaults)
+    const workType = String(emp.work_type ?? emp.workType ?? "standard");
+    const isFixed = workType === "fixed";
+    const empWorkdayRaw = emp.workdays ?? emp.work_days;
+    const workdayNames = empWorkdayRaw
+      ? String(empWorkdayRaw).split(",").map((s: string) => s.trim()).filter(Boolean)
+      : companyWorkdayNames;
+    const reqHours = parseFloat(emp.req_hours ?? emp.reqHours) || companyReqHours;
+    // Official holidays are paid days off — drop them from the working days
+    const workdays = getWorkdaysInMonth(year, month, workdayNames).filter((d) => !holidaySet.has(d));
+    const hourlyRate = baseSalary / (monthDays * reqHours);
 
     let totalAdjustment = 0;
     let totalHours = 0;
@@ -132,7 +141,7 @@ export function calculateDailyPayroll(
       if (leaveStatus === "paid" || leaveStatus === "unpaid") {
         const isUnpaid = leaveStatus === "unpaid";
         if (!isUnpaid) paidLeaveDays += 1;
-        if (isUnpaid) {
+        if (isUnpaid && !isFixed) {
           const fullDayDeduct = -(reqHours * hourlyRate);
           totalAdjustment += fullDayDeduct;
           dailyBreakdown.push({ date: workday, hours_worked: 0, required: reqHours, diff: -reqHours, adjustment: parseFloat(fullDayDeduct.toFixed(4)), status: "absent" });
@@ -146,13 +155,19 @@ export function calculateDailyPayroll(
         const effectiveRequired = reqHours - toleranceHours;
         const diff = hoursWorked - reqHours;
         let dayAdjustment = 0;
-        if (hoursWorked < effectiveRequired) {
-          dayAdjustment = -(( reqHours - hoursWorked) * hourlyRate * deductionRate);
-        } else if (hoursWorked > reqHours) {
-          dayAdjustment = (hoursWorked - reqHours) * hourlyRate * extraRate;
+        // Fixed/exempt employees: presence recorded, but no deduction or overtime
+        if (!isFixed) {
+          if (hoursWorked < effectiveRequired) {
+            dayAdjustment = -(( reqHours - hoursWorked) * hourlyRate * deductionRate);
+          } else if (hoursWorked > reqHours) {
+            dayAdjustment = (hoursWorked - reqHours) * hourlyRate * extraRate;
+          }
         }
         totalAdjustment += dayAdjustment;
-        dailyBreakdown.push({ date: workday, hours_worked: hoursWorked, required: reqHours, diff: parseFloat(diff.toFixed(4)), adjustment: parseFloat(dayAdjustment.toFixed(4)), status: "present", check_in: record.clock_in ?? record.clockIn ?? null, check_out: record.clock_out ?? record.clockOut ?? null });
+        dailyBreakdown.push({ date: workday, hours_worked: hoursWorked, required: isFixed ? 0 : reqHours, diff: parseFloat(diff.toFixed(4)), adjustment: parseFloat(dayAdjustment.toFixed(4)), status: "present", check_in: record.clock_in ?? record.clockIn ?? null, check_out: record.clock_out ?? record.clockOut ?? null });
+      } else if (isFixed) {
+        // Fixed employee who didn't clock in this day — no penalty
+        dailyBreakdown.push({ date: workday, hours_worked: 0, required: 0, diff: 0, adjustment: 0, status: "present" });
       } else {
         const fullDayDeduct = -(reqHours * hourlyRate);
         totalAdjustment += fullDayDeduct;
@@ -167,7 +182,7 @@ export function calculateDailyPayroll(
       if (record && hasValidClock(record)) {
         const hoursWorked = parseFloat(record.hours_worked ?? record.hoursWorked) || 0;
         totalHours += hoursWorked;
-        const dayAdjustment = hoursWorked * hourlyRate * extraRate;
+        const dayAdjustment = isFixed ? 0 : hoursWorked * hourlyRate * extraRate;
         totalAdjustment += dayAdjustment;
         dailyBreakdown.push({ date: holiday, hours_worked: hoursWorked, required: 0, diff: parseFloat(hoursWorked.toFixed(4)), adjustment: parseFloat(dayAdjustment.toFixed(4)), status: "holiday", check_in: record.clock_in ?? record.clockIn ?? null, check_out: record.clock_out ?? record.clockOut ?? null });
       } else {
@@ -257,10 +272,13 @@ export function calculateHoursPayroll(
       totalHours += parseFloat((record as any).hours_worked ?? (record as any).hoursWorked) || 0;
     }
 
+    const isFixed = String(emp.work_type ?? emp.workType ?? "standard") === "fixed";
     const diff = totalHours - requiredHours;
     let adjustment = 0;
-    if (diff < 0) adjustment = diff * hourlyRate * deductionRate;
-    else if (diff > 0) adjustment = diff * hourlyRate * extraRate;
+    if (!isFixed) {
+      if (diff < 0) adjustment = diff * hourlyRate * deductionRate;
+      else if (diff > 0) adjustment = diff * hourlyRate * extraRate;
+    }
 
     const socialSecurityDeduct = emp.social_security || emp.socialSecurity ? baseSalary * 0.075 : 0;
     let bonusTotal = 0;

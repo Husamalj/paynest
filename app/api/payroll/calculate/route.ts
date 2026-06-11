@@ -153,6 +153,9 @@ export async function POST(req: NextRequest) {
       name: e.name,
       base_salary: e.baseSalary,
       social_security: e.socialSecurity,
+      work_type: e.workType,
+      workdays: e.workdays,
+      req_hours: e.reqHours != null ? Number(e.reqHours) : null,
     }));
 
     let payrollResults;

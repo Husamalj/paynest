@@ -26,6 +26,9 @@ function toSnake(e: any) {
     birth_date: e.birthDate,
     photo_url: e.photoUrl,
     social_security: e.socialSecurity,
+    work_type: e.workType,
+    workdays: e.workdays,
+    req_hours: e.reqHours != null ? Number(e.reqHours) : null,
     remote_days: e.remoteDays,
     system_mode: e.systemMode,
     created_at: e.createdAt,
@@ -98,6 +101,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (body.birth_date !== undefined) data.birthDate = body.birth_date ? new Date(body.birth_date) : null;
     if (body.photo_url !== undefined) data.photoUrl = body.photo_url || null;
     if (body.social_security !== undefined) data.socialSecurity = !!body.social_security;
+    if (body.work_type !== undefined) data.workType = body.work_type || "standard";
+    if (body.workdays !== undefined) data.workdays = body.workdays || null;
+    if (body.req_hours !== undefined) data.reqHours = body.req_hours != null && body.req_hours !== "" ? Number(body.req_hours) : null;
     if (body.remote_days !== undefined) data.remoteDays = body.remote_days;
     if (body.religion !== undefined) data.religion = body.religion ?? "";
     data.companyId = session.companyId;
