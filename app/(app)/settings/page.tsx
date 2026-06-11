@@ -122,7 +122,7 @@ export default function SettingsPage() {
           </div>
           <p className="text-sm text-slate-500 mb-3">
             {ar
-              ? "اختر طريقة احتساب الراتب: يومي (حسب أيام الدوام) أو ساعي (حسب ساعات الدوام)"
+              ? "اختر طريقة احتساب الراتب: شهري (حسب أيام الدوام) أو ساعي (حسب ساعات الدوام)"
               : "Choose how salaries are calculated — Daily (by workdays) or Hourly (by clocked hours)"}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -130,7 +130,7 @@ export default function SettingsPage() {
               {
                 value: "daily",
                 icon: "📅",
-                label:    ar ? "يومي (Daily)"   : "Daily-based",
+                label:    ar ? "شهري (Monthly)"   : "Monthly-based",
                 sublabel: ar
                   ? "الراتب = الأساسي ÷ أيام الشهر × أيام الدوام"
                   : "Salary = Base ÷ month days × days worked",
