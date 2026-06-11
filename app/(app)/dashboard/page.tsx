@@ -166,6 +166,9 @@ export default function DashboardPage() {
   const [onLeaveToday, setOnLeaveToday] = useState<any[]>([]);
   const [onDepartureToday, setOnDepartureToday] = useState<any[]>([]);
   const [dutyOpen, setDutyOpen] = useState(false);
+  const [qDuty, setQDuty] = useState("");
+  const [qLeave, setQLeave] = useState("");
+  const [qDep, setQDep] = useState("");
   const [payrollPeriod, setPayrollPeriod] = useState<{ month: number | null; year: number | null }>({ month: null, year: null });
 
   useEffect(() => {
@@ -263,37 +266,43 @@ export default function DashboardPage() {
             {/* Working */}
             <div>
               <div className="text-xs font-semibold text-emerald-700 mb-2 flex items-center gap-1">{isRTL ? "مداومون" : "Working"} <span className="text-slate-400">({onDuty.length})</span></div>
+              <input value={qDuty} onChange={(e) => setQDuty(e.target.value)} placeholder={isRTL ? "بحث..." : "Search..."}
+                className="w-full mb-2 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500" />
               <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                {onDuty.length === 0 ? <div className="text-xs text-slate-400">—</div> : onDuty.map((e) => (
+                {(() => { const list = onDuty.filter((e) => `${e.name || ""} ${e.department || ""} ${e.job_title || ""}`.toLowerCase().includes(qDuty.toLowerCase())); return list.length === 0 ? <div className="text-xs text-slate-400">—</div> : list.map((e) => (
                   <div key={e.employee_id} className="flex items-center gap-2 min-w-0">
                     <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">{(e.name || "?").charAt(0).toUpperCase()}</div>
                     <div className="min-w-0"><div className="text-xs font-medium text-slate-800 truncate leading-tight">{e.name}</div>{(e.department || e.job_title) && <div className="text-[10px] text-slate-400 truncate leading-tight">{e.department || e.job_title}</div>}</div>
                   </div>
-                ))}
+                )); })()}
               </div>
             </div>
             {/* On leave */}
             <div>
               <div className="text-xs font-semibold text-amber-700 mb-2 flex items-center gap-1">{isRTL ? "بإجازة" : "On leave"} <span className="text-slate-400">({onLeaveToday.length})</span></div>
+              <input value={qLeave} onChange={(e) => setQLeave(e.target.value)} placeholder={isRTL ? "بحث..." : "Search..."}
+                className="w-full mb-2 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500" />
               <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                {onLeaveToday.length === 0 ? <div className="text-xs text-slate-400">—</div> : onLeaveToday.map((e, i) => (
+                {(() => { const list = onLeaveToday.filter((e) => (e.name || "").toLowerCase().includes(qLeave.toLowerCase())); return list.length === 0 ? <div className="text-xs text-slate-400">—</div> : list.map((e, i) => (
                   <div key={i} className="flex items-center gap-2 min-w-0">
                     <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">{(e.name || "?").charAt(0).toUpperCase()}</div>
                     <div className="text-xs font-medium text-slate-800 truncate leading-tight">{e.name}</div>
                   </div>
-                ))}
+                )); })()}
               </div>
             </div>
             {/* On departure */}
             <div>
               <div className="text-xs font-semibold text-sky-700 mb-2 flex items-center gap-1">{isRTL ? "بمغادرة" : "On departure"} <span className="text-slate-400">({onDepartureToday.length})</span></div>
+              <input value={qDep} onChange={(e) => setQDep(e.target.value)} placeholder={isRTL ? "بحث..." : "Search..."}
+                className="w-full mb-2 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500" />
               <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                {onDepartureToday.length === 0 ? <div className="text-xs text-slate-400">—</div> : onDepartureToday.map((e, i) => (
+                {(() => { const list = onDepartureToday.filter((e) => (e.name || "").toLowerCase().includes(qDep.toLowerCase())); return list.length === 0 ? <div className="text-xs text-slate-400">—</div> : list.map((e, i) => (
                   <div key={i} className="flex items-center gap-2 min-w-0">
                     <div className="w-6 h-6 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">{(e.name || "?").charAt(0).toUpperCase()}</div>
                     <div className="text-xs font-medium text-slate-800 truncate leading-tight">{e.name}</div>
                   </div>
-                ))}
+                )); })()}
               </div>
             </div>
           </div>
