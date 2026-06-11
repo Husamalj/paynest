@@ -248,34 +248,18 @@ export default function DashboardPage() {
           <span className="text-xs text-slate-400">{new Date().toLocaleDateString(isRTL ? "ar" : "en", { weekday: "long", day: "numeric", month: "short" })}</span>
         </div>
         {onDuty.length === 0 ? (
-          <div className="text-center py-8 text-sm text-slate-400">{isRTL ? "لا أحد مداوم اليوم" : "No one scheduled today"}</div>
+          <div className="text-center py-6 text-sm text-slate-400">{isRTL ? "لا أحد مداوم اليوم" : "No one scheduled today"}</div>
         ) : (
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>{isRTL ? "الاسم" : "Name"}</th>
-                  <th>{isRTL ? "المسمى الوظيفي" : "Job Title"}</th>
-                  <th>{isRTL ? "القسم" : "Department"}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {onDuty.map((e) => (
-                  <tr key={e.employee_id}>
-                    <td>
-                      <div className="flex items-center gap-2">
-                        {e.photo_url
-                          ? <img src={e.photo_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
-                          : <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{(e.name || "?").charAt(0).toUpperCase()}</div>}
-                        <span className="font-medium text-slate-900">{e.name}</span>
-                      </div>
-                    </td>
-                    <td className="text-sm text-slate-600">{e.job_title || "—"}</td>
-                    <td className="text-sm text-slate-600">{e.department || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1.5 max-h-56 overflow-y-auto">
+            {onDuty.map((e) => (
+              <div key={e.employee_id} className="flex items-center gap-2 min-w-0 py-1">
+                <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">{(e.name || "?").charAt(0).toUpperCase()}</div>
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-slate-800 truncate leading-tight">{e.name}</div>
+                  {(e.department || e.job_title) && <div className="text-[10px] text-slate-400 truncate leading-tight">{e.department || e.job_title}</div>}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
