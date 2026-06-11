@@ -93,6 +93,7 @@ const WEEKDAYS: { key: string; ar: string; en: string }[] = [
 function ScheduleFields({ f, set, ar }: { f: any; set: (u: any) => void; ar: boolean }) {
   const days: string[] = f.workdays ? String(f.workdays).split(",").map((s: string) => s.trim()).filter(Boolean) : [];
   const fixed = f.work_type === "fixed";
+  const dailyWage = f.work_type === "daily_wage";
   const toggle = (k: string) => {
     const next = days.includes(k) ? days.filter((d) => d !== k) : [...days, k];
     set({ workdays: WEEKDAYS.filter((w) => next.includes(w.key)).map((w) => w.key).join(",") });
@@ -108,15 +109,16 @@ function ScheduleFields({ f, set, ar }: { f: any; set: (u: any) => void; ar: boo
           <select className="form-input" value={f.work_type} onChange={(e) => set({ work_type: e.target.value })}>
             <option value="standard">{ar ? "عادي (حسب الجدول)" : "Standard (by schedule)"}</option>
             <option value="fixed">{ar ? "ثابت / مُعفى (راتب كامل بدون خصم حضور)" : "Fixed / exempt (full salary, no attendance deduction)"}</option>
+            <option value="daily_wage">{ar ? "مياومة (أجر عن أيام الحضور فقط)" : "Daily wage (paid only for attended days)"}</option>
           </select>
         </div>
         <div>
-          <label className="form-label">{ar ? "عدد ساعات اليوم" : "Hours per day"}</label>
+          <label className="form-label">{ar ? "عدد ساعات اليوم المطلوبة" : "Required hours/day"}</label>
           <input type="number" step="any" className="form-input" placeholder={ar ? "افتراضي الشركة" : "company default"}
             value={f.req_hours} onChange={(e) => set({ req_hours: e.target.value })} disabled={fixed} />
         </div>
       </div>
-      <div className={fixed ? "opacity-40 pointer-events-none" : ""}>
+      <div className={fixed || dailyWage ? "opacity-40 pointer-events-none" : ""}>
         <label className="form-label">{ar ? "أيام الدوام" : "Work days"}</label>
         <div className="flex flex-wrap gap-1.5">
           {WEEKDAYS.map((w) => (
@@ -128,6 +130,7 @@ function ScheduleFields({ f, set, ar }: { f: any; set: (u: any) => void; ar: boo
         </div>
       </div>
       {fixed && <div className="text-[11px] text-amber-600">{ar ? "موظف ثابت: راتبه كامل دائماً، الحضور للتسجيل فقط بدون أي خصم." : "Fixed employee: always full salary; attendance is recorded only, no deductions."}</div>}
+      {dailyWage && <div className="text-[11px] text-sky-600">{ar ? "مياومة: خانة «الراتب الأساسي» = أجر اليوم الواحد. يأخذ أجراً عن كل يوم حضور (كامل إن أتمّ ساعاته، ناقص إن قصّر، إضافي إن زاد)، ولا أجر للأيام الغائبة، وبدون ضمان." : "Daily wage: the 'Base salary' field = the daily rate. Paid per attended day (full if hours met, less if short, extra if over); no pay for absent days; no social security."}</div>}
     </div>
   );
 }
