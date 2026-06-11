@@ -201,10 +201,8 @@ export function calculateDailyPayroll(
     const requiredHours = Math.max(0, (workdays.length - paidLeaveDays) * reqHours);
     const hourDiff = totalHours - requiredHours;
 
-    let status = "Full Attendance";
-    if (dailyBreakdown.some((d) => d.status === "absent")) status = "Absent";
-    else if (totalAdjustment < 0) status = "Has Deductions";
-    else if (totalAdjustment > 0) status = "Has Extras";
+    // Two states only: worked less than required → deductions, otherwise complete
+    const status = totalAdjustment < 0 ? "Has Deductions" : "Full Attendance";
 
     return {
       employee_id: empId,
@@ -289,10 +287,8 @@ export function calculateHoursPayroll(
     }
     const netSalary = baseSalary + adjustment - socialSecurityDeduct + bonusTotal - deductionTotal;
 
-    let status = "Full Attendance";
-    if (diff < 0) status = "Has Deductions";
-    else if (diff > 0) status = "Has Extras";
-    if (totalHours === 0 && paidLeaveDays === 0) status = "Absent";
+    // Two states only: worked less than required → deductions, otherwise complete
+    const status = adjustment < 0 ? "Has Deductions" : "Full Attendance";
 
     return {
       employee_id: empId,
