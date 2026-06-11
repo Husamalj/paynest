@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 
     const employees = await prisma.employee.findMany({
       where: { companyId: session.companyId, ...(adminNums.length ? { NOT: { employeeId: { in: adminNums } } } : {}) },
-      select: { employeeId: true, name: true, jobTitle: true, photoUrl: true, workdays: true, workType: true },
+      select: { employeeId: true, name: true, jobTitle: true, department: true, photoUrl: true, workdays: true, workType: true },
       orderBy: { name: "asc" },
     });
 
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
         seen.add(e.employeeId);
         return true;
       })
-      .map((e) => ({ employee_id: e.employeeId, name: e.name, job_title: e.jobTitle, photo_url: e.photoUrl }));
+      .map((e) => ({ employee_id: e.employeeId, name: e.name, job_title: e.jobTitle, department: e.department, photo_url: e.photoUrl }));
 
     return NextResponse.json({ date: startOfToday.toISOString().substring(0, 10), weekday: todayKey, on_duty: onDuty });
   } catch (err) {

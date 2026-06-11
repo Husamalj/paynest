@@ -250,18 +250,32 @@ export default function DashboardPage() {
         {onDuty.length === 0 ? (
           <div className="text-center py-8 text-sm text-slate-400">{isRTL ? "لا أحد مداوم اليوم" : "No one scheduled today"}</div>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {onDuty.map((e) => (
-              <div key={e.employee_id} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full ps-1 pe-3 py-1">
-                {e.photo_url
-                  ? <img src={e.photo_url} alt="" className="w-7 h-7 rounded-full object-cover" />
-                  : <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">{(e.name || "?").charAt(0).toUpperCase()}</div>}
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold text-slate-800 leading-tight truncate max-w-[140px]">{e.name}</div>
-                  {e.job_title && <div className="text-[10px] text-slate-400 leading-tight truncate max-w-[140px]">{e.job_title}</div>}
-                </div>
-              </div>
-            ))}
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>{isRTL ? "الاسم" : "Name"}</th>
+                  <th>{isRTL ? "المسمى الوظيفي" : "Job Title"}</th>
+                  <th>{isRTL ? "القسم" : "Department"}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {onDuty.map((e) => (
+                  <tr key={e.employee_id}>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        {e.photo_url
+                          ? <img src={e.photo_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+                          : <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{(e.name || "?").charAt(0).toUpperCase()}</div>}
+                        <span className="font-medium text-slate-900">{e.name}</span>
+                      </div>
+                    </td>
+                    <td className="text-sm text-slate-600">{e.job_title || "—"}</td>
+                    <td className="text-sm text-slate-600">{e.department || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
