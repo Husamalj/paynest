@@ -45,6 +45,7 @@ export async function PUT(req: NextRequest) {
       deductionRate: body.deduction_rate != null ? Number(body.deduction_rate) : body.deductionRate != null ? Number(body.deductionRate) : undefined,
       extraRate: body.extra_rate != null ? Number(body.extra_rate) : body.extraRate != null ? Number(body.extraRate) : undefined,
       workStartTime: body.work_start_time ?? body.workStartTime,
+      timezone: body.timezone,
     };
     // Remove undefined keys
     const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
@@ -76,6 +77,7 @@ function toSnake(s: any) {
     deduction_rate: s.deductionRate,
     extra_rate: s.extraRate,
     work_start_time: s.workStartTime ?? "09:00",
+    timezone: s.timezone ?? "Asia/Amman",
     created_at: s.createdAt,
     // also camel for newer code
     companyId: s.companyId,

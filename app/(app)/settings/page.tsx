@@ -34,7 +34,22 @@ const defaultForm = {
   deduction_rate: 1.0,
   extra_rate: 1.0,
   work_start_time: "09:00", // daily mode only
+  timezone: "Asia/Amman",
 };
+
+const TIMEZONES: { value: string; ar: string; en: string }[] = [
+  { value: "Asia/Amman", ar: "الأردن (عمّان)", en: "Jordan (Amman)" },
+  { value: "Asia/Riyadh", ar: "السعودية (الرياض)", en: "Saudi Arabia (Riyadh)" },
+  { value: "Asia/Dubai", ar: "الإمارات (دبي)", en: "UAE (Dubai)" },
+  { value: "Asia/Kuwait", ar: "الكويت", en: "Kuwait" },
+  { value: "Asia/Qatar", ar: "قطر", en: "Qatar" },
+  { value: "Asia/Bahrain", ar: "البحرين", en: "Bahrain" },
+  { value: "Asia/Muscat", ar: "عُمان (مسقط)", en: "Oman (Muscat)" },
+  { value: "Asia/Baghdad", ar: "العراق (بغداد)", en: "Iraq (Baghdad)" },
+  { value: "Asia/Beirut", ar: "لبنان (بيروت)", en: "Lebanon (Beirut)" },
+  { value: "Asia/Damascus", ar: "سوريا (دمشق)", en: "Syria (Damascus)" },
+  { value: "Africa/Cairo", ar: "مصر (القاهرة)", en: "Egypt (Cairo)" },
+];
 
 export default function SettingsPage() {
   const { t, lang } = useLanguage();
@@ -64,6 +79,7 @@ export default function SettingsPage() {
             deduction_rate:  s.deduction_rate  ?? 1.0,
             extra_rate:      s.extra_rate      ?? 1.0,
             work_start_time: s.work_start_time || "09:00",
+            timezone:        s.timezone        || "Asia/Amman",
           });
         }
         setEmployees(eRes.data || []);
@@ -171,6 +187,14 @@ export default function SettingsPage() {
                 <div className="text-xs text-slate-500">{opt.sublabel}</div>
               </button>
             ))}
+          </div>
+
+          <div className="mt-4 max-w-md">
+            <label className="form-label">{ar ? "المنطقة الزمنية للشركة" : "Company timezone"}</label>
+            <select className="form-input" value={form.timezone} onChange={(e) => setForm((f) => ({ ...f, timezone: e.target.value }))}>
+              {TIMEZONES.map((z) => <option key={z.value} value={z.value}>{ar ? z.ar : z.en}</option>)}
+            </select>
+            <p className="text-xs text-slate-400 mt-1">{ar ? "تُحدّد بداية ونهاية اليوم (المداومون/الإجازات اليوم)." : "Defines the day boundary (who's working/on leave today)."}</p>
           </div>
         </div>
 
