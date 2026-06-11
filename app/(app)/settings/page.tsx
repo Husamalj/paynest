@@ -121,12 +121,20 @@ export default function SettingsPage() {
   };
 
   const handleSSToggle = async (emp: any, value: boolean) => {
-    setSavingEmp((p) => ({ ...p, [emp.employee_id]: true }));
+    // Optimistic: flip immediately, save in the background, revert on failure
+    setEmployees((p) => p.map((e) => e.employee_id === emp.employee_id ? { ...e, social_security: value } : e));
+    const save = () => api.put(`/employees/${emp.employee_id}`, { social_security: value });
     try {
-      await api.put(`/employees/${emp.employee_id}`, { social_security: value });
-      setEmployees((p) => p.map((e) => e.employee_id === emp.employee_id ? { ...e, social_security: value } : e));
-    } catch (err: any) { setError(err.message); }
-    finally { setSavingEmp((p) => ({ ...p, [emp.employee_id]: false })); }
+      try { await save(); }
+      catch (e1: any) {
+        if (/network|wak|fetch|connect/i.test(e1?.message || "")) { await new Promise((r) => setTimeout(r, 1200)); await save(); }
+        else { throw e1; }
+      }
+    } catch (err: any) {
+      // revert on real failure
+      setEmployees((p) => p.map((e) => e.employee_id === emp.employee_id ? { ...e, social_security: !value } : e));
+      setError(err.message);
+    }
   };
 
   const isDaily  = form.system_mode === "daily";
