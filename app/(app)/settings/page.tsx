@@ -123,7 +123,7 @@ export default function SettingsPage() {
           <p className="text-sm text-slate-500 mb-3">
             {ar
               ? "اختر طريقة احتساب الراتب: شهري (حسب أيام الدوام) أو ساعي (حسب ساعات الدوام)"
-              : "Choose how salaries are calculated — Daily (by workdays) or Hourly (by clocked hours)"}
+              : "Choose how salaries are calculated — Monthly (by workdays) or Hourly (by clocked hours)"}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
