@@ -49,6 +49,11 @@ const TIMEZONES: { value: string; ar: string; en: string }[] = [
   { value: "Asia/Beirut", ar: "لبنان (بيروت)", en: "Lebanon (Beirut)" },
   { value: "Asia/Damascus", ar: "سوريا (دمشق)", en: "Syria (Damascus)" },
   { value: "Africa/Cairo", ar: "مصر (القاهرة)", en: "Egypt (Cairo)" },
+  { value: "America/New_York", ar: "أمريكا - شرقي (نيويورك)", en: "USA - Eastern (New York)" },
+  { value: "America/Chicago", ar: "أمريكا - وسط (شيكاغو)", en: "USA - Central (Chicago)" },
+  { value: "America/Denver", ar: "أمريكا - جبلي (دنفر)", en: "USA - Mountain (Denver)" },
+  { value: "America/Los_Angeles", ar: "أمريكا - غربي (لوس أنجلوس)", en: "USA - Pacific (Los Angeles)" },
+  { value: "Europe/London", ar: "بريطانيا (لندن)", en: "UK (London)" },
 ];
 
 export default function SettingsPage() {
