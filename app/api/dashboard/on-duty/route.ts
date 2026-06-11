@@ -38,12 +38,18 @@ export async function GET(req: NextRequest) {
       orderBy: { name: "asc" },
     });
 
-    // Who is on approved leave today
+    // Who is on approved leave / departure today
     const leaves = await prisma.leaveRequest.findMany({
       where: { companyId: session.companyId, status: "approved", startDate: { lte: endOfToday }, endDate: { gte: startOfToday } },
-      select: { employeeId: true },
+      select: { employeeId: true, employeeName: true, leaveType: true },
     });
     const onLeave = new Set(leaves.map((l) => l.employeeId));
+    const onLeaveList = leaves
+      .filter((l) => l.leaveType !== "permission")
+      .map((l) => ({ employee_id: l.employeeId, name: l.employeeName, leave_type: l.leaveType }));
+    const onDepartureList = leaves
+      .filter((l) => l.leaveType === "permission")
+      .map((l) => ({ employee_id: l.employeeId, name: l.employeeName }));
 
     // Dedupe by employeeId (employee can exist per systemMode)
     const seen = new Set<string>();
@@ -58,7 +64,7 @@ export async function GET(req: NextRequest) {
       })
       .map((e) => ({ employee_id: e.employeeId, name: e.name, job_title: e.jobTitle, department: e.department, photo_url: e.photoUrl }));
 
-    return NextResponse.json({ date: startOfToday.toISOString().substring(0, 10), weekday: todayKey, on_duty: onDuty });
+    return NextResponse.json({ date: startOfToday.toISOString().substring(0, 10), weekday: todayKey, on_duty: onDuty, on_leave: onLeaveList, on_departure: onDepartureList });
   } catch (err) {
     return errorResponse(err);
   }

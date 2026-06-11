@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Users, Wallet, DollarSign, TrendingDown, Gift, Shield, AlertTriangle, MapPin, Bell, Calendar, CheckSquare, ChevronLeft, ChevronRight, Scale, X } from "lucide-react";
+import { Users, Wallet, DollarSign, TrendingDown, Gift, Shield, AlertTriangle, MapPin, Bell, Calendar, CheckSquare, ChevronLeft, ChevronRight, ChevronDown, Scale, X } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import StatCard from "@/components/StatCard";
 import api from "@/lib/api";
@@ -163,6 +163,9 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [settings, setSettings] = useState<any>(null);
   const [onDuty, setOnDuty] = useState<any[]>([]);
+  const [onLeaveToday, setOnLeaveToday] = useState<any[]>([]);
+  const [onDepartureToday, setOnDepartureToday] = useState<any[]>([]);
+  const [dutyOpen, setDutyOpen] = useState(false);
   const [payrollPeriod, setPayrollPeriod] = useState<{ month: number | null; year: number | null }>({ month: null, year: null });
 
   useEffect(() => {
@@ -186,6 +189,8 @@ export default function DashboardPage() {
         setAnnouncements(annRes.data || []);
         setSettings(setRes.data);
         setOnDuty(dutyRes.data?.on_duty || []);
+        setOnLeaveToday(dutyRes.data?.on_leave || []);
+        setOnDepartureToday(dutyRes.data?.on_departure || []);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -239,27 +244,58 @@ export default function DashboardPage() {
         <StatCard title={isRTL ? "إجازات معلقة" : "Pending Leaves"} value={pendingLeaves} icon={Calendar} color="orange" />
       </div>
 
-      {/* Working today */}
+      {/* Today's status — collapsed by default; click to expand into 3 columns */}
       <div className="card">
-        <div className="card-header">
-          <div className="card-title"><Users size={16} className="text-emerald-600" />{isRTL ? "المداومون اليوم" : "Working Today"}
-            <span className="ms-2 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">{onDuty.length}</span>
+        <button type="button" onClick={() => setDutyOpen((v) => !v)} className="w-full flex items-center justify-between text-start">
+          <div className="card-title">
+            <Users size={16} className="text-emerald-600" />{isRTL ? "حالة اليوم" : "Today's Status"}
+            <span className="ms-2 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">{onDuty.length} {isRTL ? "مداوم" : "in"}</span>
+            {onLeaveToday.length > 0 && <span className="ms-1 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold">{onLeaveToday.length} {isRTL ? "إجازة" : "leave"}</span>}
+            {onDepartureToday.length > 0 && <span className="ms-1 px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] font-bold">{onDepartureToday.length} {isRTL ? "مغادرة" : "out"}</span>}
           </div>
-          <span className="text-xs text-slate-400">{new Date().toLocaleDateString(isRTL ? "ar" : "en", { weekday: "long", day: "numeric", month: "short" })}</span>
-        </div>
-        {onDuty.length === 0 ? (
-          <div className="text-center py-6 text-sm text-slate-400">{isRTL ? "لا أحد مداوم اليوم" : "No one scheduled today"}</div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1.5 max-h-56 overflow-y-auto">
-            {onDuty.map((e) => (
-              <div key={e.employee_id} className="flex items-center gap-2 min-w-0 py-1">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">{(e.name || "?").charAt(0).toUpperCase()}</div>
-                <div className="min-w-0">
-                  <div className="text-xs font-medium text-slate-800 truncate leading-tight">{e.name}</div>
-                  {(e.department || e.job_title) && <div className="text-[10px] text-slate-400 truncate leading-tight">{e.department || e.job_title}</div>}
-                </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 hidden sm:inline">{new Date().toLocaleDateString(isRTL ? "ar" : "en", { weekday: "long", day: "numeric", month: "short" })}</span>
+            <ChevronDown size={16} className={`text-slate-400 transition-transform ${dutyOpen ? "rotate-180" : ""}`} />
+          </div>
+        </button>
+        {dutyOpen && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100">
+            {/* Working */}
+            <div>
+              <div className="text-xs font-semibold text-emerald-700 mb-2 flex items-center gap-1">{isRTL ? "مداومون" : "Working"} <span className="text-slate-400">({onDuty.length})</span></div>
+              <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                {onDuty.length === 0 ? <div className="text-xs text-slate-400">—</div> : onDuty.map((e) => (
+                  <div key={e.employee_id} className="flex items-center gap-2 min-w-0">
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">{(e.name || "?").charAt(0).toUpperCase()}</div>
+                    <div className="min-w-0"><div className="text-xs font-medium text-slate-800 truncate leading-tight">{e.name}</div>{(e.department || e.job_title) && <div className="text-[10px] text-slate-400 truncate leading-tight">{e.department || e.job_title}</div>}</div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+            {/* On leave */}
+            <div>
+              <div className="text-xs font-semibold text-amber-700 mb-2 flex items-center gap-1">{isRTL ? "بإجازة" : "On leave"} <span className="text-slate-400">({onLeaveToday.length})</span></div>
+              <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                {onLeaveToday.length === 0 ? <div className="text-xs text-slate-400">—</div> : onLeaveToday.map((e, i) => (
+                  <div key={i} className="flex items-center gap-2 min-w-0">
+                    <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">{(e.name || "?").charAt(0).toUpperCase()}</div>
+                    <div className="text-xs font-medium text-slate-800 truncate leading-tight">{e.name}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* On departure */}
+            <div>
+              <div className="text-xs font-semibold text-sky-700 mb-2 flex items-center gap-1">{isRTL ? "بمغادرة" : "On departure"} <span className="text-slate-400">({onDepartureToday.length})</span></div>
+              <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                {onDepartureToday.length === 0 ? <div className="text-xs text-slate-400">—</div> : onDepartureToday.map((e, i) => (
+                  <div key={i} className="flex items-center gap-2 min-w-0">
+                    <div className="w-6 h-6 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">{(e.name || "?").charAt(0).toUpperCase()}</div>
+                    <div className="text-xs font-medium text-slate-800 truncate leading-tight">{e.name}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>
