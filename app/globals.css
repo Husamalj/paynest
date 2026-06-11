@@ -205,6 +205,11 @@
   .toggle input:checked + .toggle-slider::before {
     transform: translateX(20px);
   }
+  /* RTL: knob sits on the right when off, slides left when on (stays inside the track) */
+  html[dir='rtl'] .toggle-slider::before {
+    left: auto;
+    right: 3px;
+  }
   html[dir='rtl'] .toggle input:checked + .toggle-slider::before {
     transform: translateX(-20px);
   }
