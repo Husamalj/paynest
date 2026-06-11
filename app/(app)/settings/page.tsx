@@ -83,7 +83,19 @@ export default function SettingsPage() {
     try {
       await api.put("/settings", form);
       setSuccess(ar ? "تم حفظ الإعدادات بنجاح" : "Settings saved successfully");
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) {
+      // Retry once on a transient network/cold-start failure (no server response)
+      const transient = /network|wak|fetch|connect/i.test(err?.message || "");
+      if (transient) {
+        try {
+          await new Promise((r) => setTimeout(r, 1200));
+          await api.put("/settings", form);
+          setSuccess(ar ? "تم حفظ الإعدادات بنجاح" : "Settings saved successfully");
+          return;
+        } catch (err2: any) { setError(err2.message); return; }
+      }
+      setError(err.message);
+    }
     finally { setSaving(false); }
   };
 
