@@ -498,7 +498,7 @@ export default function OwnerPortalPage() {
                 { label: ar ? "عدد الموظفين" : "Employees", value: String(employees.length), icon: Users, color: "text-brand-600 bg-brand-50" },
                 { label: ar ? "إجمالي الخصومات" : "Total deductions", value: formatCurrency(fin.totalDed), icon: TrendingDown, color: "text-rose-600 bg-rose-50" },
                 { label: ar ? "إجمالي المكافآت" : "Total bonuses", value: formatCurrency(fin.totalBonus), icon: Gift, color: "text-amber-600 bg-amber-50" },
-                { label: ar ? "متوسط الراتب" : "Average salary", value: formatCurrency(fin.avg), icon: DollarSign, color: "text-cyan-600 bg-cyan-50" },
+                { label: ar ? "الفرق عن الراتب الأصلي" : "Base − Net difference", value: formatCurrency(fin.totalBase - fin.totalNet), icon: DollarSign, color: "text-cyan-600 bg-cyan-50" },
                 { label: ar ? "السلف المتبقية" : "Advances outstanding", value: formatCurrency(advancesOutstanding), icon: Briefcase, color: "text-orange-600 bg-orange-50" },
               ].map((k, i) => (
                 <div key={i} className="card">
