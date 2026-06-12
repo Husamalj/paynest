@@ -202,8 +202,16 @@ export default function DashboardPage() {
   const totals = useMemo(() => ({
     totalBase: payroll.reduce((s, r) => s + (parseFloat(r.base_salary) || 0), 0),
     totalNet: payroll.reduce((s, r) => s + (parseFloat(r.net_salary) || 0), 0),
-    totalDeductions: payroll.reduce((s, r) => s + (parseFloat(r.deduction_total) || 0), 0),
-    totalBonuses: payroll.reduce((s, r) => s + (parseFloat(r.bonus_total) || 0), 0),
+    // Total deductions = manual deductions + attendance shortfalls (negative adjustments)
+    totalDeductions: payroll.reduce((s, r) => {
+      const adj = parseFloat(r.adjustment) || 0;
+      return s + (parseFloat(r.deduction_total) || 0) + (adj < 0 ? -adj : 0);
+    }, 0),
+    // Total bonuses = manual bonuses + overtime (positive adjustments)
+    totalBonuses: payroll.reduce((s, r) => {
+      const adj = parseFloat(r.adjustment) || 0;
+      return s + (parseFloat(r.bonus_total) || 0) + (adj > 0 ? adj : 0);
+    }, 0),
     totalSS: payroll.reduce((s, r) => s + (parseFloat(r.social_security_deduct) || 0), 0),
   }), [payroll]);
 
