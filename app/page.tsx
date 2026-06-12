@@ -44,7 +44,7 @@ function TopNav({ ar }: { ar: boolean }) {
             {lang === "ar" ? "EN" : "AR"}
           </button>
           <Link
-            href="/login"
+            href="/portal-select"
             className="text-slate-700 hover:text-slate-900 text-sm font-medium px-3 py-2 hidden sm:inline-flex items-center gap-1"
           >
             <LogIn size={14} />
@@ -178,7 +178,7 @@ function Hero({ ar }: { ar: boolean }) {
             <ArrowRight size={17} className={ar ? "rotate-180" : ""} />
           </button>
           <Link
-            href="/login"
+            href="/portal-select"
             className="inline-flex items-center gap-2 bg-white text-slate-700 hover:text-slate-900 border border-slate-200 hover:border-slate-300 text-base font-semibold px-6 py-3 rounded-xl shadow-sm transition-all"
           >
             <LogIn size={17} />
@@ -346,7 +346,7 @@ function Footer({ ar }: { ar: boolean }) {
           <button onClick={() => router.push("/privacy")} className="hover:text-slate-900 transition-colors">
             {ar ? "الخصوصية" : "Privacy"}
           </button>
-          <Link href="/login" className="hover:text-slate-900 transition-colors">
+          <Link href="/portal-select" className="hover:text-slate-900 transition-colors">
             {ar ? "تسجيل الدخول" : "Log In"}
           </Link>
           <button onClick={() => router.push("/signup")} className="hover:text-slate-900 transition-colors">
