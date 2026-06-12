@@ -36,6 +36,8 @@ export async function POST(req: NextRequest) {
     });
     const adminNums = adminUsers.map((u) => u.employeeNumber).filter(Boolean) as string[];
 
+    // Global employee directory (identity + schedule). Salaries/roster may be
+    // overridden per-month by the uploaded salary snapshot below.
     const employees = await prisma.employee.findMany({
       where: {
         companyId,
@@ -44,7 +46,34 @@ export async function POST(req: NextRequest) {
       },
       orderBy: { name: "asc" },
     });
-    if (employees.length === 0) throw new HttpError(400, "No employees found");
+
+    // Per-month snapshot: if a salary file was uploaded for THIS period, it is
+    // the definitive roster + salaries for the month (employees not in it are
+    // not paid this month). Falls back to the global directory if no snapshot.
+    const monthly = await prisma.monthlySalary.findMany({
+      where: { companyId, periodMonth, periodYear, systemMode: mode },
+    });
+    const schedById = new Map(employees.map((e) => [e.employeeId, e]));
+    let roster: any[];
+    if (monthly.length > 0) {
+      roster = monthly
+        .filter((m) => !adminNums.includes(m.employeeId))
+        .map((m) => {
+          const e = schedById.get(m.employeeId);
+          return {
+            employeeId: m.employeeId,
+            name: m.name,
+            baseSalary: m.baseSalary,
+            socialSecurity: m.socialSecurity,
+            workType: e?.workType ?? "standard",
+            workdays: e?.workdays ?? null,
+            reqHours: e?.reqHours ?? null,
+          };
+        });
+    } else {
+      roster = employees;
+    }
+    if (roster.length === 0) throw new HttpError(400, "No employees found");
 
     const attendanceRecords = await prisma.attendanceRecord.findMany({
       where: {
@@ -148,7 +177,7 @@ export async function POST(req: NextRequest) {
       holidays,
     };
 
-    const empPlain = employees.map((e) => ({
+    const empPlain = roster.map((e) => ({
       employee_id: e.employeeId,
       name: e.name,
       base_salary: e.baseSalary,

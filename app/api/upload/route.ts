@@ -71,6 +71,9 @@ export async function POST(req: NextRequest) {
     const companyId = session.companyId;
     const url = new URL(req.url);
     const fileType = url.searchParams.get("type") || "attendance";
+    const now = new Date();
+    const periodMonth = parseInt(url.searchParams.get("month") || "", 10) || (now.getMonth() + 1);
+    const periodYear = parseInt(url.searchParams.get("year") || "", 10) || now.getFullYear();
     const batchId = `batch_${Date.now()}`;
     const systemMode = await getSystemMode(companyId);
 
@@ -262,6 +265,21 @@ export async function POST(req: NextRequest) {
               })
             )
           );
+
+          // 2b. Snapshot THIS month's roster + salaries (the file is the
+          //     definitive payroll source for the selected period). Replace any
+          //     previous snapshot for the same period so re-uploads stay clean.
+          await prisma.monthlySalary.deleteMany({ where: { companyId, periodMonth, periodYear, systemMode } });
+          await prisma.monthlySalary.createMany({
+            data: emps.map((emp) => ({
+              companyId, periodMonth, periodYear, systemMode,
+              employeeId: emp.employee_id,
+              name: emp.name,
+              baseSalary: emp.base_salary,
+              socialSecurity: emp.social_security,
+            })),
+            skipDuplicates: true,
+          });
 
           // 3. Auto-create login accounts for employees that have an email and
           //    don't already have a user. Temp password "123456" + forced change.

@@ -279,6 +279,25 @@ model OfficialHoliday {
   @@map("official_holidays")
 }
 
+/// Per-month salary snapshot. The salary file uploaded for a given month is the
+/// definitive roster + salaries for THAT month — independent of other months.
+model MonthlySalary {
+  id             Int      @id @default(autoincrement())
+  companyId      Int      @map("company_id")
+  periodMonth    Int      @map("period_month")
+  periodYear     Int      @map("period_year")
+  employeeId     String   @map("employee_id") @db.VarChar(50)
+  name           String   @db.VarChar(255)
+  baseSalary     Decimal  @default(0) @map("base_salary")
+  socialSecurity Boolean  @default(false) @map("social_security")
+  systemMode     String   @default("daily") @map("system_mode") @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([companyId, periodYear, periodMonth, employeeId, systemMode], map: "monthly_salary_period_emp_uidx")
+  @@index([companyId, periodYear, periodMonth, systemMode])
+  @@map("monthly_salaries")
+}
+
 model Task {
   id           Int       @id @default(autoincrement())
   companyId    Int       @default(1) @map("company_id")

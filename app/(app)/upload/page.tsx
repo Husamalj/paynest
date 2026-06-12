@@ -140,7 +140,7 @@ export default function UploadPage() {
     files.forEach((f) => formData.append("files", f));
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.post(`/api/upload?type=${type}`, formData, {
+      const res = await axios.post(`/api/upload?type=${type}&month=${periodMonth}&year=${periodYear}`, formData, {
         headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
         timeout: 60000,
       });
@@ -206,8 +206,8 @@ export default function UploadPage() {
         </div>
         <p className="text-xs text-slate-500 mt-2">
           {ar
-            ? "اختر الشهر والسنة لكل من رفع الملفات واحتساب الرواتب. سيتم استخدام هذه القيم لتحديد الفترة المحاسبية."
-            : "Pick the month and year — used for both file uploads and payroll calculation."}
+            ? "اختر الشهر والسنة أولاً. ملف الرواتب الذي ترفعه يصبح المرجع الكامل لموظفي هذا الشهر ورواتبهم — كل شهر مستقل عن الآخر."
+            : "Pick the month and year first. The salary file you upload becomes the definitive roster & salaries for that month — each month is independent."}
         </p>
       </div>
 
