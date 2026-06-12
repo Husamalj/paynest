@@ -61,8 +61,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       // HR / owner / super_admin set the HR decision; supervisor's decision stays as-is.
       const newHrStatus = body.hr_status ?? body.status;
       if (newHrStatus === "approved" || newHrStatus === "rejected" || newHrStatus === "pending") {
-        const newStatus = calcStatus(existing.supervisorStatus ?? "pending", newHrStatus);
-        updateData = { hrStatus: newHrStatus, status: newStatus, adminNote: body.admin_note ?? existing.adminNote };
+        // The owner is the top authority: their decision is final (counts for the
+        // supervisor side too), so approving an owner request needs no second sign-off.
+        if (session.role === "owner") {
+          const newStatus = calcStatus(newHrStatus, newHrStatus);
+          updateData = { supervisorStatus: newHrStatus, hrStatus: newHrStatus, status: newStatus, adminNote: body.admin_note ?? existing.adminNote };
+        } else {
+          const newStatus = calcStatus(existing.supervisorStatus ?? "pending", newHrStatus);
+          updateData = { hrStatus: newHrStatus, status: newStatus, adminNote: body.admin_note ?? existing.adminNote };
+        }
       } else {
         // No decision supplied — just an admin note update
         updateData = { adminNote: body.admin_note ?? null };
