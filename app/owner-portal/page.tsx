@@ -515,41 +515,6 @@ export default function OwnerPortalPage() {
               </div>
             </div>
 
-            {/* Pending approvals — owner approval is final */}
-            <div className="card">
-              <div className="card-header"><div className="card-title"><CheckCircle size={16} className="text-amber-600" />{ar ? "طلبات تنتظر موافقتك" : "Pending your approval"}<span className="ms-2 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold">{pendingLeaves + pendingAdvances.length}</span></div></div>
-              {(pendingLeaves + pendingAdvances.length) === 0 ? (
-                <div className="text-center py-6 text-sm text-slate-400">{ar ? "لا طلبات معلّقة 🎉" : "No pending requests 🎉"}</div>
-              ) : (
-                <div className="space-y-2">
-                  {leaves.filter((l) => l.status === "pending").map((l) => (
-                    <div key={`l${l.id}`} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-slate-200">
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-slate-900 truncate">{l.employee_name || l.employeeName} <span className="badge badge-yellow text-[10px]">{ar ? "إجازة" : "Leave"}</span></div>
-                        <div className="text-[11px] text-slate-500">{(l.leave_type || l.leaveType)} · {String(l.start_date || l.startDate).slice(0, 10)} → {String(l.end_date || l.endDate).slice(0, 10)}</div>
-                      </div>
-                      <div className="flex gap-1.5 shrink-0">
-                        <button className="btn btn-sm btn-success" disabled={leaveBusy === l.id} onClick={() => handleLeave(l.id, "approved")}>{ar ? "موافقة" : "Approve"}</button>
-                        <button className="btn btn-sm btn-danger" disabled={leaveBusy === l.id} onClick={() => handleLeave(l.id, "rejected")}>{ar ? "رفض" : "Reject"}</button>
-                      </div>
-                    </div>
-                  ))}
-                  {pendingAdvances.map((a) => (
-                    <div key={`a${a.id}`} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-slate-200">
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-slate-900 truncate">{a.employee_name || a.employeeName} <span className="badge badge-blue text-[10px]">{ar ? "سلفة" : "Advance"}</span></div>
-                        <div className="text-[11px] text-slate-500">{formatCurrency(a.amount)} · {a.installments || 1} {ar ? "قسط" : "inst."}</div>
-                      </div>
-                      <div className="flex gap-1.5 shrink-0">
-                        <button className="btn btn-sm btn-success" disabled={advBusy === a.id} onClick={() => handleAdvance(a.id, "approved")}>{ar ? "موافقة" : "Approve"}</button>
-                        <button className="btn btn-sm btn-danger" disabled={advBusy === a.id} onClick={() => handleAdvance(a.id, "rejected")}>{ar ? "رفض" : "Reject"}</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
           </div>
         )}
 
