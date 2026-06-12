@@ -48,7 +48,7 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-const TABS = ["overview", "employees", "team", "leaves", "announcements", "hr_team"] as const;
+const TABS = ["overview", "employees", "team", "announcements", "hr_team"] as const;
 type Tab = typeof TABS[number];
 
 const emptyEmp  = { employee_id: "", name: "", email: "", phone: "", base_salary: "", social_security: false, religion: "" };
@@ -394,7 +394,6 @@ export default function OwnerPortalPage() {
     { key: "employees",     label: ar ? "الموظفون"    : "Employees",     icon: Users,       badge: employees.length },
     { key: "team",          label: ar ? "فريقي"       : "My Team",       icon: Users,       badge: subordinates.length },
     { key: "hr_team",       label: ar ? "فريق HR"     : "HR Team",       icon: ShieldCheck, badge: hrs.length },
-    { key: "leaves",        label: ar ? "الإجازات"    : "Leaves",        icon: Calendar,    badge: pendingLeaves },
     { key: "announcements", label: ar ? "الإعلانات"   : "Announcements", icon: Bell,        badge: announcements.length },
   ] as const;
 
@@ -832,40 +831,6 @@ export default function OwnerPortalPage() {
         )}
 
         {/* ══ LEAVES TAB ══ */}
-        {tab === "leaves" && (
-          <div className="card">
-            <div className="card-header"><div className="card-title"><Calendar size={16} className="text-violet-600" />{ar ? "طلبات الإجازة" : "Leave Requests"}</div></div>
-            {leaves.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{ar ? "لا يوجد طلبات" : "No requests"}</div> : (
-              <div className="table-wrapper">
-                <table>
-                  <thead><tr><th>{ar ? "الموظف" : "Employee"}</th><th>{ar ? "النوع" : "Type"}</th><th>{ar ? "من" : "From"}</th><th>{ar ? "إلى" : "To"}</th><th>{ar ? "الحالة" : "Status"}</th><th className="text-right">{ar ? "إجراء" : "Action"}</th></tr></thead>
-                  <tbody>
-                    {leaves.map((l) => (
-                      <tr key={l.id}>
-                        <td className="font-medium">{l.employee_name || l.employeeName || l.employee_id || l.employeeId}</td>
-                        <td className="text-slate-500 text-sm">{l.leave_type || l.leaveType}</td>
-                        <td className="text-sm">{(l.start_date || l.startDate) ? new Date(l.start_date || l.startDate).toLocaleDateString() : "-"}</td>
-                        <td className="text-sm">{(l.end_date || l.endDate) ? new Date(l.end_date || l.endDate).toLocaleDateString() : "-"}</td>
-                        <td>
-                          {l.status === "approved" && <span className="badge badge-green">{ar ? "موافق" : "Approved"}</span>}
-                          {l.status === "rejected" && <span className="badge badge-red">{ar ? "مرفوض" : "Rejected"}</span>}
-                          {l.status === "pending"  && <span className="badge badge-yellow">{ar ? "معلق" : "Pending"}</span>}
-                        </td>
-                        <td>{l.status === "pending" && (
-                          <div className="flex justify-end gap-2">
-                            <button className="btn btn-sm btn-success" disabled={leaveBusy === l.id} onClick={() => handleLeave(l.id, "approved")}>{ar ? "موافقة" : "Approve"}</button>
-                            <button className="btn btn-sm btn-danger"  disabled={leaveBusy === l.id} onClick={() => handleLeave(l.id, "rejected")}>{ar ? "رفض" : "Reject"}</button>
-                          </div>
-                        )}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* ══ ANNOUNCEMENTS TAB ══ */}
         {tab === "announcements" && (
           <div className="card">
