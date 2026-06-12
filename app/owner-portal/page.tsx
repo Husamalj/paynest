@@ -511,26 +511,7 @@ export default function OwnerPortalPage() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Monthly payroll cost trend */}
-              <div className="card">
-                <div className="card-header"><div className="card-title"><TrendingUp size={16} className="text-emerald-600" />{ar ? "تكلفة الرواتب شهرياً" : "Monthly payroll cost"}</div></div>
-                {trend.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{ar ? "لا بيانات" : "No data"}</div> : (
-                  <div className="flex items-end gap-2 h-40 pt-2">
-                    {trend.map((t, i) => {
-                      const h = Math.round((num(t.total_net) / trendMax) * 100);
-                      return (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
-                          <div className="text-[9px] text-slate-500 font-mono">{Math.round(num(t.total_net))}</div>
-                          <div className="w-full bg-emerald-500 rounded-t" style={{ height: `${Math.max(4, h)}%` }} />
-                          <div className="text-[9px] text-slate-400">{MONTHS_AR[(t.period_month - 1)]?.slice(0, 3)}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
+            <div>
               {/* Cost per department */}
               <div className="card">
                 <div className="card-header"><div className="card-title"><Briefcase size={16} className="text-violet-600" />{ar ? "تكلفة كل قسم" : "Cost per department"}</div></div>
@@ -585,33 +566,6 @@ export default function OwnerPortalPage() {
               )}
             </div>
 
-            {/* People insights */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="card">
-                <div className="card-header"><div className="card-title"><Clock size={16} className="text-rose-600" />{ar ? "عقود قاربت على الانتهاء" : "Contracts expiring soon"}</div></div>
-                {expiringContracts.length === 0 ? <div className="text-center py-5 text-sm text-slate-400">—</div> : (
-                  <div className="space-y-1.5">{expiringContracts.map((e) => (
-                    <div key={e.employee_id} className="flex justify-between text-xs"><span className="text-slate-700 truncate">{e.name}</span><span className="text-rose-600 font-mono">{String(e.contract_end_date).slice(0, 10)}</span></div>
-                  ))}</div>
-                )}
-              </div>
-              <div className="card">
-                <div className="card-header"><div className="card-title"><Plus size={16} className="text-emerald-600" />{ar ? "موظفون جدد هذا الشهر" : "New hires this month"}</div></div>
-                {newHires.length === 0 ? <div className="text-center py-5 text-sm text-slate-400">—</div> : (
-                  <div className="space-y-1.5">{newHires.map((e) => (
-                    <div key={e.employee_id} className="flex justify-between text-xs"><span className="text-slate-700 truncate">{e.name}</span><span className="text-slate-400 font-mono">{String(e.join_date).slice(0, 10)}</span></div>
-                  ))}</div>
-                )}
-              </div>
-              <div className="card">
-                <div className="card-header"><div className="card-title"><TrendingDown size={16} className="text-amber-600" />{ar ? "الالتزام بالدوام" : "Attendance compliance"}</div></div>
-                <div className="py-3 text-center">
-                  <div className="text-3xl font-bold text-slate-900">{fin.count - fin.withDeduction}<span className="text-base text-slate-400">/{fin.count}</span></div>
-                  <div className="text-xs text-slate-500 mt-1">{ar ? "موظف بدوام كامل (بدون خصم)" : "employees with full attendance"}</div>
-                  {fin.withDeduction > 0 && <div className="text-[11px] text-rose-600 mt-1">{fin.withDeduction} {ar ? "عليهم خصم هذا الشهر" : "had deductions"}</div>}
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
