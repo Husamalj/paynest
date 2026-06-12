@@ -24,14 +24,34 @@ function MiniCalendar({ leaves, isRTL }: { leaves: any[]; isRTL: boolean }) {
   };
   useEffect(() => { loadEvents(cursor.y, cursor.m); setSelected(null); }, [cursor.y, cursor.m]);
 
+  const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const leaveTypeLabel = (tp: string) => {
+    const m: Record<string, string> = isRTL
+      ? { annual: "سنوية", sick: "مرضية", unpaid: "بدون راتب", permission: "مغادرة" }
+      : { annual: "Annual", sick: "Sick", unpaid: "Unpaid", permission: "Permission" };
+    return m[tp] || tp;
+  };
+  // Mark every day within each leave's range (not just the start day)
   const leaveDays = new Set<number>();
   for (const l of leaves) {
-    const d = new Date(l.startDate || l.start_date);
-    if (!isNaN(d.getTime()) && d.getFullYear() === cursor.y && d.getMonth() === cursor.m) leaveDays.add(d.getDate());
+    const s = new Date(l.startDate || l.start_date);
+    const e = new Date(l.endDate || l.end_date || l.startDate || l.start_date);
+    if (isNaN(s.getTime())) continue;
+    for (let d = new Date(s.getFullYear(), s.getMonth(), s.getDate()); d <= e; d.setDate(d.getDate() + 1)) {
+      if (d.getFullYear() === cursor.y && d.getMonth() === cursor.m) leaveDays.add(d.getDate());
+    }
   }
   const eventDays = new Set<number>(events.map((e) => parseInt(e.date.substring(8, 10), 10)));
   const dateStr = (day: number) => `${cursor.y}-${String(cursor.m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   const selectedEvents = selected ? events.filter((e) => e.date === selected) : [];
+  // Who is on leave on the selected day (date falls within the leave range)
+  const selectedLeaves = selected ? leaves.filter((l) => {
+    const s = new Date(l.startDate || l.start_date);
+    const e = new Date(l.endDate || l.end_date || l.startDate || l.start_date);
+    if (isNaN(s.getTime())) return false;
+    const sk = dayKey(s), ek = dayKey(e);
+    return selected >= sk && selected <= ek;
+  }) : [];
 
   const firstDow = new Date(cursor.y, cursor.m, 1).getDay();
   const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
@@ -88,6 +108,20 @@ function MiniCalendar({ leaves, isRTL }: { leaves: any[]; isRTL: boolean }) {
 
       {selected && (
         <div className="mt-3 pt-3 border-t border-slate-100">
+          {/* Who was on leave that day */}
+          {selectedLeaves.length > 0 && (
+            <div className="mb-3">
+              <div className="text-xs font-semibold text-amber-700 mb-1.5">{isRTL ? "مجازون هذا اليوم" : "On leave this day"} ({selectedLeaves.length})</div>
+              <div className="space-y-1">
+                {selectedLeaves.map((l, i) => (
+                  <div key={i} className="flex items-center justify-between gap-2 text-xs bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
+                    <span className="text-slate-800 truncate">{l.employeeName || l.employee_name || l.employeeId || l.employee_id}</span>
+                    <span className="text-[10px] text-amber-700 font-semibold flex-shrink-0">{leaveTypeLabel(l.leaveType || l.leave_type)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="text-xs font-semibold text-slate-700 mb-2">{isRTL ? "أحداث يوم" : "Events on"} {selected}</div>
           <div className="space-y-1 mb-2">
             {selectedEvents.length === 0 ? (
