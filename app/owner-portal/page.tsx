@@ -842,10 +842,10 @@ export default function OwnerPortalPage() {
                   <tbody>
                     {leaves.map((l) => (
                       <tr key={l.id}>
-                        <td className="font-medium">{l.employee_name || l.employee_id}</td>
-                        <td className="text-slate-500 text-sm">{l.leave_type}</td>
-                        <td className="text-sm">{l.start_date ? new Date(l.start_date).toLocaleDateString() : "-"}</td>
-                        <td className="text-sm">{l.end_date ? new Date(l.end_date).toLocaleDateString() : "-"}</td>
+                        <td className="font-medium">{l.employee_name || l.employeeName || l.employee_id || l.employeeId}</td>
+                        <td className="text-slate-500 text-sm">{l.leave_type || l.leaveType}</td>
+                        <td className="text-sm">{(l.start_date || l.startDate) ? new Date(l.start_date || l.startDate).toLocaleDateString() : "-"}</td>
+                        <td className="text-sm">{(l.end_date || l.endDate) ? new Date(l.end_date || l.endDate).toLocaleDateString() : "-"}</td>
                         <td>
                           {l.status === "approved" && <span className="badge badge-green">{ar ? "موافق" : "Approved"}</span>}
                           {l.status === "rejected" && <span className="badge badge-red">{ar ? "مرفوض" : "Rejected"}</span>}
