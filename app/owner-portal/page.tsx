@@ -451,22 +451,6 @@ export default function OwnerPortalPage() {
         {error   && <div className="alert alert-error"><AlertTriangle size={16} className="flex-shrink-0" /><span className="flex-1">{error}</span><button onClick={() => setError("")}><X size={14} /></button></div>}
         {success && <div className="alert alert-success"><CheckCircle2 size={16} className="flex-shrink-0" /><span className="flex-1">{success}</span><button onClick={() => setSuccess("")}><X size={14} /></button></div>}
 
-        {/* Stat cards / tab switcher */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          {TAB_CONFIG.map(({ key, label, icon: Icon, badge }) => (
-            <button key={key} onClick={() => setTab(key as Tab)}
-              className={clsx("card p-4 flex items-center gap-3 text-left transition-all", tab === key ? "ring-2 ring-violet-500 bg-violet-50" : "hover:shadow-elevated")}>
-              <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", tab === key ? "bg-violet-600 text-white" : "bg-slate-100 text-slate-500")}>
-                <Icon size={18} />
-              </div>
-              <div>
-                <div className={clsx("text-xl font-bold", tab === key ? "text-violet-700" : "text-slate-900")}>{badge}</div>
-                <div className="text-xs text-slate-500">{label}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-
         {/* Tab nav */}
         <div className="flex gap-1 bg-white rounded-xl border border-slate-200 p-1 w-fit flex-wrap">
           {TAB_CONFIG.map(({ key, label, icon: Icon }) => (
