@@ -177,6 +177,7 @@ export default function EmployeePortalPage() {
   const [showOnlineModal, setShowOnlineModal] = useState(false);
   const [onlineForm, setOnlineForm] = useState({ start: new Date().toISOString().slice(0, 10), end: new Date().toISOString().slice(0, 10), reason: "" });
   const [checkinBusy, setCheckinBusy] = useState(false);
+  const [checkin, setCheckin] = useState<any>(null);
   const [showAdvModal, setShowAdvModal] = useState(false);
   const [reqOpen, setReqOpen] = useState(false);
   const [showOrg, setShowOrg] = useState(false);
@@ -270,6 +271,16 @@ export default function EmployeePortalPage() {
       const res = await api.put(`/leaves/${leaveId}`, { supervisor_status: approve ? "approved" : "rejected" });
       setSubLeaves((prev) => prev.map((l) => (l.id === leaveId ? res.data : l)));
     } catch (err: any) { setError(err.message); }
+  };
+
+  const loadCheckin = async () => {
+    try { const r = await api.get("/attendance/checkin"); setCheckin(r.data); } catch { setCheckin(null); }
+  };
+  const doCheck = async (action: "in" | "out") => {
+    setCheckinBusy(true);
+    try { await api.post("/attendance/checkin", { action }); await loadCheckin(); }
+    catch (err: any) { setError(err.message); }
+    finally { setCheckinBusy(false); }
   };
 
   const submitOnline = async (e: React.FormEvent) => {
@@ -713,7 +724,7 @@ export default function EmployeePortalPage() {
                     <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-base">💵</div>
                     <div className="text-sm font-medium text-slate-900">{isRTL ? "طلب سلفة" : "Request Advance"}</div>
                   </button>
-                  <button type="button" onClick={() => { setShowOnlineModal(true); setReqOpen(false); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
+                  <button type="button" onClick={() => { setShowOnlineModal(true); setReqOpen(false); loadCheckin(); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
                     <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center flex-shrink-0"><Wifi size={16} /></div>
                     <div className="text-sm font-medium text-slate-900">{isRTL ? "طلب عمل أونلاين" : "Online Work"}</div>
                   </button>
@@ -1193,6 +1204,28 @@ export default function EmployeePortalPage() {
                   <div><label className="form-label">{isRTL ? "ملاحظة (اختياري)" : "Note (optional)"}</label><textarea rows={2} className="form-textarea" value={onlineForm.reason} onChange={(e) => setOnlineForm((f) => ({ ...f, reason: e.target.value }))} /></div>
                   <button className="btn btn-primary w-full" disabled={checkinBusy}>{checkinBusy ? <span className="spinner" /> : <Send size={15} />}{isRTL ? "إرسال الطلب" : "Send request"}</button>
                 </form>
+
+                {/* Check in / out for today's online work */}
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <div className="text-xs font-semibold text-slate-500 mb-2">{isRTL ? "تسجيل حضور اليوم (أونلاين)" : "Today's online attendance"}</div>
+                  <div className="grid grid-cols-2 gap-3 text-center mb-2">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+                      <div className="text-[11px] text-slate-500">{isRTL ? "الدخول" : "Check in"}</div>
+                      <div className="text-base font-bold text-slate-900">{checkin?.clock_in || "—"}</div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+                      <div className="text-[11px] text-slate-500">{isRTL ? "الخروج" : "Check out"}</div>
+                      <div className="text-base font-bold text-slate-900">{checkin?.clock_out || "—"}</div>
+                    </div>
+                  </div>
+                  {checkin?.clock_in && checkin?.clock_out && (
+                    <div className="text-center text-xs text-emerald-600 font-semibold mb-2">{isRTL ? "ساعات اليوم" : "Hours today"}: {checkin.hours_worked}</div>
+                  )}
+                  <div className="flex gap-2">
+                    <button type="button" disabled={checkinBusy || !!checkin?.clock_in} onClick={() => doCheck("in")} className="btn btn-success flex-1 disabled:opacity-50">{isRTL ? "تسجيل دخول" : "Check in"}</button>
+                    <button type="button" disabled={checkinBusy || !checkin?.clock_in || !!checkin?.clock_out} onClick={() => doCheck("out")} className="btn btn-primary flex-1 disabled:opacity-50">{isRTL ? "تسجيل خروج" : "Check out"}</button>
+                  </div>
+                </div>
               </div>
             </div>
             )}

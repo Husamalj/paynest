@@ -198,11 +198,11 @@ export default function DashboardPage() {
   const [settings, setSettings] = useState<any>(null);
   const [onDuty, setOnDuty] = useState<any[]>([]);
   const [onLeaveToday, setOnLeaveToday] = useState<any[]>([]);
-  const [onDepartureToday, setOnDepartureToday] = useState<any[]>([]);
+  const [onlineToday, setOnlineToday] = useState<any[]>([]);
   const [dutyOpen, setDutyOpen] = useState(false);
   const [qDuty, setQDuty] = useState("");
   const [qLeave, setQLeave] = useState("");
-  const [qDep, setQDep] = useState("");
+  const [qOnline, setQOnline] = useState("");
   const [payrollPeriod, setPayrollPeriod] = useState<{ month: number | null; year: number | null }>({ month: null, year: null });
 
   useEffect(() => {
@@ -227,7 +227,7 @@ export default function DashboardPage() {
         setSettings(setRes.data);
         setOnDuty(dutyRes.data?.on_duty || []);
         setOnLeaveToday(dutyRes.data?.on_leave || []);
-        setOnDepartureToday(dutyRes.data?.on_departure || []);
+        setOnlineToday(dutyRes.data?.on_online || []);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -288,7 +288,7 @@ export default function DashboardPage() {
             <Users size={16} className="text-emerald-600" />{isRTL ? "حالة اليوم" : "Today's Status"}
             <span className="ms-2 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">{onDuty.length} {isRTL ? "مداوم" : "in"}</span>
             {onLeaveToday.length > 0 && <span className="ms-1 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold">{onLeaveToday.length} {isRTL ? "إجازة" : "leave"}</span>}
-            {onDepartureToday.length > 0 && <span className="ms-1 px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] font-bold">{onDepartureToday.length} {isRTL ? "مغادرة" : "out"}</span>}
+            {onlineToday.length > 0 && <span className="ms-1 px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] font-bold">{onlineToday.length} {isRTL ? "أونلاين" : "online"}</span>}
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400 hidden sm:inline">{new Date().toLocaleDateString(isRTL ? "ar" : "en", { weekday: "long", day: "numeric", month: "short" })}</span>
@@ -327,11 +327,11 @@ export default function DashboardPage() {
             </div>
             {/* On departure */}
             <div>
-              <div className="text-xs font-semibold text-sky-700 mb-2 flex items-center gap-1">{isRTL ? "بمغادرة" : "On departure"} <span className="text-slate-400">({onDepartureToday.length})</span></div>
-              <input value={qDep} onChange={(e) => setQDep(e.target.value)} placeholder={isRTL ? "بحث..." : "Search..."}
+              <div className="text-xs font-semibold text-sky-700 mb-2 flex items-center gap-1">{isRTL ? "أونلاين" : "Online"} <span className="text-slate-400">({onlineToday.length})</span></div>
+              <input value={qOnline} onChange={(e) => setQOnline(e.target.value)} placeholder={isRTL ? "بحث..." : "Search..."}
                 className="w-full mb-2 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500" />
               <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                {(() => { const list = onDepartureToday.filter((e) => (e.name || "").toLowerCase().includes(qDep.toLowerCase())); return list.length === 0 ? <div className="text-xs text-slate-400">—</div> : list.map((e, i) => (
+                {(() => { const list = onlineToday.filter((e) => (e.name || "").toLowerCase().includes(qOnline.toLowerCase())); return list.length === 0 ? <div className="text-xs text-slate-400">—</div> : list.map((e, i) => (
                   <div key={i} className="flex items-center gap-2 min-w-0">
                     <div className="w-6 h-6 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">{(e.name || "?").charAt(0).toUpperCase()}</div>
                     <div className="text-xs font-medium text-slate-800 truncate leading-tight">{e.name}</div>

@@ -63,6 +63,9 @@ export async function GET(req: NextRequest) {
     const onDepartureList = leaves
       .filter((l) => l.leaveType === "permission")
       .map((l) => ({ employee_id: l.employeeId, name: l.employeeName }));
+    const onlineList = leaves
+      .filter((l) => l.leaveType === "online")
+      .map((l) => ({ employee_id: l.employeeId, name: l.employeeName }));
 
     // Dedupe by employeeId (employee can exist per systemMode)
     const seen = new Set<string>();
@@ -77,7 +80,7 @@ export async function GET(req: NextRequest) {
       })
       .map((e) => ({ employee_id: e.employeeId, name: e.name, job_title: e.jobTitle, department: e.department, photo_url: e.photoUrl }));
 
-    return NextResponse.json({ date: startOfToday.toISOString().substring(0, 10), weekday: todayKey, on_duty: onDuty, on_leave: onLeaveList, on_departure: onDepartureList });
+    return NextResponse.json({ date: startOfToday.toISOString().substring(0, 10), weekday: todayKey, on_duty: onDuty, on_leave: onLeaveList, on_departure: onDepartureList, on_online: onlineList });
   } catch (err) {
     return errorResponse(err);
   }

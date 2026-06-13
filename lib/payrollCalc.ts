@@ -188,8 +188,9 @@ export function calculateDailyPayroll(
       const leaveStatus = empLeaves[workday];
       const record = empAttendance[workday];
 
-      if (leaveStatus === "online") {
-        // Approved online workday — counts as a full present day (no deduction).
+      if (leaveStatus === "online" && !(record && hasValidClock(record))) {
+        // Approved online workday with no check-in/out — counts as a full present day.
+        // (If the employee DID check in/out, the attendance branch below uses real hours.)
         paidLeaveDays += 1;
         dailyBreakdown.push({ date: workday, hours_worked: reqHours, required: reqHours, diff: 0, adjustment: 0, status: "online" });
       } else if (leaveStatus === "paid" || leaveStatus === "unpaid") {
