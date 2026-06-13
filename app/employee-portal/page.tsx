@@ -10,7 +10,7 @@ const DownloadPayslipButton = dynamic(
 import {
   AlertTriangle, Bell, Calendar, CheckCircle2, CheckSquare, ChevronDown,
   ClipboardList, Clock, KeyRound, Languages, LogOut, Palmtree, Paperclip, Send,
-  ThumbsDown, ThumbsUp, User, UserCheck, Users, X, Plus,
+  ThumbsDown, ThumbsUp, User, UserCheck, Users, X, Plus, Wifi,
 } from "lucide-react";
 import { useRef } from "react";
 import api from "@/lib/api";
@@ -174,6 +174,9 @@ export default function EmployeePortalPage() {
   // Quick-action modals
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showPermModal, setShowPermModal] = useState(false);
+  const [showOnlineModal, setShowOnlineModal] = useState(false);
+  const [checkin, setCheckin] = useState<any>(null);
+  const [checkinBusy, setCheckinBusy] = useState(false);
   const [showAdvModal, setShowAdvModal] = useState(false);
   const [reqOpen, setReqOpen] = useState(false);
   const [showOrg, setShowOrg] = useState(false);
@@ -267,6 +270,18 @@ export default function EmployeePortalPage() {
       const res = await api.put(`/leaves/${leaveId}`, { supervisor_status: approve ? "approved" : "rejected" });
       setSubLeaves((prev) => prev.map((l) => (l.id === leaveId ? res.data : l)));
     } catch (err: any) { setError(err.message); }
+  };
+
+  const loadCheckin = async () => {
+    try { const r = await api.get("/attendance/checkin"); setCheckin(r.data); } catch { setCheckin(null); }
+  };
+  const doCheck = async (action: "in" | "out") => {
+    setCheckinBusy(true);
+    try {
+      await api.post("/attendance/checkin", { action });
+      await loadCheckin();
+    } catch (err: any) { setError(err.message); }
+    finally { setCheckinBusy(false); }
   };
 
   const openTaskModal = (sub: any) => {
@@ -689,6 +704,10 @@ export default function EmployeePortalPage() {
                   <button type="button" onClick={() => { setShowAdvModal(true); setReqOpen(false); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
                     <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-base">💵</div>
                     <div className="text-sm font-medium text-slate-900">{isRTL ? "طلب سلفة" : "Request Advance"}</div>
+                  </button>
+                  <button type="button" onClick={() => { setShowOnlineModal(true); setReqOpen(false); loadCheckin(); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
+                    <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center flex-shrink-0"><Wifi size={16} /></div>
+                    <div className="text-sm font-medium text-slate-900">{isRTL ? "العمل أونلاين" : "Online Work"}</div>
                   </button>
                 </div>
               )}
@@ -1153,6 +1172,36 @@ export default function EmployeePortalPage() {
             )}
 
             {/* ── Request Advance modal ── */}
+            {showOnlineModal && (
+            <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowOnlineModal(false); }}>
+              <div className="card w-full max-w-md" dir={isRTL ? "rtl" : "ltr"}>
+                <div className="card-header"><div className="card-title"><Wifi size={16} className="text-sky-600" />{isRTL ? "العمل أونلاين — تسجيل حضور" : "Online Work — Check in/out"}</div><button type="button" onClick={() => setShowOnlineModal(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button></div>
+                <div className="space-y-4">
+                  <p className="text-xs text-slate-500">{isRTL ? "سجّل دخولك وخروجك ليوم العمل أونلاين — بينحفظ عند الموارد البشرية ويدخل بحساب الراتب." : "Record your online workday check-in/out — saved for HR and counted in payroll."}</p>
+                  <div className="grid grid-cols-2 gap-3 text-center">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="text-[11px] text-slate-500">{isRTL ? "الدخول" : "Check in"}</div>
+                      <div className="text-lg font-bold text-slate-900">{checkin?.clock_in || "—"}</div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="text-[11px] text-slate-500">{isRTL ? "الخروج" : "Check out"}</div>
+                      <div className="text-lg font-bold text-slate-900">{checkin?.clock_out || "—"}</div>
+                    </div>
+                  </div>
+                  {checkin?.clock_in && checkin?.clock_out && (
+                    <div className="text-center text-sm text-emerald-600 font-semibold">{isRTL ? "ساعات اليوم" : "Hours today"}: {checkin.hours_worked}</div>
+                  )}
+                  <div className="flex gap-2">
+                    <button type="button" disabled={checkinBusy || !!checkin?.clock_in} onClick={() => doCheck("in")}
+                      className="btn btn-success flex-1 disabled:opacity-50">{isRTL ? "تسجيل دخول" : "Check in"}</button>
+                    <button type="button" disabled={checkinBusy || !checkin?.clock_in || !!checkin?.clock_out} onClick={() => doCheck("out")}
+                      className="btn btn-primary flex-1 disabled:opacity-50">{isRTL ? "تسجيل خروج" : "Check out"}</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            )}
+
             {showAdvModal && (
             <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAdvModal(false); }}>
               <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto" dir={isRTL ? "rtl" : "ltr"}>
