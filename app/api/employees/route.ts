@@ -32,7 +32,6 @@ export async function GET(req: NextRequest) {
     const employees = await prisma.employee.findMany({
       where: {
         companyId: session.companyId,
-        systemMode: mode,
         ...(adminNums.length > 0 ? { NOT: { employeeId: { in: adminNums } } } : {}),
       },
       orderBy: { name: "asc" },
@@ -71,7 +70,7 @@ export async function POST(req: NextRequest) {
     if (company?.maxEmployees != null) {
       // Check if this is a NEW employee (not updating existing)
       const existing = await prisma.employee.findUnique({
-        where: { employeeId_systemMode_companyId: { employeeId: employee_id, systemMode: mode, companyId: session.companyId } },
+        where: { employeeId_companyId: { employeeId: employee_id, companyId: session.companyId } },
         select: { id: true },
       });
       if (!existing) {
@@ -84,7 +83,6 @@ export async function POST(req: NextRequest) {
         const currentCount = await prisma.employee.count({
           where: {
             companyId: session.companyId,
-            systemMode: mode,
             ...(adminNums.length > 0 ? { NOT: { employeeId: { in: adminNums } } } : {}),
           },
         });
@@ -98,7 +96,7 @@ export async function POST(req: NextRequest) {
     }
 
     const employee = await prisma.employee.upsert({
-      where: { employeeId_systemMode_companyId: { employeeId: employee_id, systemMode: mode, companyId: session.companyId } },
+      where: { employeeId_companyId: { employeeId: employee_id, companyId: session.companyId } },
       create: {
         employeeId: employee_id,
         name,

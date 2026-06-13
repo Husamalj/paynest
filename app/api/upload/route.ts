@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
           await prisma.$transaction(
             uniqueEmpIds.map((id) =>
               prisma.employee.upsert({
-                where: { employeeId_systemMode_companyId: { employeeId: id, systemMode, companyId } },
+                where: { employeeId_companyId: { employeeId: id, companyId } },
                 create: { employeeId: id, name: empNameMap.get(id) || id, systemMode, companyId },
                 update: {
                   name:
@@ -238,7 +238,7 @@ export async function POST(req: NextRequest) {
           await prisma.$transaction(
             emps.map((emp) =>
               prisma.employee.upsert({
-                where: { employeeId_systemMode_companyId: { employeeId: emp.employee_id, systemMode, companyId } },
+                where: { employeeId_companyId: { employeeId: emp.employee_id, companyId } },
                 create: {
                   employeeId: emp.employee_id,
                   name: emp.name,
