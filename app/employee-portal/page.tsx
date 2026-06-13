@@ -151,6 +151,8 @@ export default function EmployeePortalPage() {
   const [employeeId, setEmployeeId] = useState(savedUser.employeeNumber || savedUser.employee_number || (typeof window !== "undefined" ? localStorage.getItem("paynest_employee_id") : "") || "");
   const [employee, setEmployee] = useState<any>(null);
   const [payroll, setPayroll] = useState<any[]>([]);
+  const [salHistory, setSalHistory] = useState<any[]>([]);
+  const [salSel, setSalSel] = useState<string>("");
   const [tasks, setTasks] = useState<any[]>([]);
   const [leaves, setLeaves] = useState<any[]>([]);
   const [balances, setBalances] = useState<any[]>([]);
@@ -432,10 +434,26 @@ export default function EmployeePortalPage() {
     finally { setLoading(false); }
   };
 
+  // Load this employee's full payroll history (each month)
+  useEffect(() => {
+    if (!employeeId) return;
+    api.get("/payroll/my").then((r) => {
+      const list = r.data || [];
+      setSalHistory(list);
+      if (list.length && !salSel) setSalSel(`${list[0].period_month}-${list[0].period_year}`);
+    }).catch(() => {});
+  }, [employeeId]);
+
+  // The salary record to display = the month picked from history (fallback to latest)
   const myPayroll = useMemo(() => {
+    if (salSel && salHistory.length) {
+      const [m, y] = salSel.split("-").map(Number);
+      const hit = salHistory.find((r) => r.period_month === m && r.period_year === y);
+      if (hit) return hit;
+    }
     if (!employeeId || !Array.isArray(payroll)) return null;
     return payroll.find((row) => (row.employeeId || row.employee_id) === employeeId) || null;
-  }, [employeeId, payroll]);
+  }, [employeeId, payroll, salSel, salHistory]);
 
   const myTasks = useMemo(() => tasks.filter((task) => (task.employeeId || task.employee_id) === employeeId), [tasks, employeeId]);
   // All subordinate tasks grouped by employee (for tidy supervisor tracking)
@@ -770,6 +788,38 @@ export default function EmployeePortalPage() {
 
           {/* ── Main column ── */}
           <div className="flex-1 min-w-0 space-y-5">
+            {/* Leave balances — prominent at the top */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="card flex items-center gap-3 border-emerald-100 bg-emerald-50/40">
+                <div className="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0"><Palmtree size={20} /></div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-500">{isRTL ? "رصيد الإجازة السنوية" : "Annual leave balance"}</div>
+                  <div className="text-2xl font-bold text-emerald-700">{myBalance?.annual_remaining ?? "—"} <span className="text-sm font-medium text-slate-400">{isRTL ? "يوم" : "days"}</span></div>
+                </div>
+              </div>
+              <div className="card flex items-center gap-3 border-rose-100 bg-rose-50/40">
+                <div className="w-11 h-11 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center flex-shrink-0">🩺</div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-500">{isRTL ? "رصيد الإجازة المرضية" : "Sick leave balance"}</div>
+                  <div className="text-2xl font-bold text-rose-700">{myBalance?.sick_remaining ?? "—"} <span className="text-sm font-medium text-slate-400">{isRTL ? "يوم" : "days"}</span></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Salary month picker */}
+            {salHistory.length > 0 && (
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="text-sm font-semibold text-slate-700">{isRTL ? "راتب شهر:" : "Salary for:"}</div>
+                <select className="form-select w-auto text-sm h-9 py-0" value={salSel} onChange={(e) => setSalSel(e.target.value)}>
+                  {salHistory.map((r) => (
+                    <option key={`${r.period_month}-${r.period_year}`} value={`${r.period_month}-${r.period_year}`}>
+                      {(isRTL ? MONTHS_AR : MONTHS_EN)[(r.period_month || 1) - 1]} {r.period_year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.base}</div><div className="text-xl font-bold text-slate-900">{formatCurrency(myPayroll?.baseSalary || myPayroll?.base_salary || employee.baseSalary || employee.base_salary)}</div></div>
               <div className="card relative">
