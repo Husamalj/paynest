@@ -55,9 +55,10 @@ export async function GET(req: NextRequest) {
       where: { companyId: session.companyId, status: "approved", startDate: { lte: endOfToday }, endDate: { gte: startOfToday } },
       select: { employeeId: true, employeeName: true, leaveType: true },
     });
-    const onLeave = new Set(leaves.map((l) => l.employeeId));
+    // Online-work approvals mean the person IS working (just remotely) — not on leave.
+    const onLeave = new Set(leaves.filter((l) => l.leaveType !== "online").map((l) => l.employeeId));
     const onLeaveList = leaves
-      .filter((l) => l.leaveType !== "permission")
+      .filter((l) => l.leaveType !== "permission" && l.leaveType !== "online")
       .map((l) => ({ employee_id: l.employeeId, name: l.employeeName, leave_type: l.leaveType }));
     const onDepartureList = leaves
       .filter((l) => l.leaveType === "permission")

@@ -175,7 +175,7 @@ export default function EmployeePortalPage() {
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showPermModal, setShowPermModal] = useState(false);
   const [showOnlineModal, setShowOnlineModal] = useState(false);
-  const [checkin, setCheckin] = useState<any>(null);
+  const [onlineForm, setOnlineForm] = useState({ start: new Date().toISOString().slice(0, 10), end: new Date().toISOString().slice(0, 10), reason: "" });
   const [checkinBusy, setCheckinBusy] = useState(false);
   const [showAdvModal, setShowAdvModal] = useState(false);
   const [reqOpen, setReqOpen] = useState(false);
@@ -272,14 +272,22 @@ export default function EmployeePortalPage() {
     } catch (err: any) { setError(err.message); }
   };
 
-  const loadCheckin = async () => {
-    try { const r = await api.get("/attendance/checkin"); setCheckin(r.data); } catch { setCheckin(null); }
-  };
-  const doCheck = async (action: "in" | "out") => {
+  const submitOnline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!employee || !onlineForm.start) return;
     setCheckinBusy(true);
     try {
-      await api.post("/attendance/checkin", { action });
-      await loadCheckin();
+      const res = await api.post("/leaves", {
+        employee_id: employee.employeeId || employee.employee_id,
+        employee_name: employee.name,
+        leave_type: "online",
+        start_date: onlineForm.start,
+        end_date: onlineForm.end || onlineForm.start,
+        reason: onlineForm.reason,
+      });
+      setLeaves((prev) => [res.data, ...prev]);
+      setShowOnlineModal(false);
+      setSuccess(isRTL ? "تم إرسال طلب العمل أونلاين" : "Online work request sent");
     } catch (err: any) { setError(err.message); }
     finally { setCheckinBusy(false); }
   };
@@ -705,9 +713,9 @@ export default function EmployeePortalPage() {
                     <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-base">💵</div>
                     <div className="text-sm font-medium text-slate-900">{isRTL ? "طلب سلفة" : "Request Advance"}</div>
                   </button>
-                  <button type="button" onClick={() => { setShowOnlineModal(true); setReqOpen(false); loadCheckin(); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
+                  <button type="button" onClick={() => { setShowOnlineModal(true); setReqOpen(false); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
                     <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center flex-shrink-0"><Wifi size={16} /></div>
-                    <div className="text-sm font-medium text-slate-900">{isRTL ? "العمل أونلاين" : "Online Work"}</div>
+                    <div className="text-sm font-medium text-slate-900">{isRTL ? "طلب عمل أونلاين" : "Online Work"}</div>
                   </button>
                 </div>
               )}
@@ -1175,29 +1183,16 @@ export default function EmployeePortalPage() {
             {showOnlineModal && (
             <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowOnlineModal(false); }}>
               <div className="card w-full max-w-md" dir={isRTL ? "rtl" : "ltr"}>
-                <div className="card-header"><div className="card-title"><Wifi size={16} className="text-sky-600" />{isRTL ? "العمل أونلاين — تسجيل حضور" : "Online Work — Check in/out"}</div><button type="button" onClick={() => setShowOnlineModal(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button></div>
-                <div className="space-y-4">
-                  <p className="text-xs text-slate-500">{isRTL ? "سجّل دخولك وخروجك ليوم العمل أونلاين — بينحفظ عند الموارد البشرية ويدخل بحساب الراتب." : "Record your online workday check-in/out — saved for HR and counted in payroll."}</p>
-                  <div className="grid grid-cols-2 gap-3 text-center">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <div className="text-[11px] text-slate-500">{isRTL ? "الدخول" : "Check in"}</div>
-                      <div className="text-lg font-bold text-slate-900">{checkin?.clock_in || "—"}</div>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <div className="text-[11px] text-slate-500">{isRTL ? "الخروج" : "Check out"}</div>
-                      <div className="text-lg font-bold text-slate-900">{checkin?.clock_out || "—"}</div>
-                    </div>
+                <div className="card-header"><div className="card-title"><Wifi size={16} className="text-sky-600" />{isRTL ? "طلب عمل أونلاين" : "Online Work Request"}</div><button type="button" onClick={() => setShowOnlineModal(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button></div>
+                <form className="space-y-4" onSubmit={submitOnline}>
+                  <p className="text-xs text-slate-500">{isRTL ? "اطلب يوم عمل أونلاين — يروح للموارد البشرية للموافقة. عند الموافقة يُحتسب حضور كامل لذلك اليوم." : "Request an online workday — sent to HR for approval. Once approved it counts as a full attendance day."}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><label className="form-label">{isRTL ? "من تاريخ" : "From"}</label><input type="date" className="form-input" value={onlineForm.start} onChange={(e) => setOnlineForm((f) => ({ ...f, start: e.target.value }))} /></div>
+                    <div><label className="form-label">{isRTL ? "إلى تاريخ" : "To"}</label><input type="date" className="form-input" value={onlineForm.end} onChange={(e) => setOnlineForm((f) => ({ ...f, end: e.target.value }))} /></div>
                   </div>
-                  {checkin?.clock_in && checkin?.clock_out && (
-                    <div className="text-center text-sm text-emerald-600 font-semibold">{isRTL ? "ساعات اليوم" : "Hours today"}: {checkin.hours_worked}</div>
-                  )}
-                  <div className="flex gap-2">
-                    <button type="button" disabled={checkinBusy || !!checkin?.clock_in} onClick={() => doCheck("in")}
-                      className="btn btn-success flex-1 disabled:opacity-50">{isRTL ? "تسجيل دخول" : "Check in"}</button>
-                    <button type="button" disabled={checkinBusy || !checkin?.clock_in || !!checkin?.clock_out} onClick={() => doCheck("out")}
-                      className="btn btn-primary flex-1 disabled:opacity-50">{isRTL ? "تسجيل خروج" : "Check out"}</button>
-                  </div>
-                </div>
+                  <div><label className="form-label">{isRTL ? "ملاحظة (اختياري)" : "Note (optional)"}</label><textarea rows={2} className="form-textarea" value={onlineForm.reason} onChange={(e) => setOnlineForm((f) => ({ ...f, reason: e.target.value }))} /></div>
+                  <button className="btn btn-primary w-full" disabled={checkinBusy}>{checkinBusy ? <span className="spinner" /> : <Send size={15} />}{isRTL ? "إرسال الطلب" : "Send request"}</button>
+                </form>
               </div>
             </div>
             )}
@@ -1271,6 +1266,7 @@ export default function EmployeePortalPage() {
                           : lType === "annual" ? (isRTL ? "سنوية" : "Annual")
                           : lType === "sick"   ? (isRTL ? "مرضية" : "Sick")
                           : lType === "unpaid" ? (isRTL ? "بدون راتب" : "Unpaid")
+                          : lType === "online" ? (isRTL ? "عمل أونلاين" : "Online")
                           : lType;
                         const dc = leave.daysCount ?? leave.days_count ?? 0;
                         const duration = isPerm
@@ -1342,7 +1338,9 @@ export default function EmployeePortalPage() {
                               ? (isRTL ? "مرضية" : "Sick")
                               : lType === "unpaid"
                                 ? (isRTL ? "بدون راتب" : "Unpaid")
-                                : lType;
+                                : lType === "online"
+                                  ? (isRTL ? "عمل أونلاين" : "Online")
+                                  : lType;
                         const duration = isPerm
                           ? `${dCount} ${isRTL ? (dCount === 1 ? "ساعة" : "ساعات") : (dCount === 1 ? "hr" : "hrs")}`
                           : `${dCount} ${isRTL ? "يوم" : "days"}`;

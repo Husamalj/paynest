@@ -53,7 +53,9 @@ export function buildLeaveMap(
       const inPeriod = key >= periodStartKey && key <= periodEndKey;
       let mark: string | null = null;
 
-      if (type === "unpaid") {
+      if (type === "online") {
+        mark = "online"; // approved online workday — counts as a full present day
+      } else if (type === "unpaid") {
         mark = "unpaid";
       } else if (type === "annual" || type === "sick") {
         const limit =
@@ -186,7 +188,11 @@ export function calculateDailyPayroll(
       const leaveStatus = empLeaves[workday];
       const record = empAttendance[workday];
 
-      if (leaveStatus === "paid" || leaveStatus === "unpaid") {
+      if (leaveStatus === "online") {
+        // Approved online workday — counts as a full present day (no deduction).
+        paidLeaveDays += 1;
+        dailyBreakdown.push({ date: workday, hours_worked: reqHours, required: reqHours, diff: 0, adjustment: 0, status: "online" });
+      } else if (leaveStatus === "paid" || leaveStatus === "unpaid") {
         const isUnpaid = leaveStatus === "unpaid";
         if (!isUnpaid) paidLeaveDays += 1;
         if (isUnpaid && !isFixed) {
