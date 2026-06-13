@@ -26,6 +26,7 @@ const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
 const defaultForm = {
   company_name: "PayNest",
   system_mode: "daily",
+  calc_mode: "daily",
   language: "ar",
   req_hours: 9,
   month_days: 176,          // hourly mode: req hours/month | daily mode: workdays/month (26)
@@ -76,6 +77,7 @@ export default function SettingsPage() {
           setForm({
             company_name:    s.company_name    || "PayNest",
             system_mode:     s.system_mode     || "daily",
+            calc_mode:       s.calc_mode       || s.system_mode || "daily",
             language:        s.language        || "ar",
             req_hours:       s.req_hours       ?? 9,
             month_days:      s.month_days      ?? (s.system_mode === "hourly" ? 176 : 26),
@@ -137,8 +139,8 @@ export default function SettingsPage() {
     }
   };
 
-  const isDaily  = form.system_mode === "daily";
-  const isHourly = form.system_mode === "hourly";
+  const isDaily  = form.calc_mode === "daily";
+  const isHourly = form.calc_mode === "hourly";
 
   return (
     <div className="space-y-6">
@@ -188,10 +190,10 @@ export default function SettingsPage() {
               <button
                 key={opt.value}
                 type="button"
-                onClick={() => setForm((f) => ({ ...f, system_mode: opt.value }))}
+                onClick={() => setForm((f) => ({ ...f, calc_mode: opt.value }))}
                 className={clsx(
                   "rounded-xl border-2 p-4 text-left transition-all",
-                  form.system_mode === opt.value
+                  form.calc_mode === opt.value
                     ? "border-brand-500 bg-brand-50"
                     : "border-slate-200 hover:border-brand-300"
                 )}

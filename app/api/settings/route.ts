@@ -36,7 +36,9 @@ export async function PUT(req: NextRequest) {
 
     const data = {
       companyName: companyNameToSave,
-      systemMode: body.system_mode ?? body.systemMode,
+      // The toggle now controls calcMode (calculation method). systemMode stays
+      // fixed as the identity bucket and is never changed here.
+      calcMode: body.calc_mode ?? body.calcMode ?? body.system_mode ?? body.systemMode,
       language: body.language,
       reqHours: body.req_hours != null ? Number(body.req_hours) : body.reqHours != null ? Number(body.reqHours) : undefined,
       monthDays: body.month_days != null ? Number(body.month_days) : body.monthDays != null ? Number(body.monthDays) : undefined,
@@ -78,6 +80,7 @@ function toSnake(s: any) {
     extra_rate: s.extraRate,
     work_start_time: s.workStartTime ?? "09:00",
     timezone: s.timezone ?? "Asia/Amman",
+    calc_mode: (s as any).calcMode ?? s.systemMode ?? "daily",
     created_at: s.createdAt,
     // also camel for newer code
     companyId: s.companyId,

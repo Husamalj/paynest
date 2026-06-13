@@ -27,7 +27,9 @@ export async function POST(req: NextRequest) {
     const settings = await prisma.companySettings.findFirst({ where: { companyId } });
     if (!settings) throw new HttpError(400, "Settings not configured");
 
-    const mode = settings.systemMode || "daily";
+    const mode = settings.systemMode || "daily"; // identity bucket (always "daily")
+    const calcMode = (settings as any).calcMode || settings.systemMode || "daily"; // calculation method
+    const isHourly = calcMode === "hours" || calcMode === "hourly";
 
     // Exclude owner / super_admin from payroll (they are not paid employees)
     const adminUsers = await prisma.user.findMany({
@@ -188,7 +190,7 @@ export async function POST(req: NextRequest) {
     }));
 
     let payrollResults;
-    if (mode === "hours") {
+    if (isHourly) {
       payrollResults = calculateHoursPayroll(empPlain, attendanceMap, settingsPlain, bonusesMap, leaveMap, { month: periodMonth, year: periodYear });
     } else {
       payrollResults = calculateDailyPayroll(empPlain, attendanceMap, settingsPlain, bonusesMap, { month: periodMonth, year: periodYear }, leaveMap);

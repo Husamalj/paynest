@@ -80,7 +80,10 @@ model CompanySettings {
   id            Int      @id @default(autoincrement())
   companyId     Int      @default(1) @map("company_id")
   companyName   String   @default("PayNest") @map("company_name") @db.VarChar(255)
+  // systemMode = legacy identity bucket (kept "daily" for everyone now).
+  // calcMode   = the payroll calculation method (daily/monthly vs hourly).
   systemMode    String   @default("daily") @map("system_mode") @db.VarChar(20)
+  calcMode      String   @default("daily") @map("calc_mode") @db.VarChar(20)
   language      String   @default("ar") @db.VarChar(10)
   reqHours      Decimal  @default(8) @map("req_hours")
   monthDays     Int      @default(26) @map("month_days")
