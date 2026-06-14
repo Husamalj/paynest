@@ -455,10 +455,11 @@ export default function EmployeePortalPage() {
     return null;
   }, [employeeId, payroll, salMonth, salYear, salHistory]);
 
-  // Years available in the picker (from history + current year)
+  // Years available in the picker: a range around the current year + any with data
   const salYears = useMemo(() => {
+    const cur = new Date().getFullYear();
     const ys = new Set<number>(salHistory.map((r) => r.period_year));
-    ys.add(new Date().getFullYear());
+    for (let y = cur - 3; y <= cur + 1; y++) ys.add(y);
     return [...ys].sort((a, b) => b - a);
   }, [salHistory]);
 
@@ -791,37 +792,34 @@ export default function EmployeePortalPage() {
                 </div>
               </div>
             )}
+
+            {/* Leave balances */}
+            <div className="card flex items-center gap-3 border-emerald-100 bg-emerald-50/40">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0"><Palmtree size={18} /></div>
+              <div>
+                <div className="text-xs font-semibold text-slate-500">{isRTL ? "رصيد الإجازة السنوية" : "Annual leave balance"}</div>
+                <div className="text-xl font-bold text-emerald-700">{myBalance?.annual_remaining ?? "—"} <span className="text-xs font-medium text-slate-400">{isRTL ? "يوم" : "days"}</span></div>
+              </div>
+            </div>
+            <div className="card flex items-center gap-3 border-rose-100 bg-rose-50/40">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center flex-shrink-0">🩺</div>
+              <div>
+                <div className="text-xs font-semibold text-slate-500">{isRTL ? "رصيد الإجازة المرضية" : "Sick leave balance"}</div>
+                <div className="text-xl font-bold text-rose-700">{myBalance?.sick_remaining ?? "—"} <span className="text-xs font-medium text-slate-400">{isRTL ? "يوم" : "days"}</span></div>
+              </div>
+            </div>
           </aside>
 
           {/* ── Main column ── */}
           <div className="flex-1 min-w-0 space-y-5">
-            {/* Leave balances — prominent at the top */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="card flex items-center gap-3 border-emerald-100 bg-emerald-50/40">
-                <div className="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0"><Palmtree size={20} /></div>
-                <div>
-                  <div className="text-xs font-semibold text-slate-500">{isRTL ? "رصيد الإجازة السنوية" : "Annual leave balance"}</div>
-                  <div className="text-2xl font-bold text-emerald-700">{myBalance?.annual_remaining ?? "—"} <span className="text-sm font-medium text-slate-400">{isRTL ? "يوم" : "days"}</span></div>
-                </div>
-              </div>
-              <div className="card flex items-center gap-3 border-rose-100 bg-rose-50/40">
-                <div className="w-11 h-11 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center flex-shrink-0">🩺</div>
-                <div>
-                  <div className="text-xs font-semibold text-slate-500">{isRTL ? "رصيد الإجازة المرضية" : "Sick leave balance"}</div>
-                  <div className="text-2xl font-bold text-rose-700">{myBalance?.sick_remaining ?? "—"} <span className="text-sm font-medium text-slate-400">{isRTL ? "يوم" : "days"}</span></div>
-                </div>
-              </div>
-            </div>
-
             {/* Salary month picker — whole year */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="text-sm font-semibold text-slate-700">{isRTL ? "راتب شهر:" : "Salary for:"}</div>
               <div className="flex items-center gap-2">
                 <select className="form-select w-auto text-sm h-9 py-0" value={salMonth} onChange={(e) => setSalMonth(Number(e.target.value))}>
-                  {(isRTL ? MONTHS_AR : MONTHS_EN).map((m, i) => {
-                    const has = salHistory.some((r) => r.period_month === i + 1 && r.period_year === salYear);
-                    return <option key={i + 1} value={i + 1}>{m}{has ? " ✓" : ""}</option>;
-                  })}
+                  {(isRTL ? MONTHS_AR : MONTHS_EN).map((m, i) => (
+                    <option key={i + 1} value={i + 1}>{m}</option>
+                  ))}
                 </select>
                 <select className="form-select w-auto text-sm h-9 py-0" value={salYear} onChange={(e) => setSalYear(Number(e.target.value))}>
                   {salYears.map((y) => <option key={y} value={y}>{y}</option>)}
