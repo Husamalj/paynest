@@ -14,11 +14,20 @@ export async function GET(req: NextRequest) {
 
     const records = await prisma.payrollRecord.findMany({
       where: { companyId: session.companyId, employeeId },
-      orderBy: [{ periodYear: "desc" }, { periodMonth: "desc" }],
+      orderBy: [{ periodYear: "desc" }, { periodMonth: "desc" }, { id: "desc" }],
+    });
+
+    // Keep only the most recent record per (month, year) — avoids duplicate periods
+    const seen = new Set<string>();
+    const deduped = records.filter((r) => {
+      const k = `${r.periodMonth}-${r.periodYear}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
     });
 
     return NextResponse.json(
-      records.map((r) => ({
+      deduped.map((r) => ({
         period_month: r.periodMonth,
         period_year: r.periodYear,
         base_salary: r.baseSalary,

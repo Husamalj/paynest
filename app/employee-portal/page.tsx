@@ -152,7 +152,8 @@ export default function EmployeePortalPage() {
   const [employee, setEmployee] = useState<any>(null);
   const [payroll, setPayroll] = useState<any[]>([]);
   const [salHistory, setSalHistory] = useState<any[]>([]);
-  const [salSel, setSalSel] = useState<string>("");
+  const [salMonth, setSalMonth] = useState<number>(new Date().getMonth() + 1);
+  const [salYear, setSalYear] = useState<number>(new Date().getFullYear());
   const [tasks, setTasks] = useState<any[]>([]);
   const [leaves, setLeaves] = useState<any[]>([]);
   const [balances, setBalances] = useState<any[]>([]);
@@ -440,20 +441,26 @@ export default function EmployeePortalPage() {
     api.get("/payroll/my").then((r) => {
       const list = r.data || [];
       setSalHistory(list);
-      if (list.length && !salSel) setSalSel(`${list[0].period_month}-${list[0].period_year}`);
+      // Default the picker to the most recent month that actually has a payslip
+      if (list.length) { setSalMonth(list[0].period_month); setSalYear(list[0].period_year); }
     }).catch(() => {});
   }, [employeeId]);
 
-  // The salary record to display = the month picked from history (fallback to latest)
+  // The salary record to display = the month picked (null if no payslip that month)
   const myPayroll = useMemo(() => {
-    if (salSel && salHistory.length) {
-      const [m, y] = salSel.split("-").map(Number);
-      const hit = salHistory.find((r) => r.period_month === m && r.period_year === y);
-      if (hit) return hit;
-    }
+    const hit = salHistory.find((r) => r.period_month === salMonth && r.period_year === salYear);
+    if (hit) return hit;
+    // Fallback to the latest-period record only when no specific month is selected yet
     if (!employeeId || !Array.isArray(payroll)) return null;
-    return payroll.find((row) => (row.employeeId || row.employee_id) === employeeId) || null;
-  }, [employeeId, payroll, salSel, salHistory]);
+    return null;
+  }, [employeeId, payroll, salMonth, salYear, salHistory]);
+
+  // Years available in the picker (from history + current year)
+  const salYears = useMemo(() => {
+    const ys = new Set<number>(salHistory.map((r) => r.period_year));
+    ys.add(new Date().getFullYear());
+    return [...ys].sort((a, b) => b - a);
+  }, [salHistory]);
 
   const myTasks = useMemo(() => tasks.filter((task) => (task.employeeId || task.employee_id) === employeeId), [tasks, employeeId]);
   // All subordinate tasks grouped by employee (for tidy supervisor tracking)
@@ -806,17 +813,24 @@ export default function EmployeePortalPage() {
               </div>
             </div>
 
-            {/* Salary month picker */}
-            {salHistory.length > 0 && (
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="text-sm font-semibold text-slate-700">{isRTL ? "راتب شهر:" : "Salary for:"}</div>
-                <select className="form-select w-auto text-sm h-9 py-0" value={salSel} onChange={(e) => setSalSel(e.target.value)}>
-                  {salHistory.map((r) => (
-                    <option key={`${r.period_month}-${r.period_year}`} value={`${r.period_month}-${r.period_year}`}>
-                      {(isRTL ? MONTHS_AR : MONTHS_EN)[(r.period_month || 1) - 1]} {r.period_year}
-                    </option>
-                  ))}
+            {/* Salary month picker — whole year */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="text-sm font-semibold text-slate-700">{isRTL ? "راتب شهر:" : "Salary for:"}</div>
+              <div className="flex items-center gap-2">
+                <select className="form-select w-auto text-sm h-9 py-0" value={salMonth} onChange={(e) => setSalMonth(Number(e.target.value))}>
+                  {(isRTL ? MONTHS_AR : MONTHS_EN).map((m, i) => {
+                    const has = salHistory.some((r) => r.period_month === i + 1 && r.period_year === salYear);
+                    return <option key={i + 1} value={i + 1}>{m}{has ? " ✓" : ""}</option>;
+                  })}
                 </select>
+                <select className="form-select w-auto text-sm h-9 py-0" value={salYear} onChange={(e) => setSalYear(Number(e.target.value))}>
+                  {salYears.map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+            </div>
+            {!myPayroll && (
+              <div className="card text-center py-4 text-sm text-slate-400">
+                {isRTL ? "لا يوجد راتب محسوب لهذا الشهر" : "No payslip for this month"}
               </div>
             )}
 
