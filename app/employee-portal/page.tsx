@@ -103,6 +103,40 @@ function TargetProgress({ task, isRTL, onSave }: { task: any; isRTL: boolean; on
   );
 }
 
+/** Employee-side report box: send / edit a progress report on a task. */
+function TaskReportBox({ task, isRTL, onSave }: { task: any; isRTL: boolean; onSave: (text: string) => Promise<void> }) {
+  const existing = task.report || "";
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState(existing);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setVal(existing); }, [existing]);
+  return (
+    <div className="mt-2">
+      {existing && !open && (
+        <div className="text-[11px] bg-sky-50 border border-sky-100 rounded-lg px-2 py-1.5 text-slate-700">
+          <span className="font-semibold text-sky-700">{isRTL ? "تقريرك: " : "Your report: "}</span>{existing}
+          <button type="button" onClick={() => setOpen(true)} className="text-sky-600 hover:underline ms-2">{isRTL ? "تعديل" : "edit"}</button>
+        </div>
+      )}
+      {!existing && !open && (
+        <button type="button" onClick={() => setOpen(true)} className="text-[11px] text-slate-400 hover:text-sky-600 flex items-center gap-1">
+          <Send size={11} />{isRTL ? "إرسال تقرير للمشرف" : "Send report to supervisor"}
+        </button>
+      )}
+      {open && (
+        <div className="space-y-1.5">
+          <textarea rows={2} value={val} onChange={(e) => setVal(e.target.value)} placeholder={isRTL ? "اكتب ما أنجزته..." : "Describe what you've done..."}
+            className="w-full text-xs px-2.5 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500" />
+          <div className="flex gap-1.5">
+            <button type="button" disabled={busy} onClick={async () => { setBusy(true); try { await onSave(val); setOpen(false); } finally { setBusy(false); } }} className="btn btn-sm btn-primary">{isRTL ? "إرسال" : "Send"}</button>
+            <button type="button" onClick={() => { setVal(existing); setOpen(false); }} className="btn btn-sm btn-secondary">{isRTL ? "إلغاء" : "Cancel"}</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function EmployeePortalPage() {
   const { lang, toggleLanguage } = useLanguage();
   const isRTL = lang === "ar";
@@ -570,6 +604,17 @@ export default function EmployeePortalPage() {
     } catch (err: any) { setError(err.message); }
   };
 
+  const cancelLeave = async (id: number) => {
+    if (!confirm(isRTL ? "إلغاء هذا الطلب؟" : "Cancel this request?")) return;
+    try { await api.delete(`/leaves/${id}`); setLeaves((p) => p.filter((l) => l.id !== id)); setSuccess(isRTL ? "تم إلغاء الطلب" : "Request cancelled"); }
+    catch (err: any) { setError(err.message); }
+  };
+  const cancelAdvance = async (id: number) => {
+    if (!confirm(isRTL ? "إلغاء طلب السلفة؟" : "Cancel this advance request?")) return;
+    try { await api.delete(`/advances/${id}`); setAdvances((p) => p.filter((a) => a.id !== id)); setSuccess(isRTL ? "تم إلغاء الطلب" : "Request cancelled"); }
+    catch (err: any) { setError(err.message); }
+  };
+
   const updateTaskProgress = async (taskId: number, current_value: number) => {
     try {
       const res = await api.put(`/tasks/${taskId}`, { current_value });
@@ -789,7 +834,10 @@ export default function EmployeePortalPage() {
                   {advances.slice(0, 5).map((a) => (
                     <div key={a.id} className="flex items-center justify-between gap-2">
                       <span className="font-mono text-sm font-semibold text-slate-900">{(parseFloat(a.amount) || 0).toFixed(2)}</span>
-                      <span className={`badge text-[10px] ${a.status === "approved" ? "badge-green" : a.status === "rejected" ? "badge-red" : "badge-yellow"}`}>{a.status === "approved" ? (isRTL ? "موافق" : "Approved") : a.status === "rejected" ? (isRTL ? "مرفوض" : "Rejected") : (isRTL ? "معلّق" : "Pending")}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`badge text-[10px] ${a.status === "approved" ? "badge-green" : a.status === "rejected" ? "badge-red" : "badge-yellow"}`}>{a.status === "approved" ? (isRTL ? "موافق" : "Approved") : a.status === "rejected" ? (isRTL ? "مرفوض" : "Rejected") : (isRTL ? "معلّق" : "Pending")}</span>
+                        {a.status === "pending" && <button onClick={() => cancelAdvance(a.id)} className="text-rose-400 hover:text-rose-600" title={isRTL ? "إلغاء" : "Cancel"}><X size={13} /></button>}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -906,6 +954,10 @@ export default function EmployeePortalPage() {
                       </label>
                     )}
                   </div>
+                  <TaskReportBox task={task} isRTL={isRTL} onSave={async (text) => {
+                    const res = await api.put(`/tasks/${task.id}`, { report: text });
+                    setTasks((prev) => prev.map((t) => (t.id === task.id ? res.data : t)));
+                  }} />
                 </div>
               );
 
@@ -1123,6 +1175,11 @@ export default function EmployeePortalPage() {
                                           </button>
                                         )}
                                         <TargetProgress task={task} isRTL={isRTL} onSave={(v) => updateTaskProgress(task.id, v)} />
+                                        {task.report && (
+                                          <div className="mt-2 text-[11px] bg-sky-50 border border-sky-100 rounded-lg px-2 py-1.5 text-slate-700">
+                                            <span className="font-semibold text-sky-700">{isRTL ? "تقرير الموظف: " : "Report: "}</span>{task.report}
+                                          </div>
+                                        )}
                                       </div>
                                     ))}
                                   </div>
@@ -1420,7 +1477,7 @@ export default function EmployeePortalPage() {
               {myLeaves.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{text.noData}</div> : (
                 <div className="table-wrapper">
                   <table>
-                    <thead><tr><th>{text.leaveType}</th><th>{text.startDate}</th><th>{text.endDate}</th><th>{isRTL ? "المدة" : "Duration"}</th><th>{isRTL ? "الحالة" : "Status"}</th></tr></thead>
+                    <thead><tr><th>{text.leaveType}</th><th>{text.startDate}</th><th>{text.endDate}</th><th>{isRTL ? "المدة" : "Duration"}</th><th>{isRTL ? "الحالة" : "Status"}</th><th></th></tr></thead>
                     <tbody>
                       {myLeaves.map((leave) => {
                         const lType   = leave.leaveType   || leave.leave_type   || "";
@@ -1453,6 +1510,11 @@ export default function EmployeePortalPage() {
                           <td>{isPerm ? "-" : formatDate(eDate)}</td>
                           <td>{duration}</td>
                           <td><StatusBadge status={leave.status} isRTL={isRTL} /></td>
+                          <td className="text-end">
+                            {leave.status === "pending" && (
+                              <button onClick={() => cancelLeave(leave.id)} className="text-rose-500 hover:text-rose-700 inline-flex items-center gap-1 text-xs"><X size={13} />{isRTL ? "إلغاء" : "Cancel"}</button>
+                            )}
+                          </td>
                         </tr>
                         );
                       })}

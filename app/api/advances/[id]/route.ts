@@ -76,9 +76,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireAuth(req);
-    requireRole(session, ["owner", "hr", "super_admin"]);
+    requireRole(session, ["owner", "hr", "super_admin", "employee"]);
     if (session.companyId == null) throw new HttpError(403, "No company scope");
     const { id } = await params;
+    // Employees may only cancel their own pending advance request.
+    if (session.role === "employee") {
+      const adv = await prisma.advanceRequest.findFirst({ where: { id: Number(id), companyId: session.companyId } });
+      if (!adv) throw new HttpError(404, "Advance request not found");
+      if (adv.employeeId !== session.employeeNumber) throw new HttpError(403, "Not your request");
+      if (adv.status !== "pending") throw new HttpError(400, "Can only cancel a pending request");
+    }
     const r = await prisma.advanceRequest.deleteMany({ where: { id: Number(id), companyId: session.companyId } });
     if (r.count === 0) throw new HttpError(404, "Advance request not found");
     return NextResponse.json({ success: true });

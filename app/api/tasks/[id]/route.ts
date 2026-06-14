@@ -36,6 +36,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       if (body.current_value !== undefined) empData.currentValue = Number(body.current_value) || 0;
       if (body.status !== undefined) empData.status = body.status;
       if (body.attachment !== undefined) { empData.attachment = body.attachment || null; empData.attachmentName = body.attachment_name || null; }
+      if (body.report !== undefined) { empData.report = body.report || null; empData.reportAt = body.report ? new Date() : null; }
       if (Object.keys(empData).length === 0) empData.status = "completed";
       await prisma.task.update({ where: { id: Number(id) }, data: empData });
       return NextResponse.json(await prisma.task.findUnique({ where: { id: Number(id) } }));
