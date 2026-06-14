@@ -12,6 +12,7 @@ import {
   ClipboardList, Clock, KeyRound, Languages, LogOut, Palmtree, Paperclip, Send,
   ThumbsDown, ThumbsUp, User, UserCheck, Users, X, Plus, Wifi,
 } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 import { useRef } from "react";
 import api from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -658,6 +659,7 @@ export default function EmployeePortalPage() {
               </select>
             )}
 
+            <ThemeToggle />
             {/* Profile dropdown (same shape as HR Layout) */}
             <div className="relative" ref={profileRef}>
               <button

@@ -31,7 +31,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       dir="rtl"
       className={`${caveat.variable} ${sans.variable} ${arabic.variable}`}
     >
-      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased font-sans">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}`,
+          }}
+        />
+      </head>
+      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased font-sans dark:bg-[#0b1220] dark:text-slate-200">
         <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>

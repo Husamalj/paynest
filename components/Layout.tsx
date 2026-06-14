@@ -35,6 +35,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import ThemeToggle from "@/components/ThemeToggle";
 import clsx from "clsx";
 import api from "@/lib/api";
 import { TranslationKey } from "@/lib/i18n/translations";
@@ -329,6 +330,7 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
             <Building2 size={14} className="text-brand-600" />
             <span className="truncate max-w-[160px]">{companyName}</span>
           </div>
+          <ThemeToggle />
           {/* Notification Bell */}
           {NotificationBell && <NotificationBell />}
 

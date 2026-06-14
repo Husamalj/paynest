@@ -8,6 +8,7 @@ import {
   Upload, ChevronRight, Languages, Eye, EyeOff,
   LayoutDashboard, Wallet, DollarSign, TrendingDown, TrendingUp, Gift, Shield, Banknote, Briefcase, Clock,
 } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 import clsx from "clsx";
 import api, { apiPostForm } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -412,6 +413,7 @@ export default function OwnerPortalPage() {
           </span>
         </div>
 
+        <ThemeToggle />
         <div className="relative">
           <button onClick={() => setProfileOpen((o) => !o)} className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors">
             <div className="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
