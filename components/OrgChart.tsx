@@ -21,19 +21,29 @@ export type OrgEmp = {
   supervisorId: number | null;
   supervisorIds?: number[];
   isOwner?: boolean;
+  role?: string | null;
+  email?: string | null;
   jobTitle?: string | null;
   photoUrl?: string | null;
 };
 
-const NODE_W = 210;
-const NODE_H = 84;
+const NODE_W = 236;
+const NODE_H = 96;
+
+function roleTag(role: string | undefined | null, isOwner: boolean | undefined, isRTL: boolean) {
+  const r = isOwner ? "owner" : (role || "employee");
+  if (r === "owner") return { cls: "bg-amber-50 text-amber-700", label: isRTL ? "👑 مالك" : "👑 Owner", border: "border-amber-300" };
+  if (r === "hr" || r === "super_admin") return { cls: "bg-violet-50 text-violet-700", label: isRTL ? "🛡️ موارد بشرية" : "🛡️ HR", border: "border-violet-200" };
+  return { cls: "bg-brand-50 text-brand-700", label: isRTL ? "موظف" : "Employee", border: "border-slate-200" };
+}
 
 function PersonNode({ data }: NodeProps<Node<{ emp: OrgEmp; isRTL: boolean }>>) {
   const { emp, isRTL } = data;
   const initial = (emp.name || "?").trim().charAt(0).toUpperCase();
+  const tag = roleTag(emp.role, emp.isOwner, isRTL);
   return (
     <div
-      className={`bg-white rounded-xl shadow-sm px-3 py-2.5 flex items-center gap-2.5 border ${emp.isOwner ? "border-amber-300" : "border-slate-200"}`}
+      className={`bg-white rounded-xl shadow-sm px-3 py-2.5 flex items-center gap-2.5 border ${tag.border}`}
       style={{ width: NODE_W, minHeight: NODE_H }}
     >
       <Handle type="target" position={Position.Top} className="!opacity-0" />
@@ -44,10 +54,8 @@ function PersonNode({ data }: NodeProps<Node<{ emp: OrgEmp; isRTL: boolean }>>) 
       )}
       <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold text-slate-900 truncate">{emp.name}</div>
-        <div className="text-[11px] text-slate-500 truncate">{emp.jobTitle || emp.employeeId}</div>
-        {emp.isOwner && (
-          <div className="mt-0.5 inline-flex px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[9px] font-bold">{isRTL ? "👑 مالك" : "👑 Owner"}</div>
-        )}
+        {emp.email && <div className="text-[10px] text-slate-400 truncate">{emp.email}</div>}
+        <div className={`mt-0.5 inline-flex px-1.5 py-0.5 rounded-full text-[9px] font-bold ${tag.cls}`}>{tag.label}</div>
       </div>
       <Handle type="source" position={Position.Bottom} className="!opacity-0" />
     </div>

@@ -151,6 +151,7 @@ export default function EmployeePortalPage() {
   const [employeeId, setEmployeeId] = useState(savedUser.employeeNumber || savedUser.employee_number || (typeof window !== "undefined" ? localStorage.getItem("paynest_employee_id") : "") || "");
   const [employee, setEmployee] = useState<any>(null);
   const [payroll, setPayroll] = useState<any[]>([]);
+  const [detailModal, setDetailModal] = useState<null | "deductions" | "hours">(null);
   const [salHistory, setSalHistory] = useState<any[]>([]);
   const [salMonth, setSalMonth] = useState<number>(new Date().getMonth() + 1);
   const [salYear, setSalYear] = useState<number>(new Date().getFullYear());
@@ -860,8 +861,8 @@ export default function EmployeePortalPage() {
                   </div>
                 )}
               </div>
-              <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.deductions}</div><div className="text-xl font-bold text-rose-700">{formatCurrency(Math.max(0, -(parseFloat(myPayroll?.adjustment) || 0)) + (parseFloat(myPayroll?.deductionTotal || myPayroll?.deduction_total) || 0) + (parseFloat(myPayroll?.socialSecurityDeduct || myPayroll?.social_security_deduct) || 0))}</div></div>
-              <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.hoursDiff}</div><div className={clsx("text-xl font-bold", parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff || 0) < 0 ? "text-rose-700" : "text-emerald-700")}>{(parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff) || 0).toFixed(2)}</div></div>
+              <button type="button" onClick={() => myPayroll && setDetailModal("deductions")} className="card text-start hover:ring-2 hover:ring-rose-200 transition-all"><div className="text-xs font-semibold text-slate-500 mb-1 flex items-center justify-between">{text.deductions}<span className="text-[10px] text-rose-400">{isRTL ? "تفاصيل" : "details"}</span></div><div className="text-xl font-bold text-rose-700">{formatCurrency(Math.max(0, -(parseFloat(myPayroll?.adjustment) || 0)) + (parseFloat(myPayroll?.deductionTotal || myPayroll?.deduction_total) || 0) + (parseFloat(myPayroll?.socialSecurityDeduct || myPayroll?.social_security_deduct) || 0))}</div></button>
+              <button type="button" onClick={() => myPayroll && setDetailModal("hours")} className="card text-start hover:ring-2 hover:ring-slate-200 transition-all"><div className="text-xs font-semibold text-slate-500 mb-1 flex items-center justify-between">{text.hoursDiff}<span className="text-[10px] text-slate-400">{isRTL ? "تفاصيل" : "details"}</span></div><div className={clsx("text-xl font-bold", parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff || 0) < 0 ? "text-rose-700" : "text-emerald-700")}>{(parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff) || 0).toFixed(2)}</div></button>
             </div>
 
             {/* ── My Tasks card (reusable inline) ── */}
@@ -1777,6 +1778,46 @@ export default function EmployeePortalPage() {
           </div>
         </div>
       )}
+
+      {/* Deductions / Hour-diff details */}
+      {detailModal && myPayroll && (() => {
+        const att = parseFloat(myPayroll.adjustment) || 0;
+        const attDed = Math.max(0, -att);
+        const manualDed = parseFloat(myPayroll.deductionTotal || myPayroll.deduction_total) || 0;
+        const ss = parseFloat(myPayroll.socialSecurityDeduct || myPayroll.social_security_deduct) || 0;
+        const totalDed = attDed + manualDed + ss;
+        const worked = parseFloat(myPayroll.totalHours || myPayroll.total_hours) || 0;
+        const diff = parseFloat(myPayroll.hourDiff || myPayroll.hour_diff) || 0;
+        const required = worked - diff;
+        const Row = ({ label, val, neg }: { label: string; val: string; neg?: boolean }) => (
+          <div className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 text-sm">
+            <span className="text-slate-600">{label}</span><span className={`font-mono font-semibold ${neg ? "text-rose-600" : "text-slate-900"}`}>{val}</span>
+          </div>
+        );
+        return (
+          <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setDetailModal(null); }}>
+            <div className="card w-full max-w-md" dir={isRTL ? "rtl" : "ltr"}>
+              <div className="card-header"><div className="card-title">{detailModal === "deductions" ? (isRTL ? "تفاصيل الخصومات" : "Deductions breakdown") : (isRTL ? "تفاصيل فرق الساعات" : "Hours breakdown")}</div><button type="button" onClick={() => setDetailModal(null)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button></div>
+              {detailModal === "deductions" ? (
+                <div>
+                  <Row label={isRTL ? "خصم نقص ساعات الحضور" : "Attendance shortfall"} val={formatCurrency(attDed)} neg={attDed > 0} />
+                  <Row label={isRTL ? "خصومات يدوية (من الإدارة)" : "Manual deductions"} val={formatCurrency(manualDed)} neg={manualDed > 0} />
+                  <Row label={isRTL ? "الضمان الاجتماعي" : "Social security"} val={formatCurrency(ss)} neg={ss > 0} />
+                  <div className="flex items-center justify-between pt-3 mt-1 border-t-2 border-slate-200 text-sm font-bold"><span>{isRTL ? "إجمالي الخصومات" : "Total deductions"}</span><span className="font-mono text-rose-700">{formatCurrency(totalDed)}</span></div>
+                  <p className="text-[11px] text-slate-400 mt-3">{isRTL ? "خصم نقص الساعات يظهر عند عدم إكمال ساعات الدوام المطلوبة." : "Attendance shortfall appears when required work hours weren't completed."}</p>
+                </div>
+              ) : (
+                <div>
+                  <Row label={isRTL ? "ساعاتك الفعلية" : "Hours you worked"} val={worked.toFixed(2)} />
+                  <Row label={isRTL ? "الساعات المطلوبة" : "Required hours"} val={required.toFixed(2)} />
+                  <div className="flex items-center justify-between pt-3 mt-1 border-t-2 border-slate-200 text-sm font-bold"><span>{isRTL ? "الفرق" : "Difference"}</span><span className={`font-mono ${diff < 0 ? "text-rose-700" : "text-emerald-700"}`}>{diff.toFixed(2)}</span></div>
+                  <p className="text-[11px] text-slate-400 mt-3">{diff < 0 ? (isRTL ? "الفرق سالب: نقص في الساعات قد ينتج عنه خصم." : "Negative: you worked fewer hours than required (may cause a deduction).") : (isRTL ? "الفرق موجب: ساعات إضافية." : "Positive: extra hours worked.")}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
