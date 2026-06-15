@@ -245,11 +245,36 @@ export async function POST(req: NextRequest) {
             }
           }
 
+          // 1b. Dedup by NAME: if an incoming employee number is new but a
+          //     person with the same name already exists, reuse that existing
+          //     record so the same person isn't duplicated across months.
+          const normName = (s: string) => (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+          const existingForDedup = await prisma.employee.findMany({
+            where: { companyId, systemMode },
+            select: { employeeId: true, name: true },
+          });
+          const existingIdSet2 = new Set(existingForDedup.map((e) => e.employeeId).filter(Boolean) as string[]);
+          const nameToId = new Map<string, string>();
+          for (const e of existingForDedup) {
+            const k = normName(e.name);
+            if (e.employeeId && k && !nameToId.has(k)) nameToId.set(k, e.employeeId);
+          }
+          for (const emp of emps) {
+            if (!existingIdSet2.has(emp.employee_id)) {
+              const match = nameToId.get(normName(emp.name));
+              if (match) emp.employee_id = match; // reuse the existing person's id
+            }
+          }
+
           // 2. Batch upsert all employees — one transaction.
           //    New SANA format also carries email / department / contract dates.
+          //    Collapse rows that now share an id (keep the last seen).
           const toDate = (d?: string | null) => (d ? new Date(d) : null);
+          const empById = new Map<string, (typeof emps)[number]>();
+          for (const emp of emps) empById.set(emp.employee_id, emp);
+          const dedupedEmps = Array.from(empById.values());
           await prisma.$transaction(
-            emps.map((emp) =>
+            dedupedEmps.map((emp) =>
               prisma.employee.upsert({
                 where: { employeeId_companyId: { employeeId: emp.employee_id, companyId } },
                 create: {
