@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CheckSquare, Plus, Trash2, AlertTriangle, CheckCircle2, X, Calendar, User } from "lucide-react";
+import { CheckSquare, Plus, AlertTriangle, CheckCircle2, X, Calendar, User } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 import clsx from "clsx";
@@ -37,12 +37,6 @@ export default function TasksPage() {
     } catch (err: any) { setError(err.message); }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm(t("deleteConfirm"))) return;
-    try { await api.delete(`/tasks/${id}`); setTasks((p) => p.filter((t) => t.id !== id)); }
-    catch (err: any) { setError(err.message); }
-  };
-
   const filtered = filterStatus === "all" ? tasks : tasks.filter((t) => t.status === filterStatus);
 
   if (loading) return <div className="flex items-center justify-center py-20 gap-3 text-slate-500"><span className="spinner spinner-dark w-5 h-5" />{t("loadingData")}</div>;
@@ -71,7 +65,7 @@ export default function TasksPage() {
         {filtered.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noTasks")}</div> : (
           <div className="table-wrapper">
             <table>
-              <thead><tr><th>{t("taskName")}</th><th>{t("assignTo")}</th><th>{t("deadline")}</th><th>{t("target")}</th><th>{t("taskStatus")}</th><th className="text-right">{t("actions")}</th></tr></thead>
+              <thead><tr><th>{t("taskName")}</th><th>{t("assignTo")}</th><th>{t("deadline")}</th><th>{t("target")}</th><th>{t("taskStatus")}</th></tr></thead>
               <tbody>
                 {filtered.map((task) => (
                   <tr key={task.id}>
@@ -91,7 +85,6 @@ export default function TasksPage() {
                       );
                     })()}</td>
                     <td><span className={`badge ${getStatusColor(task.status)}`}>{task.status === "pending" ? t("pending") : task.status === "in_progress" ? t("inProgress") : t("completed")}</span></td>
-                    <td className="text-right"><button className="btn btn-sm btn-danger" onClick={() => handleDelete(task.id)}><Trash2 size={13} />{t("delete")}</button></td>
                   </tr>
                 ))}
               </tbody>
