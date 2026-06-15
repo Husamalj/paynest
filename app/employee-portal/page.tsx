@@ -810,6 +810,21 @@ export default function EmployeePortalPage() {
               )}
             </div>
 
+            {/* Contract dates */}
+            <div className="card">
+              <div className="card-header"><div className="card-title text-sm"><Calendar size={15} className="text-brand-600" />{isRTL ? "بيانات العقد" : "Contract"}</div></div>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">{isRTL ? "بداية العقد" : "Contract start"}</span>
+                  <span className="font-medium text-slate-800">{(() => { const d = employee.joinDate || employee.join_date; return d ? new Date(d).toLocaleDateString() : "—"; })()}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">{isRTL ? "نهاية العقد" : "Contract end"}</span>
+                  <span className="font-medium text-slate-800">{(() => { const d = employee.contractEndDate || employee.contract_end_date; return d ? new Date(d).toLocaleDateString() : "—"; })()}</span>
+                </div>
+              </div>
+            </div>
+
             {orgEmployees.length > 0 && (
               <button type="button" onClick={() => setShowOrg(true)} className="card p-2 w-full flex items-center gap-2 hover:bg-slate-50 text-start">
                 <Users size={18} className="text-brand-600 flex-shrink-0" />
