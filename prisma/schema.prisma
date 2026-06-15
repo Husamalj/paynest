@@ -231,6 +231,10 @@ model UploadedFile {
   // copy is lost. Nullable: files uploaded before this feature have no bytes.
   fileData      String?  @map("file_data") @db.Text
   mimeType      String?  @map("mime_type") @db.VarChar(150)
+  // The month/year this file's data belongs to (a label, independent of the
+  // upload date — e.g. a May payroll file uploaded in June).
+  periodMonth   Int?     @map("period_month")
+  periodYear    Int?     @map("period_year")
   createdAt     DateTime @default(now()) @map("created_at")
 
   company Company @relation(fields: [companyId], references: [id])

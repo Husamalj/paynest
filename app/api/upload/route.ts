@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
       select: {
         id: true, companyId: true, filename: true, originalName: true,
         fileType: true, uploadBatch: true, rowCount: true, employeeCount: true,
-        systemMode: true, mimeType: true, createdAt: true,
+        systemMode: true, mimeType: true, periodMonth: true, periodYear: true, createdAt: true,
         fileData: false,
       },
     });
@@ -337,6 +337,9 @@ export async function POST(req: NextRequest) {
           // Keep the original bytes so HR can re-download the file later.
           fileData: buf.toString("base64"),
           mimeType: file.type || "application/octet-stream",
+          // The month/year this file belongs to (chosen at upload).
+          periodMonth,
+          periodYear,
         },
       });
 

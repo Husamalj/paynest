@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Upload as UploadIcon, Clock, Wallet, FileSpreadsheet, Trash2, Download, CheckCircle2, AlertTriangle, X, Eye, Users, Crown } from "lucide-react";
+import { Upload as UploadIcon, Clock, Wallet, FileSpreadsheet, Trash2, Download, Pencil, CheckCircle2, AlertTriangle, X, Eye, Users, Crown } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 import axios from "axios";
@@ -58,6 +58,10 @@ export default function UploadPage() {
   const [periodMonth, setPeriodMonth] = useState(now.getMonth() + 1);
   const [periodYear, setPeriodYear]   = useState(now.getFullYear());
   const [calculating, setCalculating] = useState(false);
+  // Inline editing of a file's month/year label
+  const [editId, setEditId] = useState<number | null>(null);
+  const [emMonth, setEmMonth] = useState(now.getMonth() + 1);
+  const [emYear, setEmYear] = useState(now.getFullYear());
   const ar = lang === "ar";
   const months = ar ? MONTHS_AR : MONTHS_EN;
   const yearOptions = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1];
@@ -198,6 +202,21 @@ export default function UploadPage() {
       a.download = file.originalName || file.filename || "file.xlsx";
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch (err: any) { setError(err.message); }
+  };
+
+  const startEditMonth = (file: any) => {
+    setEditId(file.id);
+    setEmMonth(file.periodMonth || now.getMonth() + 1);
+    setEmYear(file.periodYear || now.getFullYear());
+  };
+
+  const saveMonth = async (file: any) => {
+    try {
+      await api.patch(`/upload/${file.id}`, { period_month: emMonth, period_year: emYear });
+      setUploadedFiles((p) => p.map((f) => (f.id === file.id ? { ...f, periodMonth: emMonth, periodYear: emYear } : f)));
+      setEditId(null);
+      setSuccess(ar ? "تم تحديث الشهر" : "Month updated");
     } catch (err: any) { setError(err.message); }
   };
 
@@ -343,13 +362,32 @@ export default function UploadPage() {
         {uploadedFiles.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noData")}</div> : (
           <div className="table-wrapper">
             <table>
-              <thead><tr><th>{t("name")}</th><th>{t("type")}</th><th className="text-right">{t("employees")}</th><th>{t("uploadedAt")}</th><th className="text-right">{t("actions")}</th></tr></thead>
+              <thead><tr><th>{t("name")}</th><th>{t("type")}</th><th className="text-right">{t("employees")}</th><th>{ar ? "الشهر" : "Month"}</th><th>{t("uploadedAt")}</th><th className="text-right">{t("actions")}</th></tr></thead>
               <tbody>
                 {uploadedFiles.map((file) => (
                   <tr key={file.id}>
                     <td className="font-medium"><span className="flex items-center gap-2"><FileSpreadsheet size={14} className="text-slate-400" /><span className="truncate max-w-[260px]">{file.originalName || file.filename}</span></span></td>
                     <td><span className={clsx("badge", file.fileType === "attendance" ? "badge-blue" : "badge-green")}>{file.fileType === "attendance" ? <Clock size={11} /> : <Wallet size={11} />}{file.fileType}</span></td>
                     <td className="text-right font-mono">{file.employeeCount || 0}</td>
+                    <td className="text-sm">
+                      {editId === file.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <select className="form-select text-xs py-1 w-28" value={emMonth} onChange={(e) => setEmMonth(+e.target.value)}>
+                            {months.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                          </select>
+                          <select className="form-select text-xs py-1 w-20" value={emYear} onChange={(e) => setEmYear(+e.target.value)}>
+                            {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+                          </select>
+                          <button className="btn btn-sm btn-success" onClick={() => saveMonth(file)} title={ar ? "حفظ" : "Save"}><CheckCircle2 size={13} /></button>
+                          <button className="btn btn-sm btn-secondary" onClick={() => setEditId(null)} title={ar ? "إلغاء" : "Cancel"}><X size={13} /></button>
+                        </div>
+                      ) : (
+                        <button className="inline-flex items-center gap-1.5 text-slate-700 hover:text-sky-600" onClick={() => startEditMonth(file)} title={ar ? "تعديل الشهر" : "Edit month"}>
+                          {file.periodMonth ? `${months[file.periodMonth - 1]} ${file.periodYear ?? ""}` : <span className="text-slate-400">{ar ? "— غير محدد" : "— not set"}</span>}
+                          <Pencil size={12} className="text-slate-400" />
+                        </button>
+                      )}
+                    </td>
                     <td className="text-xs text-slate-500">{file.createdAt ? new Date(file.createdAt).toLocaleDateString() : "-"}</td>
                     <td className="text-right">
                       <div className="flex justify-end gap-2">
