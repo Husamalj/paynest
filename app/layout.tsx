@@ -1,11 +1,27 @@
 import "./globals.css";
-import { Caveat, Plus_Jakarta_Sans, Tajawal } from "next/font/google";
+import { Caveat, Plus_Jakarta_Sans, Tajawal, Great_Vibes, Cormorant_Garamond } from "next/font/google";
 import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 
 const caveat = Caveat({
   subsets: ["latin"],
   variable: "--font-caveat",
   display: "swap",
+});
+
+// Brand fonts: a flowing script for the PN monogram and an elegant serif
+// for the "PayNest" wordmark — to match the company logo.
+const script = Great_Vibes({
+  subsets: ["latin"],
+  variable: "--font-script",
+  display: "swap",
+  weight: "400",
+});
+
+const serif = Cormorant_Garamond({
+  subsets: ["latin"],
+  variable: "--font-serif",
+  display: "swap",
+  weight: ["500", "600", "700"],
 });
 
 const sans = Plus_Jakarta_Sans({
@@ -29,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="ar"
       dir="rtl"
-      className={`${caveat.variable} ${sans.variable} ${arabic.variable}`}
+      className={`${caveat.variable} ${sans.variable} ${arabic.variable} ${script.variable} ${serif.variable}`}
     >
       <head>
         <script
