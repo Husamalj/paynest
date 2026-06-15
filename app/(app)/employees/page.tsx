@@ -685,7 +685,7 @@ export default function EmployeesPage() {
                       const openDoc = async () => {
                         try {
                           const token = localStorage.getItem("token");
-                          const res = await fetch(downloadUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                          const res = await fetch(downloadUrl, { credentials: "include", headers: token ? { Authorization: `Bearer ${token}` } : {} });
                           if (!res.ok) throw new Error("Failed to load");
                           const blob = await res.blob();
                           const url = URL.createObjectURL(blob);
@@ -707,7 +707,7 @@ export default function EmployeesPage() {
                         if (!window.confirm(ar ? "تأكيد حذف هذه الوثيقة؟" : "Delete this document?")) return;
                         try {
                           const token = localStorage.getItem("token");
-                          const res = await fetch(downloadUrl, { method: "DELETE", headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                          const res = await fetch(downloadUrl, { method: "DELETE", credentials: "include", headers: token ? { Authorization: `Bearer ${token}` } : {} });
                           if (!res.ok) throw new Error("Delete failed");
                           await loadDocs(empIdParam);
                           setSuccess(ar ? "تم الحذف" : "Deleted");

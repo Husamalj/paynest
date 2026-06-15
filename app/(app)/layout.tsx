@@ -141,8 +141,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) { router.replace("/"); return; }
+    // Credential is an httpOnly cookie; gate on the flag and let /auth/me verify.
+    const loggedIn = localStorage.getItem("paynest_logged_in");
+    if (!loggedIn) { router.replace("/"); return; }
 
     const init = async () => {
       try {

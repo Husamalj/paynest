@@ -119,6 +119,8 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
   }, []);
 
   const signOut = () => {
+    // Clear the httpOnly cookie on the server, then the local UI flags.
+    try { fetch("/api/auth/logout", { method: "POST", credentials: "include" }); } catch {}
     localStorage.removeItem("token");
     localStorage.removeItem("paynest_logged_in");
     localStorage.removeItem("role");

@@ -92,8 +92,8 @@ export default function SignupPage() {
         setPending(true);
         return;
       }
-      const { token, user } = res.data;
-      localStorage.setItem("token", token);
+      const { user } = res.data;
+      // Credential (when issued) is set by the server as an httpOnly cookie.
       localStorage.setItem("paynest_logged_in", "true");
       localStorage.setItem("role", user.role);
       localStorage.setItem("user", JSON.stringify(user));

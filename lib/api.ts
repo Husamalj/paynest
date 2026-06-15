@@ -6,15 +6,21 @@ const api = axios.create({
   baseURL: "/api",
   timeout: 65000,
   headers: { "Content-Type": "application/json" },
+  withCredentials: true, // send the httpOnly auth cookie on every request
 });
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  // Auth now travels in an httpOnly cookie (sent automatically). We still
+  // attach a Bearer header if a legacy token is present, for backward
+  // compatibility — but the cookie is the source of truth.
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
 function logoutUser() {
+  // Clear the httpOnly cookie on the server (fire-and-forget).
+  try { fetch("/api/auth/logout", { method: "POST", credentials: "include" }); } catch {}
   localStorage.removeItem("token");
   localStorage.removeItem("role");
   localStorage.removeItem("user");
@@ -59,6 +65,7 @@ export const apiPostForm = (url: string, formData: FormData) => {
   return fetch(`/api${url}`, {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: "include", // send the httpOnly auth cookie
     body: formData,
   }).then(async (res) => {
     const data = await res.json().catch(() => ({}));

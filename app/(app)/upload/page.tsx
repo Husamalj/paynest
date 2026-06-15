@@ -141,7 +141,8 @@ export default function UploadPage() {
     try {
       const token = localStorage.getItem("token");
       const res = await axios.post(`/api/upload?type=${type}&month=${periodMonth}&year=${periodYear}`, formData, {
-        headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "multipart/form-data", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        withCredentials: true, // send the httpOnly auth cookie
         timeout: 60000,
       });
       const filesResult = res.data.files || [];

@@ -37,14 +37,15 @@ export default function EmployeeLoginPage() {
       setLoading(true);
       setError("");
       const res = await api.post("/auth/login", { email, password });
-      const { token, user } = res.data;
+      const { user } = res.data;
 
       if (user.role !== "employee") {
-        setError(ar ? "هذا الحساب مخصص لبوابة الموارد البشرية" : "This account belongs to the HR Portal");
+        // Don't reveal that the account exists or that it's an HR/admin account.
+        setError(ar ? "البريد الإلكتروني أو كلمة السر غير صحيحة" : "Invalid email or password");
         return;
       }
 
-      localStorage.setItem("token", token);
+      // Credential is set by the server as an httpOnly cookie (XSS-safe).
       localStorage.setItem("paynest_logged_in", "true");
       localStorage.setItem("role", user.role);
       localStorage.setItem("user", JSON.stringify(user));
