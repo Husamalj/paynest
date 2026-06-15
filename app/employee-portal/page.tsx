@@ -613,11 +613,6 @@ export default function EmployeePortalPage() {
     try { await api.delete(`/leaves/${id}`); setLeaves((p) => p.filter((l) => l.id !== id)); setSuccess(isRTL ? "تم إلغاء الطلب" : "Request cancelled"); }
     catch (err: any) { setError(err.message); }
   };
-  const cancelAdvance = async (id: number) => {
-    if (!confirm(isRTL ? "إلغاء طلب السلفة؟" : "Cancel this advance request?")) return;
-    try { await api.delete(`/advances/${id}`); setAdvances((p) => p.filter((a) => a.id !== id)); setSuccess(isRTL ? "تم إلغاء الطلب" : "Request cancelled"); }
-    catch (err: any) { setError(err.message); }
-  };
 
   const updateTaskProgress = async (taskId: number, current_value: number) => {
     try {
@@ -855,7 +850,6 @@ export default function EmployeePortalPage() {
                       <span className="font-mono text-sm font-semibold text-slate-900">{(parseFloat(a.amount) || 0).toFixed(2)}</span>
                       <div className="flex items-center gap-1.5">
                         <span className={`badge text-[10px] ${a.status === "approved" ? "badge-green" : a.status === "rejected" ? "badge-red" : "badge-yellow"}`}>{a.status === "approved" ? (isRTL ? "موافق" : "Approved") : a.status === "rejected" ? (isRTL ? "مرفوض" : "Rejected") : (isRTL ? "معلّق" : "Pending")}</span>
-                        {a.status === "pending" && <button onClick={() => cancelAdvance(a.id)} className="text-rose-400 hover:text-rose-600" title={isRTL ? "إلغاء" : "Cancel"}><X size={13} /></button>}
                       </div>
                     </div>
                   ))}
