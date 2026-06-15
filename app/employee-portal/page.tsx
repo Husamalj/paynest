@@ -432,13 +432,19 @@ export default function EmployeePortalPage() {
       const safe = async (p: Promise<any>, fallback: any = null) => { try { return await p; } catch { return { data: fallback }; } };
 
       if (isEmployeeLogin) {
-        const [meRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes] = await Promise.all([
+        // One parallel batch for everything that doesn't depend on `me`, so a
+        // cold DB pooler is woken once instead of stacking sequential calls
+        // (this was the main cause of a very slow "Loading…").
+        const [meRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes, advRes, olRes, orgRes] = await Promise.all([
           api.get("/employees/me"),
           safe(api.get("/payroll/latest"), { results: [] }),
           safe(api.get("/tasks"), []),
           safe(api.get("/leaves"), []),
           safe(api.get("/leaves/balances"), []),
           safe(api.get("/announcements"), []),
+          safe(api.get("/advances"), []),
+          safe(api.get("/leaves/on-leave"), []),
+          safe(api.get("/company-structure"), []),
         ]);
         const me = meRes.data;
         const meId = me.employeeId || me.employee_id;
@@ -446,13 +452,11 @@ export default function EmployeePortalPage() {
         setTasks(tasksRes.data || []); setLeaves(leavesRes.data || []);
         setBalances(balancesRes.data || []); setAnnouncements(announcementsRes.data || []);
         setPayroll(payrollRes.data?.results || []);
-        // Load subordinate leave requests if this employee is a supervisor
+        setAdvances(advRes.data || []); setOnLeave(olRes.data || []); setOrgEmployees(orgRes.data || []);
+        // Subordinate leaves depend on `me` (supervisor check), so load after.
         if (me.subordinates && me.subordinates.length > 0) {
           try { const slRes = await api.patch("/leaves", {}); setSubLeaves(slRes.data || []); } catch { /* no subs */ }
         }
-        try { const advRes = await api.get("/advances"); setAdvances(advRes.data || []); } catch { /* ignore */ }
-        try { const olRes = await api.get("/leaves/on-leave"); setOnLeave(olRes.data || []); } catch { /* ignore */ }
-        try { const orgRes = await api.get("/company-structure"); setOrgEmployees(orgRes.data || []); } catch { /* ignore */ }
       } else {
         const [employeesRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes] = await Promise.all([
           api.get("/employees"),
