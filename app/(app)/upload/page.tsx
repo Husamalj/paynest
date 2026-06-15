@@ -173,6 +173,39 @@ export default function UploadPage() {
     } finally { setUploading(""); }
   };
 
+  // Upload both staged files (attendance + salary) in one click. Runs them
+  // sequentially so the two employee upserts don't race, then clears & reloads.
+  const handleUploadAll = async () => {
+    if (attendanceFiles.length === 0 && salaryFiles.length === 0) return;
+    setUploading("all"); setError(""); setSuccess(""); setPreview([]); setLastUpload(null);
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const postOne = async (files: File[], type: string) => {
+      const fd = new FormData();
+      files.forEach((f) => fd.append("files", f));
+      const res = await axios.post(`/api/upload?type=${type}&month=${periodMonth}&year=${periodYear}`, fd, {
+        headers: { "Content-Type": "multipart/form-data", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        withCredentials: true,
+        timeout: 60000,
+      });
+      return (res.data.files || []).reduce((s: number, f: any) => s + (f.employee_count || 0), 0);
+    };
+    try {
+      const done: string[] = [];
+      if (salaryFiles.length > 0) { const n = await postOne(salaryFiles, "salary"); done.push(`${ar ? "الرواتب" : "Salary"}: ${n}`); }
+      if (attendanceFiles.length > 0) { await postOne(attendanceFiles, "attendance"); done.push(ar ? "الحضور ✓" : "Attendance ✓"); }
+      setSuccess(`✓ ${done.join(" · ")}`);
+      setAttendanceFiles([]); setSalaryFiles([]);
+      const nextFiles = await loadUploadedFiles();
+      await maybeAutoCalculate(uploadedFiles, nextFiles);
+    } catch (err: any) {
+      const msg = err.response?.data?.error || err.message;
+      if (typeof msg === "string" && msg.startsWith("QUOTA_EXCEEDED")) setQuotaError(msg.replace("QUOTA_EXCEEDED: ", ""));
+      else if (typeof msg === "string" && msg.startsWith("WRONG_BOX_SALARY")) setError(ar ? "⚠️ ملف الرواتب موضوع في خانة الحضور بالغلط." : "⚠️ A salary file is in the Attendance box.");
+      else if (typeof msg === "string" && msg.startsWith("WRONG_BOX_ATTENDANCE")) setError(ar ? "⚠️ ملف الحضور موضوع في خانة الرواتب بالغلط." : "⚠️ An attendance file is in the Salary box.");
+      else setError(msg);
+    } finally { setUploading(""); }
+  };
+
   const handleDelete = async (file: any) => {
     if (!window.confirm(t("deleteConfirm"))) return;
     try {
@@ -298,6 +331,14 @@ export default function UploadPage() {
           )}
         </div>
       </div>
+
+      {attendanceFiles.length > 0 && salaryFiles.length > 0 && (
+        <button className="btn btn-primary w-full" disabled={uploading !== ""} onClick={handleUploadAll}>
+          {uploading === "all"
+            ? <><span className="spinner" /> {t("uploading")}</>
+            : <><UploadIcon size={16} />{ar ? `رفع الملفّين معاً (${attendanceFiles.length + salaryFiles.length})` : `Upload both files (${attendanceFiles.length + salaryFiles.length})`}</>}
+        </button>
+      )}
 
       {/* ── Manual attendance + missing punches ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
