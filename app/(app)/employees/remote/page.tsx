@@ -9,6 +9,7 @@ export default function RemotePage() {
   const { t } = useLanguage();
   const [assignments, setAssignments] = useState<any[]>([]);
   const [onlineReqs, setOnlineReqs] = useState<any[]>([]);
+  const [onlineLog, setOnlineLog] = useState<any[]>([]);
   const [reqBusy, setReqBusy] = useState<number | null>(null);
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,11 +23,12 @@ export default function RemotePage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [aRes, eRes, lRes] = await Promise.all([api.get("/remote-assignments"), api.get("/employees"), api.get("/leaves").catch(() => ({ data: [] }))]);
+      const [aRes, eRes, lRes, logRes] = await Promise.all([api.get("/remote-assignments"), api.get("/employees"), api.get("/leaves").catch(() => ({ data: [] })), api.get("/attendance/online-log").catch(() => ({ data: [] }))]);
       const seen = new Set<string>();
       const unique = (aRes.data || []).filter((a: any) => { const k = `${a.employeeId}|${a.startDate}|${a.endDate}`; if (seen.has(k)) return false; seen.add(k); return true; });
       setAssignments(unique); setEmployees(eRes.data || []);
       setOnlineReqs((lRes.data || []).filter((l: any) => (l.leaveType || l.leave_type) === "online"));
+      setOnlineLog(logRes.data || []);
     } catch (err: any) { setError(err.message); }
     finally { setLoading(false); }
   };
@@ -59,6 +61,22 @@ export default function RemotePage() {
     catch (err: any) { setError(err.message); }
   };
 
+  // Match a request to the employee's actual online check-in/out punches within
+  // its date range. For multi-day ranges: earliest check-in, latest check-out,
+  // total hours across the days.
+  const punchesFor = (r: any) => {
+    const emp = r.employeeId || r.employee_id;
+    const s = (r.startDate || r.start_date) ? new Date(r.startDate || r.start_date).toISOString().slice(0, 10) : null;
+    const e = (r.endDate || r.end_date) ? new Date(r.endDate || r.end_date).toISOString().slice(0, 10) : s;
+    if (!emp || !s) return { cin: null, cout: null, hours: 0, days: 0 };
+    const rows = onlineLog.filter((p) => p.employee_id === emp && p.work_date && p.work_date >= s && p.work_date <= (e || s));
+    if (rows.length === 0) return { cin: null, cout: null, hours: 0, days: 0 };
+    const ins = rows.map((p) => p.clock_in).filter(Boolean).sort();
+    const outs = rows.map((p) => p.clock_out).filter(Boolean).sort();
+    const hours = rows.reduce((sum, p) => sum + (Number(p.hours_worked) || 0), 0);
+    return { cin: ins[0] || null, cout: outs.length ? outs[outs.length - 1] : null, hours: Math.round(hours * 100) / 100, days: rows.length };
+  };
+
   if (loading) return <div className="flex items-center justify-center py-20 gap-3 text-slate-500"><span className="spinner spinner-dark w-5 h-5" />{t("loadingData")}</div>;
 
   return (
@@ -77,14 +95,19 @@ export default function RemotePage() {
         {onlineReqs.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{t("noOnlineRequests")}</div> : (
           <div className="table-wrapper">
             <table>
-              <thead><tr><th>{t("employee")}</th><th>{t("startDate")}</th><th>{t("endDate")}</th><th>{t("status")}</th><th className="text-right">{t("actions")}</th></tr></thead>
+              <thead><tr><th>{t("employee")}</th><th>{t("startDate")}</th><th>{t("endDate")}</th><th>{t("status")}</th><th>{t("clockIn")}</th><th>{t("clockOut")}</th><th>{t("hoursWorked")}</th><th className="text-right">{t("actions")}</th></tr></thead>
               <tbody>
-                {onlineReqs.map((r) => (
+                {onlineReqs.map((r) => {
+                  const p = punchesFor(r);
+                  return (
                   <tr key={r.id}>
                     <td className="font-medium">{r.employeeName || r.employee_name || r.employeeId}</td>
                     <td>{(r.startDate || r.start_date) ? new Date(r.startDate || r.start_date).toLocaleDateString() : "-"}</td>
                     <td>{(r.endDate || r.end_date) ? new Date(r.endDate || r.end_date).toLocaleDateString() : "-"}</td>
                     <td><span className={`badge ${r.status === "approved" ? "badge-green" : r.status === "rejected" ? "badge-red" : "badge-yellow"}`}>{r.status === "approved" ? t("approved") : r.status === "rejected" ? t("rejected") : t("pending")}</span></td>
+                    <td className="font-mono text-sm">{p.cin || "—"}</td>
+                    <td className="font-mono text-sm">{p.cout || "—"}</td>
+                    <td className="text-sm font-semibold text-slate-700">{p.cin ? p.hours : "—"}</td>
                     <td className="text-right">
                       {r.status === "pending" ? (
                         <div className="flex justify-end gap-2">
@@ -94,7 +117,8 @@ export default function RemotePage() {
                       ) : <span className="text-xs text-slate-400">—</span>}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
