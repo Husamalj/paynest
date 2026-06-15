@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, AlertTriangle, Bell } from "lucide-react";
+import { AlertTriangle, Bell } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 import Layout from "@/components/Layout";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
@@ -210,10 +211,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-elevated">
-          <Building2 size={26} className="text-white" strokeWidth={2.5} />
-        </div>
-        <div className="text-lg font-bold text-slate-900">PayNest</div>
+        <BrandLogo variant="stacked" markClass="h-16" textClass="h-7" showHr />
         <span className="spinner spinner-dark w-5 h-5" />
         <p className="text-sm text-slate-500">{t("loadingData")}</p>
         {error && (

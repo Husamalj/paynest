@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ShieldCheck, ArrowRight, ArrowLeft, Eye, EyeOff, Globe } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
+import BrandLogo from "@/components/BrandLogo";
 
 function LangToggle() {
   const { lang, toggleLanguage } = useLanguage();
@@ -96,9 +97,9 @@ export default function StaffLoginPage() {
         </button>
         <button
           onClick={() => router.push("/")}
-          className="font-bold text-slate-900 text-[15px] hover:opacity-70 transition-opacity"
+          className="hover:opacity-70 transition-opacity"
         >
-          Pay<span className="text-brand-600">Nest</span>
+          <BrandLogo variant="row" markClass="h-8" textClass="h-5" />
         </button>
         <LangToggle />
       </header>

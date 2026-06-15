@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowRight, Wallet, Clock, UserCircle, BarChart3, ShieldCheck, TrendingUp,
-  Globe, LogIn, PlayCircle, CheckCircle2, Sparkles, Building2,
+  Globe, LogIn, PlayCircle, CheckCircle2, Sparkles,
   Flower2, Sun, Sparkle, Diamond, Hexagon,
 } from "lucide-react";
 import clsx from "clsx";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useInView } from "@/lib/useInView";
+import BrandLogo from "@/components/BrandLogo";
 
 /* ─── Top navigation ─── */
 function TopNav({ ar }: { ar: boolean }) {
@@ -22,15 +23,7 @@ function TopNav({ ar }: { ar: boolean }) {
           onClick={() => router.push("/")}
           className="flex items-center gap-2"
         >
-          <img
-            src="/logo.png"
-            alt="PayNest"
-            className="h-9 w-9 object-contain"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-          />
-          <span className="font-black text-lg text-slate-900 tracking-tight">
-            Pay<span className="text-brand-600">Nest</span>
-          </span>
+          <BrandLogo variant="row" markClass="h-9" textClass="h-5" />
         </button>
 
         <nav className="flex items-center" />
