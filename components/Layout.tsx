@@ -201,12 +201,9 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
       >
         <div className="h-[72px] flex items-center px-3 lg:justify-center lg:group-hover:justify-start lg:group-hover:px-5 border-b border-slate-100">
           <div className="flex items-center gap-3 w-full">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#2c3e5e] to-[#16243b] flex items-center justify-center shadow-sm flex-shrink-0 overflow-hidden">
-              <span style={{ fontFamily: "var(--font-script)" }} className="text-white text-[26px] leading-none -mt-1">PN</span>
-            </div>
+            <img src="/paynest-mark.png" alt="PayNest" className="h-9 w-auto object-contain flex-shrink-0 dark:brightness-0 dark:invert" />
             <div className="flex-1 min-w-0 lg:hidden lg:group-hover:block">
-              <div style={{ fontFamily: "var(--font-serif)" }} className="text-[19px] font-semibold text-[#1c2b44] dark:text-slate-100 truncate leading-tight">PayNest</div>
-              <div className="text-[10px] text-slate-500 font-medium tracking-wider uppercase">HR &amp; Payroll</div>
+              <img src="/paynest-wordmark.png" alt="PayNest — HR & Payroll" className="h-9 w-auto object-contain dark:brightness-0 dark:invert" />
             </div>
           </div>
         </div>
