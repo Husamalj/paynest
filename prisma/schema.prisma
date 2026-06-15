@@ -227,6 +227,10 @@ model UploadedFile {
   rowCount      Int?     @map("row_count")
   employeeCount Int      @default(0) @map("employee_count")
   systemMode    String   @default("daily") @map("system_mode") @db.VarChar(20)
+  // Original uploaded file kept (base64) so HR can re-download it if the local
+  // copy is lost. Nullable: files uploaded before this feature have no bytes.
+  fileData      String?  @map("file_data") @db.Text
+  mimeType      String?  @map("mime_type") @db.VarChar(150)
   createdAt     DateTime @default(now()) @map("created_at")
 
   company Company @relation(fields: [companyId], references: [id])

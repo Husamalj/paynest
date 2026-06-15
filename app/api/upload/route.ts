@@ -25,8 +25,21 @@ export async function GET(req: NextRequest) {
       where: { companyId, systemMode: mode },
       orderBy: { createdAt: "desc" },
       take: 100,
+      // Exclude the heavy base64 blob from the list; expose only whether a
+      // downloadable copy exists via `hasFile`.
+      select: {
+        id: true, companyId: true, filename: true, originalName: true,
+        fileType: true, uploadBatch: true, rowCount: true, employeeCount: true,
+        systemMode: true, mimeType: true, createdAt: true,
+        fileData: false,
+      },
     });
-    return NextResponse.json(files);
+    const withFlag = await prisma.$queryRawUnsafe<{ id: number; has: boolean }[]>(
+      `SELECT id, (file_data IS NOT NULL) AS has FROM uploaded_files WHERE company_id = $1 AND system_mode = $2`,
+      companyId, mode,
+    );
+    const hasMap = new Map(withFlag.map((r) => [r.id, r.has]));
+    return NextResponse.json(files.map((f) => ({ ...f, hasFile: hasMap.get(f.id) ?? false })));
   } catch (err) {
     return errorResponse(err);
   }
@@ -321,6 +334,9 @@ export async function POST(req: NextRequest) {
           rowCount,
           employeeCount,
           systemMode,
+          // Keep the original bytes so HR can re-download the file later.
+          fileData: buf.toString("base64"),
+          mimeType: file.type || "application/octet-stream",
         },
       });
 

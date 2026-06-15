@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Upload as UploadIcon, Clock, Wallet, FileSpreadsheet, Trash2, CheckCircle2, AlertTriangle, X, Eye, Users, Crown } from "lucide-react";
+import { Upload as UploadIcon, Clock, Wallet, FileSpreadsheet, Trash2, Download, CheckCircle2, AlertTriangle, X, Eye, Users, Crown } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 import axios from "axios";
@@ -178,6 +178,29 @@ export default function UploadPage() {
     } catch (err: any) { setError(err.message); }
   };
 
+  const handleDownload = async (file: any) => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const res = await fetch(`/api/upload/${file.id}/download`, {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        const msg = res.status === 410
+          ? (lang === "ar" ? "هذا الملف رُفع قبل تفعيل الميزة، فما تم حفظ نسخته الأصلية." : "This file was uploaded before the feature; its original copy was not stored.")
+          : (lang === "ar" ? "تعذّر تنزيل الملف" : "Could not download the file");
+        throw new Error(msg);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.originalName || file.filename || "file.xlsx";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch (err: any) { setError(err.message); }
+  };
+
   return (
     <div className="space-y-6">
       <div className="page-header">
@@ -328,7 +351,14 @@ export default function UploadPage() {
                     <td><span className={clsx("badge", file.fileType === "attendance" ? "badge-blue" : "badge-green")}>{file.fileType === "attendance" ? <Clock size={11} /> : <Wallet size={11} />}{file.fileType}</span></td>
                     <td className="text-right font-mono">{file.employeeCount || 0}</td>
                     <td className="text-xs text-slate-500">{file.createdAt ? new Date(file.createdAt).toLocaleDateString() : "-"}</td>
-                    <td className="text-right"><button className="btn btn-sm btn-danger" onClick={() => handleDelete(file)}><Trash2 size={13} />{t("delete")}</button></td>
+                    <td className="text-right">
+                      <div className="flex justify-end gap-2">
+                        {file.hasFile && (
+                          <button className="btn btn-sm btn-secondary" onClick={() => handleDownload(file)} title={lang === "ar" ? "تنزيل الملف الأصلي" : "Download original file"}><Download size={13} />{lang === "ar" ? "تنزيل" : "Download"}</button>
+                        )}
+                        <button className="btn btn-sm btn-danger" onClick={() => handleDelete(file)}><Trash2 size={13} />{t("delete")}</button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
