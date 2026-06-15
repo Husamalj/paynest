@@ -201,9 +201,10 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
       >
         <div className="h-[72px] flex items-center px-3 lg:justify-center lg:group-hover:justify-start lg:group-hover:px-5 border-b border-slate-100">
           <div className="flex items-center gap-3 w-full">
-            <img src="/paynest-mark.png" alt="PayNest" className="h-10 w-auto object-contain flex-shrink-0 dark:brightness-0 dark:invert" />
+            <img src="/paynest-mark.png" alt="PayNest" className="h-9 w-auto object-contain flex-shrink-0 dark:brightness-0 dark:invert" />
             <div className="flex-1 min-w-0 lg:hidden lg:group-hover:block">
-              <img src="/paynest-wordmark.png" alt="PayNest — HR & Payroll" className="h-14 w-auto object-contain dark:brightness-0 dark:invert" />
+              <img src="/paynest-text.png" alt="PayNest" className="h-6 w-auto object-contain dark:brightness-0 dark:invert" />
+              <img src="/paynest-hr.png" alt="HR & Payroll" className="h-4 w-auto object-contain mt-1 dark:brightness-0 dark:invert" />
             </div>
           </div>
         </div>
