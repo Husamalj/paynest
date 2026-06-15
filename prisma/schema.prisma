@@ -319,6 +319,8 @@ model Task {
   employeeId   String?   @map("employee_id") @db.VarChar(50)
   deadline     DateTime? @db.Date
   status       String    @default("pending") @db.VarChar(50)
+  // urgent | high | medium | low  (assignment priority set by the supervisor)
+  priority     String    @default("medium") @db.VarChar(20)
   // Optional measurable target (independent of evaluation/bonus)
   targetValue  Float?    @map("target_value")
   currentValue Float     @default(0) @map("current_value")

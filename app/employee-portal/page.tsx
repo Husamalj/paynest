@@ -246,6 +246,7 @@ export default function EmployeePortalPage() {
   const [taskSub, setTaskSub] = useState<any>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [taskName, setTaskName] = useState("");
+  const [taskPriority, setTaskPriority] = useState("medium");
   const [taskDeadline, setTaskDeadline] = useState("");
   const [taskTarget, setTaskTarget] = useState("");
   const [taskUnit, setTaskUnit] = useState("");
@@ -368,6 +369,7 @@ export default function EmployeePortalPage() {
         employee_id: empId,
         deadline: taskDeadline || null,
         status: "pending",
+        priority: taskPriority,
         target_value: taskTarget || null,
         unit: taskUnit || null,
         attachment: taskAttachment || null,
@@ -1732,6 +1734,23 @@ export default function EmployeePortalPage() {
                   placeholder={isRTL ? "أدخل اسم المهمة..." : "Enter task name..."}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
                 />
+              </div>
+
+              {/* Priority */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                  {isRTL ? "الأولوية" : "Priority"}
+                </label>
+                <select
+                  value={taskPriority}
+                  onChange={(e) => setTaskPriority(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+                >
+                  <option value="urgent">{isRTL ? "🔴 عاجل" : "🔴 Urgent"}</option>
+                  <option value="high">{isRTL ? "🟠 عالية" : "🟠 High"}</option>
+                  <option value="medium">{isRTL ? "🔵 متوسطة" : "🔵 Medium"}</option>
+                  <option value="low">{isRTL ? "⚪ منخفضة" : "⚪ Low"}</option>
+                </select>
               </div>
 
               {/* Deadline */}

@@ -10,8 +10,16 @@ function getStatusColor(status: string) {
   return { pending: "badge-yellow", in_progress: "badge-blue", completed: "badge-green" }[status] || "badge-gray";
 }
 
+const PRIORITY = {
+  urgent: { order: 0, badge: "badge-red", ar: "عاجل", en: "Urgent" },
+  high: { order: 1, badge: "badge-yellow", ar: "عالية", en: "High" },
+  medium: { order: 2, badge: "badge-blue", ar: "متوسطة", en: "Medium" },
+  low: { order: 3, badge: "badge-gray", ar: "منخفضة", en: "Low" },
+} as const;
+const prKey = (p: string) => (p in PRIORITY ? (p as keyof typeof PRIORITY) : "medium");
+
 export default function TasksPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [tasks, setTasks] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,7 +27,7 @@ export default function TasksPage() {
   const [success, setSuccess] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
-  const [form, setForm] = useState({ task_name: "", employee_id: "", deadline: "", status: "pending", target_value: "", unit: "" });
+  const [form, setForm] = useState({ task_name: "", employee_id: "", deadline: "", status: "pending", priority: "medium", target_value: "", unit: "" });
 
   const loadTasks = async () => { try { const res = await api.get("/tasks"); setTasks(res.data || []); } catch (err: any) { setError(err.message); } };
   const loadEmployees = async () => { try { const res = await api.get("/employees"); setEmployees(res.data || []); } catch { } };
@@ -33,11 +41,13 @@ export default function TasksPage() {
       const empName = employees.find((e) => e.employee_id === form.employee_id)?.name || "";
       const res = await api.post("/tasks", { ...form, employee_name: empName });
       setTasks((p) => [res.data, ...p]);
-      setSuccess(t("taskAdded")); setShowAdd(false); setForm({ task_name: "", employee_id: "", deadline: "", status: "pending", target_value: "", unit: "" });
+      setSuccess(t("taskAdded")); setShowAdd(false); setForm({ task_name: "", employee_id: "", deadline: "", status: "pending", priority: "medium", target_value: "", unit: "" });
     } catch (err: any) { setError(err.message); }
   };
 
-  const filtered = filterStatus === "all" ? tasks : tasks.filter((t) => t.status === filterStatus);
+  const filtered = (filterStatus === "all" ? tasks : tasks.filter((t) => t.status === filterStatus))
+    .slice()
+    .sort((a, b) => PRIORITY[prKey(a.priority)].order - PRIORITY[prKey(b.priority)].order);
 
   if (loading) return <div className="flex items-center justify-center py-20 gap-3 text-slate-500"><span className="spinner spinner-dark w-5 h-5" />{t("loadingData")}</div>;
 
@@ -65,12 +75,13 @@ export default function TasksPage() {
         {filtered.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noTasks")}</div> : (
           <div className="table-wrapper">
             <table>
-              <thead><tr><th>{t("taskName")}</th><th>{t("assignTo")}</th><th>{t("deadline")}</th><th>{t("target")}</th><th>{t("taskStatus")}</th></tr></thead>
+              <thead><tr><th>{t("taskName")}</th><th>{t("assignTo")}</th><th>{lang === "ar" ? "الأولوية" : "Priority"}</th><th>{t("deadline")}</th><th>{t("target")}</th><th>{t("taskStatus")}</th></tr></thead>
               <tbody>
                 {filtered.map((task) => (
                   <tr key={task.id}>
                     <td className="font-medium">{task.taskName || task.task_name}</td>
                     <td className="text-sm text-slate-600"><span className="flex items-center gap-1"><User size={13} />{task.employeeName || task.employee_name || task.employeeId}</span></td>
+                    <td><span className={`badge ${PRIORITY[prKey(task.priority)].badge}`}>{lang === "ar" ? PRIORITY[prKey(task.priority)].ar : PRIORITY[prKey(task.priority)].en}</span></td>
                     <td className="text-sm text-slate-500">{task.deadline ? <span className="flex items-center gap-1"><Calendar size={13} />{new Date(task.deadline).toLocaleDateString()}</span> : "-"}</td>
                     <td className="text-sm text-slate-600 min-w-[140px]">{(() => {
                       const tgt = Number(task.targetValue ?? task.target_value);
@@ -100,6 +111,7 @@ export default function TasksPage() {
             <form onSubmit={handleAdd} className="space-y-4">
               <div><label className="form-label">{t("taskName")} *</label><input className="form-input" value={form.task_name} onChange={(e) => setForm((f) => ({ ...f, task_name: e.target.value }))} required /></div>
               <div><label className="form-label">{t("assignTo")} *</label><select className="form-input" value={form.employee_id} onChange={(e) => setForm((f) => ({ ...f, employee_id: e.target.value }))}><option value="">{t("selectEmployee")}</option>{employees.map((e) => <option key={e.employee_id} value={e.employee_id}>{e.name}</option>)}</select></div>
+              <div><label className="form-label">{lang === "ar" ? "الأولوية" : "Priority"}</label><select className="form-input" value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))}><option value="urgent">{lang === "ar" ? "🔴 عاجل" : "🔴 Urgent"}</option><option value="high">{lang === "ar" ? "🟠 عالية" : "🟠 High"}</option><option value="medium">{lang === "ar" ? "🔵 متوسطة" : "🔵 Medium"}</option><option value="low">{lang === "ar" ? "⚪ منخفضة" : "⚪ Low"}</option></select></div>
               <div><label className="form-label">{t("deadline")}</label><input type="date" className="form-input" value={form.deadline} onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))} /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="form-label">{t("targetValueOptional")}</label><input type="number" step="any" className="form-input" placeholder={t("egTen")} value={form.target_value} onChange={(e) => setForm((f) => ({ ...f, target_value: e.target.value }))} /></div>
