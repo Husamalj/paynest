@@ -1324,7 +1324,6 @@ export default function EmployeePortalPage() {
                     <div><label className="form-label">{isRTL ? "إلى تاريخ" : "To"}</label><input type="date" className="form-input" value={onlineForm.end} onChange={(e) => setOnlineForm((f) => ({ ...f, end: e.target.value }))} /></div>
                   </div>
                   <div><label className="form-label">{isRTL ? "ملاحظة (اختياري)" : "Note (optional)"}</label><textarea rows={2} className="form-textarea" value={onlineForm.reason} onChange={(e) => setOnlineForm((f) => ({ ...f, reason: e.target.value }))} /></div>
-                  <button className="btn btn-primary w-full" disabled={checkinBusy}>{checkinBusy ? <span className="spinner" /> : <Send size={15} />}{isRTL ? "إرسال الطلب" : "Send request"}</button>
                 </form>
 
                 {/* Check in / out for today's online work */}
