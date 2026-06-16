@@ -210,6 +210,7 @@ export default function EmployeePortalPage() {
   const [advForm, setAdvForm] = useState({ amount: "", reason: "", installments: "1" });
   const [advances, setAdvances] = useState<any[]>([]);
   const [customTypes, setCustomTypes] = useState<any[]>([]);
+  const [myCustomReqs, setMyCustomReqs] = useState<any[]>([]);
   const [activeCT, setActiveCT] = useState<any>(null);
   const [ctValues, setCtValues] = useState<Record<string, any>>({});
   const [ctBusy, setCtBusy] = useState(false);
@@ -443,7 +444,7 @@ export default function EmployeePortalPage() {
         // One parallel batch for everything that doesn't depend on `me`, so a
         // cold DB pooler is woken once instead of stacking sequential calls
         // (this was the main cause of a very slow "Loading…").
-        const [meRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes, advRes, olRes, orgRes, ctRes] = await Promise.all([
+        const [meRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes, advRes, olRes, orgRes, ctRes, crRes] = await Promise.all([
           api.get("/employees/me"),
           safe(api.get("/payroll/latest"), { results: [] }),
           safe(api.get("/tasks"), []),
@@ -454,6 +455,7 @@ export default function EmployeePortalPage() {
           safe(api.get("/leaves/on-leave"), []),
           safe(api.get("/company-structure"), []),
           safe(api.get("/request-types"), []),
+          safe(api.get("/custom-requests"), []),
         ]);
         const me = meRes.data;
         const meId = me.employeeId || me.employee_id;
@@ -463,6 +465,7 @@ export default function EmployeePortalPage() {
         setPayroll(payrollRes.data?.results || []);
         setAdvances(advRes.data || []); setOnLeave(olRes.data || []); setOrgEmployees(orgRes.data || []);
         setCustomTypes(ctRes.data || []);
+        setMyCustomReqs(crRes.data || []);
         // Subordinate leaves depend on `me` (supervisor check), so load after.
         if (me.subordinates && me.subordinates.length > 0) {
           try { const slRes = await api.patch("/leaves", {}); setSubLeaves(slRes.data || []); } catch { /* no subs */ }
@@ -586,7 +589,8 @@ export default function EmployeePortalPage() {
     if (!activeCT) return;
     setCtBusy(true);
     try {
-      await api.post("/custom-requests", { request_type_id: activeCT.id, values: ctValues });
+      const res = await api.post("/custom-requests", { request_type_id: activeCT.id, values: ctValues });
+      setMyCustomReqs((p) => [res.data, ...p]);
       setSuccess(isRTL ? "تم إرسال الطلب" : "Request submitted");
       setActiveCT(null); setCtValues({});
     } catch (err: any) { setError(err.message); }
@@ -888,6 +892,20 @@ export default function EmployeePortalPage() {
                       <div className="flex items-center gap-1.5">
                         <span className={`badge text-[10px] ${a.status === "approved" ? "badge-green" : a.status === "rejected" ? "badge-red" : "badge-yellow"}`}>{a.status === "approved" ? (isRTL ? "موافق" : "Approved") : a.status === "rejected" ? (isRTL ? "مرفوض" : "Rejected") : (isRTL ? "معلّق" : "Pending")}</span>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {myCustomReqs.length > 0 && (
+              <div className="card">
+                <div className="card-header"><div className="card-title text-sm"><Inbox size={15} className="text-violet-600" />{isRTL ? "طلباتي المخصّصة" : "My requests"}</div></div>
+                <div className="space-y-2">
+                  {myCustomReqs.slice(0, 6).map((r) => (
+                    <div key={r.id} className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{r.typeName}</span>
+                      <span className={`badge text-[10px] shrink-0 ${r.status === "approved" ? "badge-green" : r.status === "rejected" ? "badge-red" : "badge-yellow"}`}>{r.status === "approved" ? (isRTL ? "موافق" : "Approved") : r.status === "rejected" ? (isRTL ? "مرفوض" : "Rejected") : (isRTL ? "معلّق" : "Pending")}</span>
                     </div>
                   ))}
                 </div>
