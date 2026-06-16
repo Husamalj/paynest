@@ -371,9 +371,9 @@ export default function DashboardPage() {
           {announcements.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noData")}</div> : (
             <div className="space-y-3">
               {announcements.slice(0, 5).map((ann) => (
-                <div key={ann.id} className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                  <div className="text-sm font-semibold text-slate-900 mb-1">{ann.title}</div>
-                  <div className="text-xs text-slate-600 mb-2">{ann.message}</div>
+                <div key={ann.id} className="p-3 bg-blue-50 dark:bg-slate-800/60 border border-blue-100 dark:border-slate-700 rounded-lg">
+                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">{ann.title}</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-300 mb-2">{ann.message}</div>
                   <div className="text-xs text-slate-400">{ann.createdAt ? new Date(ann.createdAt).toLocaleDateString() : "-"}</div>
                 </div>
               ))}

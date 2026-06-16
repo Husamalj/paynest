@@ -1604,9 +1604,9 @@ export default function EmployeePortalPage() {
               {announcements.length === 0 ? <div className="text-center py-6 text-sm text-slate-400">{text.noData}</div> : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {announcements.slice(0, 4).map((item) => (
-                    <div key={item.id} className="rounded-lg bg-brand-50 border border-brand-100 p-3">
-                      <div className="font-semibold text-slate-900">{item.title}</div>
-                      <div className="text-sm text-slate-600 mt-1">{item.message}</div>
+                    <div key={item.id} className="rounded-lg bg-brand-50 dark:bg-slate-800/60 border border-brand-100 dark:border-slate-700 p-3">
+                      <div className="font-semibold text-slate-900 dark:text-slate-100">{item.title}</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300 mt-1">{item.message}</div>
                     </div>
                   ))}
                 </div>
