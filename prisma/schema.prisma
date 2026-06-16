@@ -504,3 +504,36 @@ model CompanyEvent {
 
   @@map("company_events")
 }
+
+// HR-defined custom request type, scoped to a company. `fields` is a JSON array
+// of { key, label, type: text|textarea|number|date|file, required }.
+model RequestType {
+  id        Int      @id @default(autoincrement())
+  companyId Int      @map("company_id")
+  name      String   @db.VarChar(255)
+  fields    Json     @default("[]")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([companyId, active])
+  @@map("request_types")
+}
+
+// An employee's submission of a custom request type. `values` is a JSON object
+// keyed by the type's field keys.
+model CustomRequest {
+  id            Int      @id @default(autoincrement())
+  companyId     Int      @map("company_id")
+  requestTypeId Int      @map("request_type_id")
+  typeName      String   @map("type_name") @db.VarChar(255)
+  employeeId    String?  @map("employee_id") @db.VarChar(50)
+  employeeName  String?  @map("employee_name") @db.VarChar(255)
+  values        Json     @default("{}")
+  status        String   @default("pending") @db.VarChar(20)
+  adminNote     String?  @map("admin_note")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([companyId, status])
+  @@map("custom_requests")
+}

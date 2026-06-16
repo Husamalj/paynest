@@ -10,7 +10,7 @@ const DownloadPayslipButton = dynamic(
 import {
   AlertTriangle, Bell, Calendar, CheckCircle2, CheckSquare, ChevronDown,
   ClipboardList, Clock, KeyRound, Languages, LogOut, Palmtree, Paperclip, Send,
-  ThumbsDown, ThumbsUp, User, UserCheck, Users, X, Plus, Wifi,
+  ThumbsDown, ThumbsUp, User, UserCheck, Users, X, Plus, Wifi, Inbox,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useRef } from "react";
@@ -209,6 +209,10 @@ export default function EmployeePortalPage() {
   // Salary advance
   const [advForm, setAdvForm] = useState({ amount: "", reason: "", installments: "1" });
   const [advances, setAdvances] = useState<any[]>([]);
+  const [customTypes, setCustomTypes] = useState<any[]>([]);
+  const [activeCT, setActiveCT] = useState<any>(null);
+  const [ctValues, setCtValues] = useState<Record<string, any>>({});
+  const [ctBusy, setCtBusy] = useState(false);
   const [onLeave, setOnLeave] = useState<any[]>([]);
   // Quick-action modals
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -439,7 +443,7 @@ export default function EmployeePortalPage() {
         // One parallel batch for everything that doesn't depend on `me`, so a
         // cold DB pooler is woken once instead of stacking sequential calls
         // (this was the main cause of a very slow "Loading…").
-        const [meRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes, advRes, olRes, orgRes] = await Promise.all([
+        const [meRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes, advRes, olRes, orgRes, ctRes] = await Promise.all([
           api.get("/employees/me"),
           safe(api.get("/payroll/latest"), { results: [] }),
           safe(api.get("/tasks"), []),
@@ -449,6 +453,7 @@ export default function EmployeePortalPage() {
           safe(api.get("/advances"), []),
           safe(api.get("/leaves/on-leave"), []),
           safe(api.get("/company-structure"), []),
+          safe(api.get("/request-types"), []),
         ]);
         const me = meRes.data;
         const meId = me.employeeId || me.employee_id;
@@ -457,6 +462,7 @@ export default function EmployeePortalPage() {
         setBalances(balancesRes.data || []); setAnnouncements(announcementsRes.data || []);
         setPayroll(payrollRes.data?.results || []);
         setAdvances(advRes.data || []); setOnLeave(olRes.data || []); setOrgEmployees(orgRes.data || []);
+        setCustomTypes(ctRes.data || []);
         // Subordinate leaves depend on `me` (supervisor check), so load after.
         if (me.subordinates && me.subordinates.length > 0) {
           try { const slRes = await api.patch("/leaves", {}); setSubLeaves(slRes.data || []); } catch { /* no subs */ }
@@ -564,6 +570,27 @@ export default function EmployeePortalPage() {
       setPermSuccess(isRTL ? "تم إرسال طلب المغادرة" : "Permission request sent");
     } catch (err: any) { setPermError(err.message); }
     finally { setPermSaving(false); }
+  };
+
+  const openCustom = (t: any) => { setActiveCT(t); setCtValues({}); setReqOpen(false); };
+  const setCtField = async (f: any, file: File | null, value?: string) => {
+    if (f.type === "file" && file) {
+      const b64 = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(file); });
+      setCtValues((v) => ({ ...v, [f.key]: b64 }));
+    } else {
+      setCtValues((v) => ({ ...v, [f.key]: value ?? "" }));
+    }
+  };
+  const submitCustom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeCT) return;
+    setCtBusy(true);
+    try {
+      await api.post("/custom-requests", { request_type_id: activeCT.id, values: ctValues });
+      setSuccess(isRTL ? "تم إرسال الطلب" : "Request submitted");
+      setActiveCT(null); setCtValues({});
+    } catch (err: any) { setError(err.message); }
+    finally { setCtBusy(false); }
   };
 
   const submitAdvance = async (e: React.FormEvent) => {
@@ -805,6 +832,12 @@ export default function EmployeePortalPage() {
                     <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center flex-shrink-0"><Wifi size={16} /></div>
                     <div className="text-sm font-medium text-slate-900">{isRTL ? "طلب عمل أونلاين" : "Online Work"}</div>
                   </button>
+                  {customTypes.map((ct) => (
+                    <button key={ct.id} type="button" onClick={() => openCustom(ct)} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
+                      <div className="w-8 h-8 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0"><Inbox size={16} /></div>
+                      <div className="text-sm font-medium text-slate-900">{ct.name}</div>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -1399,6 +1432,31 @@ export default function EmployeePortalPage() {
                     {advSaving ? <span className="spinner" /> : <Send size={15} />}{isRTL ? "إرسال طلب السلفة" : "Send Advance Request"}
                   </button>
                   <p className="text-[11px] text-slate-400 text-center">{isRTL ? "يصل الطلب للموارد البشرية، وعند الموافقة يُخصم من راتبك." : "Goes to HR; once approved it's deducted from your salary."}</p>
+                </form>
+              </div>
+            </div>
+            )}
+
+            {/* ── Custom request modal ── */}
+            {activeCT && (
+            <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setActiveCT(null); }}>
+              <div className="card w-full max-w-md max-h-[90vh] overflow-y-auto" dir={isRTL ? "rtl" : "ltr"}>
+                <div className="card-header"><div className="card-title"><Inbox size={16} className="text-violet-600" />{activeCT.name}</div><button type="button" onClick={() => setActiveCT(null)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button></div>
+                <form onSubmit={submitCustom} className="space-y-3">
+                  {(activeCT.fields || []).length === 0 && <p className="text-sm text-slate-500">{isRTL ? "اضغط إرسال لتقديم الطلب." : "Press send to submit."}</p>}
+                  {(activeCT.fields || []).map((f: any) => (
+                    <div key={f.key}>
+                      <label className="form-label">{f.label}{f.required ? " *" : ""}</label>
+                      {f.type === "textarea" ? (
+                        <textarea className="form-textarea" rows={2} required={f.required} value={ctValues[f.key] || ""} onChange={(e) => setCtField(f, null, e.target.value)} />
+                      ) : f.type === "file" ? (
+                        <input type="file" className="form-input" required={f.required} onChange={(e) => setCtField(f, e.target.files?.[0] || null)} />
+                      ) : (
+                        <input type={f.type === "number" ? "number" : f.type === "date" ? "date" : "text"} className="form-input" required={f.required} value={ctValues[f.key] || ""} onChange={(e) => setCtField(f, null, e.target.value)} />
+                      )}
+                    </div>
+                  ))}
+                  <button className="btn btn-primary w-full gap-2" disabled={ctBusy}>{ctBusy ? <span className="spinner" /> : <Send size={15} />}{isRTL ? "إرسال الطلب" : "Submit request"}</button>
                 </form>
               </div>
             </div>

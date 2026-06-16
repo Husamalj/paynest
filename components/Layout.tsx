@@ -75,6 +75,7 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { key: "leaves", path: "/leaves" },
       { key: "advances", path: "/advances" },
+      { key: "customRequests", path: "/request-types" },
     ],
   },
   { key: "bonuses", path: "/bonuses", icon: Gift },
