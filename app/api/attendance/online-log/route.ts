@@ -12,6 +12,16 @@ const fmtTime = (d: Date | null): string | null => {
   return s === "00:00" ? null : s; // 00:00 means "no real punch"
 };
 
+// Hours between two time-only punches; if check-out is "earlier" than check-in
+// the shift crossed midnight, so add 24h.
+const calcHours = (cin: Date | null, cout: Date | null): number => {
+  if (!cin || !cout) return 0;
+  const a = cin.getUTCHours() * 60 + cin.getUTCMinutes();
+  let b = cout.getUTCHours() * 60 + cout.getUTCMinutes();
+  if (b < a) b += 24 * 60; // overnight
+  return Math.round(((b - a) / 60) * 100) / 100;
+};
+
 /**
  * GET /api/attendance/online-log
  * Self check-in/out records (uploadBatch="online") for the company, so HR can
@@ -35,7 +45,7 @@ export async function GET(req: NextRequest) {
         work_date: r.workDate ? r.workDate.toISOString().slice(0, 10) : null,
         clock_in: fmtTime(r.clockIn ?? null),
         clock_out: fmtTime(r.clockOut ?? null),
-        hours_worked: Number(r.hoursWorked),
+        hours_worked: calcHours(r.clockIn ?? null, r.clockOut ?? null),
       })),
     );
   } catch (err) {

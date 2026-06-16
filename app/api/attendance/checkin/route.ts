@@ -71,8 +71,9 @@ export async function POST(req: NextRequest) {
     const newOut = action === "out" ? toTimeISO(time) : (existing?.clockOut ?? null);
     let hours = existing ? Number(existing.hoursWorked) : 0;
     if (newIn && newOut) {
-      const diff = (newOut.getTime() - newIn.getTime()) / 3_600_000;
-      hours = diff > 0 ? Math.round(diff * 100) / 100 : 0;
+      let diff = (newOut.getTime() - newIn.getTime()) / 3_600_000;
+      if (diff < 0) diff += 24; // shift crossed midnight
+      hours = Math.round(diff * 100) / 100;
     }
 
     let record;
