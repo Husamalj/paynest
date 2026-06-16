@@ -27,7 +27,9 @@ export default function TasksPage() {
   const [success, setSuccess] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
-  const [form, setForm] = useState({ task_name: "", employee_id: "", deadline: "", status: "pending", priority: "medium", target_value: "", unit: "" });
+  const [filterEmp, setFilterEmp] = useState("");
+  const [filterMonth, setFilterMonth] = useState("");
+  const [form, setForm] = useState({ task_name: "", employee_id: "", deadline: "", status: "pending", priority: "medium", target_value: "", unit: "", attachment: "", attachment_name: "" });
 
   const loadTasks = async () => { try { const res = await api.get("/tasks"); setTasks(res.data || []); } catch (err: any) { setError(err.message); } };
   const loadEmployees = async () => { try { const res = await api.get("/employees"); setEmployees(res.data || []); } catch { } };
@@ -41,11 +43,14 @@ export default function TasksPage() {
       const empName = employees.find((e) => e.employee_id === form.employee_id)?.name || "";
       const res = await api.post("/tasks", { ...form, employee_name: empName });
       setTasks((p) => [res.data, ...p]);
-      setSuccess(t("taskAdded")); setShowAdd(false); setForm({ task_name: "", employee_id: "", deadline: "", status: "pending", priority: "medium", target_value: "", unit: "" });
+      setSuccess(t("taskAdded")); setShowAdd(false); setForm({ task_name: "", employee_id: "", deadline: "", status: "pending", priority: "medium", target_value: "", unit: "", attachment: "", attachment_name: "" });
     } catch (err: any) { setError(err.message); }
   };
 
-  const filtered = (filterStatus === "all" ? tasks : tasks.filter((t) => t.status === filterStatus))
+  const filtered = tasks
+    .filter((t) => filterStatus === "all" || t.status === filterStatus)
+    .filter((t) => !filterEmp || (t.employeeId || t.employee_id) === filterEmp)
+    .filter((t) => !filterMonth || (t.deadline && new Date(t.deadline).getMonth() + 1 === Number(filterMonth)))
     .slice()
     .sort((a, b) => PRIORITY[prKey(a.priority)].order - PRIORITY[prKey(b.priority)].order);
 
@@ -62,8 +67,18 @@ export default function TasksPage() {
       {success && <div className="alert alert-success"><CheckCircle2 size={16} className="flex-shrink-0" /><span className="flex-1">{success}</span><button onClick={() => setSuccess("")}><X size={14} /></button></div>}
 
       <div className="card">
-        <div className="card-header">
+        <div className="card-header flex-wrap gap-2">
           <div className="card-title"><CheckSquare size={16} className="text-brand-600" />{t("tasks")}</div>
+          <div className="flex items-center gap-2">
+            <select className="form-input text-sm py-1.5 w-40" value={filterEmp} onChange={(e) => setFilterEmp(e.target.value)}>
+              <option value="">{lang === "ar" ? "كل الموظفين" : "All employees"}</option>
+              {employees.map((e) => <option key={e.employee_id} value={e.employee_id}>{e.name}</option>)}
+            </select>
+            <select className="form-input text-sm py-1.5 w-32" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)}>
+              <option value="">{lang === "ar" ? "كل الشهور" : "All months"}</option>
+              {Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={i + 1}>{(lang === "ar" ? ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"] : ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"])[i]}</option>)}
+            </select>
+          </div>
           <div className="tabs">
             {["all", "pending", "in_progress", "completed"].map((s) => (
               <button key={s} className={clsx("tab", filterStatus === s && "tab-active")} onClick={() => setFilterStatus(s)}>
@@ -116,6 +131,16 @@ export default function TasksPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="form-label">{t("targetValueOptional")}</label><input type="number" step="any" className="form-input" placeholder={t("egTen")} value={form.target_value} onChange={(e) => setForm((f) => ({ ...f, target_value: e.target.value }))} /></div>
                 <div><label className="form-label">{t("unitOptional")}</label><input type="text" className="form-input" placeholder={t("egSales")} value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} /></div>
+              </div>
+              <div>
+                <label className="form-label">{lang === "ar" ? "مرفق ملف (اختياري)" : "Attach file (optional)"}</label>
+                <input type="file" className="form-input" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const b64 = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(file); });
+                  setForm((f) => ({ ...f, attachment: b64, attachment_name: file.name }));
+                }} />
+                {form.attachment_name && <p className="text-xs text-slate-500 mt-1">{form.attachment_name}</p>}
               </div>
               <div className="flex justify-end gap-2"><button type="button" className="btn btn-secondary" onClick={() => setShowAdd(false)}>{t("cancel")}</button><button type="submit" className="btn btn-primary">{t("save")}</button></div>
             </form>

@@ -114,7 +114,7 @@ function NotificationBell() {
               notifications.map((n) => (
                 <div
                   key={n.id}
-                  onClick={() => { if (!n.read) markRead(n.id); }}
+                  onClick={() => { if (!n.read) markRead(n.id); if (n.link) { setOpen(false); window.location.href = n.link; } }}
                   className={`px-4 py-3 border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors ${!n.read ? "bg-brand-50/40" : ""}`}
                 >
                   <div className="flex items-start gap-2">
