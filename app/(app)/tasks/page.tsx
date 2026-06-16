@@ -29,7 +29,7 @@ export default function TasksPage() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterEmp, setFilterEmp] = useState("");
   const [filterMonth, setFilterMonth] = useState("");
-  const [form, setForm] = useState({ task_name: "", employee_id: "", deadline: "", status: "pending", priority: "medium", target_value: "", unit: "", attachment: "", attachment_name: "" });
+  const [form, setForm] = useState({ task_name: "", employee_id: "", start_date: "", deadline: "", status: "pending", priority: "medium", target_value: "", unit: "", attachment: "", attachment_name: "" });
 
   const loadTasks = async () => { try { const res = await api.get("/tasks"); setTasks(res.data || []); } catch (err: any) { setError(err.message); } };
   const loadEmployees = async () => { try { const res = await api.get("/employees"); setEmployees(res.data || []); } catch { } };
@@ -43,7 +43,7 @@ export default function TasksPage() {
       const empName = employees.find((e) => e.employee_id === form.employee_id)?.name || "";
       const res = await api.post("/tasks", { ...form, employee_name: empName });
       setTasks((p) => [res.data, ...p]);
-      setSuccess(t("taskAdded")); setShowAdd(false); setForm({ task_name: "", employee_id: "", deadline: "", status: "pending", priority: "medium", target_value: "", unit: "", attachment: "", attachment_name: "" });
+      setSuccess(t("taskAdded")); setShowAdd(false); setForm({ task_name: "", employee_id: "", start_date: "", deadline: "", status: "pending", priority: "medium", target_value: "", unit: "", attachment: "", attachment_name: "" });
     } catch (err: any) { setError(err.message); }
   };
 
@@ -97,7 +97,7 @@ export default function TasksPage() {
                     <td className="font-medium">{task.taskName || task.task_name}</td>
                     <td className="text-sm text-slate-600"><span className="flex items-center gap-1"><User size={13} />{task.employeeName || task.employee_name || task.employeeId}</span></td>
                     <td><span className={`badge ${PRIORITY[prKey(task.priority)].badge}`}>{lang === "ar" ? PRIORITY[prKey(task.priority)].ar : PRIORITY[prKey(task.priority)].en}</span></td>
-                    <td className="text-sm text-slate-500">{task.deadline ? <span className="flex items-center gap-1"><Calendar size={13} />{new Date(task.deadline).toLocaleDateString()}</span> : "-"}</td>
+                    <td className="text-sm text-slate-500"><span className="flex items-center gap-1 whitespace-nowrap"><Calendar size={13} />{(task.startDate || task.start_date) ? new Date(task.startDate || task.start_date).toLocaleDateString() : "—"} → {task.deadline ? new Date(task.deadline).toLocaleDateString() : "—"}</span></td>
                     <td className="text-sm text-slate-600 min-w-[140px]">{(() => {
                       const tgt = Number(task.targetValue ?? task.target_value);
                       if (!tgt || tgt <= 0) return <span className="text-slate-300">-</span>;
@@ -127,7 +127,10 @@ export default function TasksPage() {
               <div><label className="form-label">{t("taskName")} *</label><input className="form-input" value={form.task_name} onChange={(e) => setForm((f) => ({ ...f, task_name: e.target.value }))} required /></div>
               <div><label className="form-label">{t("assignTo")} *</label><select className="form-input" value={form.employee_id} onChange={(e) => setForm((f) => ({ ...f, employee_id: e.target.value }))}><option value="">{t("selectEmployee")}</option>{employees.map((e) => <option key={e.employee_id} value={e.employee_id}>{e.name}</option>)}</select></div>
               <div><label className="form-label">{lang === "ar" ? "الأولوية" : "Priority"}</label><select className="form-input" value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))}><option value="urgent">{lang === "ar" ? "🔴 عاجل" : "🔴 Urgent"}</option><option value="high">{lang === "ar" ? "🟠 عالية" : "🟠 High"}</option><option value="medium">{lang === "ar" ? "🔵 متوسطة" : "🔵 Medium"}</option><option value="low">{lang === "ar" ? "⚪ منخفضة" : "⚪ Low"}</option></select></div>
-              <div><label className="form-label">{t("deadline")}</label><input type="date" className="form-input" value={form.deadline} onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="form-label">{lang === "ar" ? "تاريخ البداية" : "Start date"}</label><input type="date" className="form-input" value={form.start_date} onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))} /></div>
+                <div><label className="form-label">{lang === "ar" ? "تاريخ النهاية" : "End date"}</label><input type="date" className="form-input" value={form.deadline} onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))} /></div>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="form-label">{t("targetValueOptional")}</label><input type="number" step="any" className="form-input" placeholder={t("egTen")} value={form.target_value} onChange={(e) => setForm((f) => ({ ...f, target_value: e.target.value }))} /></div>
                 <div><label className="form-label">{t("unitOptional")}</label><input type="text" className="form-input" placeholder={t("egSales")} value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} /></div>

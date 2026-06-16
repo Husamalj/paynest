@@ -247,6 +247,7 @@ export default function EmployeePortalPage() {
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [taskName, setTaskName] = useState("");
   const [taskPriority, setTaskPriority] = useState("medium");
+  const [taskStartDate, setTaskStartDate] = useState("");
   const [taskDeadline, setTaskDeadline] = useState("");
   const [taskTarget, setTaskTarget] = useState("");
   const [taskUnit, setTaskUnit] = useState("");
@@ -346,7 +347,7 @@ export default function EmployeePortalPage() {
   const openTaskModal = (sub: any) => {
     setTaskSub(sub);
     setTaskName("");
-    setTaskDeadline("");
+    setTaskStartDate(""); setTaskDeadline("");
     setTaskTarget("");
     setTaskUnit("");
     setTaskAttachment("");
@@ -367,6 +368,7 @@ export default function EmployeePortalPage() {
       const res = await api.post("/tasks", {
         task_name: taskName.trim(),
         employee_id: empId,
+        start_date: taskStartDate || null,
         deadline: taskDeadline || null,
         status: "pending",
         priority: taskPriority,
@@ -1753,17 +1755,16 @@ export default function EmployeePortalPage() {
                 </select>
               </div>
 
-              {/* Deadline */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-                  {isRTL ? "الموعد النهائي (اختياري)" : "Deadline (optional)"}
-                </label>
-                <input
-                  type="date"
-                  value={taskDeadline}
-                  onChange={(e) => setTaskDeadline(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-                />
+              {/* Start / End dates */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">{isRTL ? "تاريخ البداية" : "Start date"}</label>
+                  <input type="date" value={taskStartDate} onChange={(e) => setTaskStartDate(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">{isRTL ? "تاريخ النهاية" : "End date"}</label>
+                  <input type="date" value={taskDeadline} onChange={(e) => setTaskDeadline(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm" />
+                </div>
               </div>
 
               {/* Measurable target (optional) — independent of evaluation */}

@@ -317,6 +317,7 @@ model Task {
   companyId    Int       @default(1) @map("company_id")
   taskName     String    @map("task_name") @db.VarChar(255)
   employeeId   String?   @map("employee_id") @db.VarChar(50)
+  startDate    DateTime? @map("start_date") @db.Date
   deadline     DateTime? @db.Date
   status       String    @default("pending") @db.VarChar(50)
   // urgent | high | medium | low  (assignment priority set by the supervisor)
