@@ -112,6 +112,33 @@ export default function EvaluationsPage() {
     finally { setTiersSaving(false); }
   };
 
+  // ── Per-employee bonus exception (override) + bulk apply ──────────────────
+  const [bonusEdit, setBonusEdit] = useState<Record<number, string>>({});
+  const saveBonus = async (ev: any) => {
+    try {
+      const amount = parseInt(bonusEdit[ev.id] ?? "", 10);
+      await api.patch(`/evaluations/${ev.id}`, { bonus_amount: isNaN(amount) ? 0 : amount });
+      setEvaluations((p) => p.map((x) => x.id === ev.id ? { ...x, bonus_amount: isNaN(amount) ? 0 : amount, bonus_worthy: !isNaN(amount) && amount > 0, bonus_override: true } : x));
+      setBonusEdit((p) => { const n = { ...p }; delete n[ev.id]; return n; });
+      setSuccess(ar ? "تم حفظ الاستثناء" : "Exception saved");
+    } catch (e: any) { setError(e.message); }
+  };
+  const clearBonus = async (ev: any) => {
+    try {
+      await api.patch(`/evaluations/${ev.id}`, { clear_override: true });
+      const amount = bonusForGrade(parseFloat(grade100(ev)), tiers);
+      setEvaluations((p) => p.map((x) => x.id === ev.id ? { ...x, bonus_override: false, bonus_amount: amount, bonus_worthy: amount > 0 } : x));
+      setSuccess(ar ? "رجع للتلقائي" : "Reverted to tier");
+    } catch (e: any) { setError(e.message); }
+  };
+  const applyTiersAll = async () => {
+    try {
+      const res = await api.post("/evaluations/apply-tiers", { month, year });
+      setSuccess(ar ? `تم تطبيق الشرائح على ${res.data.updated} موظف` : `Applied tiers to ${res.data.updated}`);
+      await load();
+    } catch (e: any) { setError(e.message); }
+  };
+
   const setTier = (i: number, field: keyof BonusTier, val: number) =>
     setTiers((arr) => arr.map((t, idx) => (idx === i ? { ...t, [field]: val } : t)));
   const addTier    = () => setTiers((arr) => [...arr, { minGrade: 0, maxGrade: 0, amount: 0 }]);
@@ -323,6 +350,20 @@ export default function EvaluationsPage() {
                           <p className="text-sm text-slate-700">{ev.recommendations}</p>
                         </div>
                       )}
+                      {(role === "owner" || role === "hr") && (
+                        <div className="mt-4 rounded-lg bg-white border border-slate-200 p-3 flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-semibold text-slate-500">{ar ? "المكافأة" : "Bonus"}:</span>
+                          <span className="text-sm font-bold text-emerald-600">{ev.bonus_amount || 0} {ar ? "د.أ" : "JD"}</span>
+                          {ev.bonus_override
+                            ? <span className="badge badge-yellow text-[10px]">{ar ? "استثناء" : "Exception"}</span>
+                            : <span className="badge badge-gray text-[10px]">{ar ? "حسب الشريحة" : "By tier"}</span>}
+                          <div className="flex items-center gap-1 ms-auto">
+                            <input type="number" min={0} className="form-input w-24 text-sm py-1" placeholder={ar ? "مبلغ مخصّص" : "Custom"} value={bonusEdit[ev.id] ?? ""} onChange={(e) => setBonusEdit((p) => ({ ...p, [ev.id]: e.target.value }))} />
+                            <button className="btn btn-sm btn-primary" onClick={() => saveBonus(ev)}>{ar ? "حفظ استثناء" : "Save exception"}</button>
+                            {ev.bonus_override && <button className="btn btn-sm btn-secondary" onClick={() => clearBonus(ev)}>{ar ? "رجوع للتلقائي" : "Use tier"}</button>}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -429,6 +470,10 @@ export default function EvaluationsPage() {
                   <button type="button" onClick={saveTiers} disabled={tiersSaving}
                     className="text-xs btn btn-secondary py-1 px-3">
                     {tiersSaving ? (ar ? "جاري الحفظ..." : "Saving...") : (ar ? "حفظ الشرائح" : "Save tiers")}
+                  </button>
+                  <button type="button" onClick={applyTiersAll}
+                    className="text-xs btn btn-primary py-1 px-3">
+                    {ar ? "تطبيق على كل الموظفين" : "Apply to all"}
                   </button>
                   {tiersMsg && <span className="text-xs text-emerald-600">{tiersMsg}</span>}
                 </div>

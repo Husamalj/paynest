@@ -168,8 +168,8 @@ export async function POST(req: NextRequest) {
         score_knowledge_sharing = EXCLUDED.score_knowledge_sharing,
         score_feedback          = EXCLUDED.score_feedback,
         score_compliance        = EXCLUDED.score_compliance,
-        bonus_worthy            = EXCLUDED.bonus_worthy,
-        bonus_amount            = EXCLUDED.bonus_amount,
+        bonus_worthy            = CASE WHEN evaluations.bonus_override THEN evaluations.bonus_worthy ELSE EXCLUDED.bonus_worthy END,
+        bonus_amount            = CASE WHEN evaluations.bonus_override THEN evaluations.bonus_amount ELSE EXCLUDED.bonus_amount END,
         recommendations         = EXCLUDED.recommendations,
         updated_at              = NOW()
       RETURNING *

@@ -377,6 +377,9 @@ model Evaluation {
   scoreCompliance       Int?     @map("score_compliance") @db.SmallInt
   bonusWorthy           Boolean  @default(false) @map("bonus_worthy")
   bonusAmount           Int      @default(0) @map("bonus_amount")
+  // HR set a manual bonus for this employee (an exception). When true the
+  // tier-based amount no longer overwrites it.
+  bonusOverride         Boolean  @default(false) @map("bonus_override")
   recommendations       String?
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")

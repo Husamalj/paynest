@@ -1710,22 +1710,7 @@ export default function EmployeePortalPage() {
                   </div>
                 ))}
 
-                {/* Automatic bonus (derived from grade tiers, set by HR/owner) */}
-                <div className="pt-3 border-t border-slate-200">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-700 font-medium">
-                      {isRTL ? "المكافأة التلقائية" : "Automatic Bonus"}
-                    </span>
-                    <strong className="text-emerald-600">
-                      {evalBonusForGrade(evalGradeFromScores(evalScores), evalTiers)} {isRTL ? "د.أ" : "JD"}
-                    </strong>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {evalTiers.length
-                      ? (isRTL ? "تُحتسب تلقائياً حسب الدرجة وشرائح المكافأة." : "Applied automatically based on the grade and bonus tiers.")
-                      : (isRTL ? "لم يتم تحديد شرائح مكافأة بعد." : "No bonus tiers configured yet.")}
-                  </p>
-                </div>
+                {/* Bonus is decided by HR/owner — not shown to the supervisor. */}
 
                 {/* Recommendations */}
                 <div>
