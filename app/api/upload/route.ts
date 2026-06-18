@@ -147,13 +147,13 @@ export async function POST(req: NextRequest) {
               employeeId: { in: uniqueEmpIds },
               workDate: { in: uniqueDates },
             },
-            select: { id: true, employeeId: true, workDate: true },
+            select: { id: true, employeeId: true, workDate: true, uploadBatch: true },
           });
-          const existingMap = new Map<string, number>();
+          const existingMap = new Map<string, { id: number; uploadBatch: string | null }>();
           for (const row of existingRows) {
             if (!row.workDate) continue;
             const key = `${row.employeeId}:${row.workDate.toISOString().slice(0, 10)}`;
-            existingMap.set(key, row.id);
+            existingMap.set(key, { id: row.id, uploadBatch: row.uploadBatch ?? null });
           }
 
           // 4. Split records into creates and updates, then run one transaction
@@ -162,11 +162,18 @@ export async function POST(req: NextRequest) {
 
           for (const record of records) {
             const key = `${record.employee_id}:${record.work_date}`;
-            const existingId = existingMap.get(key);
-            if (existingId != null) {
+            const existing = existingMap.get(key);
+            // Protect online punches: if the file row is empty (no in/out) and an
+            // online check-in already exists for this day, keep the online punch
+            // instead of overwriting it with an absent row.
+            const rowEmpty = !record.clock_in && !record.clock_out;
+            if (existing && existing.uploadBatch === "online" && rowEmpty) {
+              continue;
+            }
+            if (existing != null) {
               updates.push(
                 prisma.attendanceRecord.update({
-                  where: { id: existingId },
+                  where: { id: existing.id },
                   data: {
                     clockIn: toTimeISO(record.clock_in),
                     clockOut: toTimeISO(record.clock_out),
