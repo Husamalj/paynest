@@ -36,7 +36,9 @@ export async function PUT(req: NextRequest) {
 
     const data = {
       companyName: companyNameToSave,
-      systemMode: body.system_mode ?? body.systemMode,
+      // The toggle now controls calcMode (calculation method). systemMode stays
+      // fixed as the identity bucket and is never changed here.
+      calcMode: body.calc_mode ?? body.calcMode ?? body.system_mode ?? body.systemMode,
       language: body.language,
       reqHours: body.req_hours != null ? Number(body.req_hours) : body.reqHours != null ? Number(body.reqHours) : undefined,
       monthDays: body.month_days != null ? Number(body.month_days) : body.monthDays != null ? Number(body.monthDays) : undefined,
@@ -45,6 +47,7 @@ export async function PUT(req: NextRequest) {
       deductionRate: body.deduction_rate != null ? Number(body.deduction_rate) : body.deductionRate != null ? Number(body.deductionRate) : undefined,
       extraRate: body.extra_rate != null ? Number(body.extra_rate) : body.extraRate != null ? Number(body.extraRate) : undefined,
       workStartTime: body.work_start_time ?? body.workStartTime,
+      timezone: body.timezone,
     };
     // Remove undefined keys
     const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
@@ -76,6 +79,8 @@ function toSnake(s: any) {
     deduction_rate: s.deductionRate,
     extra_rate: s.extraRate,
     work_start_time: s.workStartTime ?? "09:00",
+    timezone: s.timezone ?? "Asia/Amman",
+    calc_mode: (s as any).calcMode ?? s.systemMode ?? "daily",
     created_at: s.createdAt,
     // also camel for newer code
     companyId: s.companyId,

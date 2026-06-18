@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Users, Wallet, DollarSign, TrendingDown, Gift, Shield, AlertTriangle, MapPin, Bell, Calendar, CheckSquare, ChevronLeft, ChevronRight, Scale, X } from "lucide-react";
+import { Users, Wallet, DollarSign, TrendingDown, Gift, Shield, AlertTriangle, MapPin, Bell, Calendar, CheckSquare, ChevronLeft, ChevronRight, ChevronDown, Scale, X } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import StatCard from "@/components/StatCard";
 import api from "@/lib/api";
@@ -24,14 +24,34 @@ function MiniCalendar({ leaves, isRTL }: { leaves: any[]; isRTL: boolean }) {
   };
   useEffect(() => { loadEvents(cursor.y, cursor.m); setSelected(null); }, [cursor.y, cursor.m]);
 
+  const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const leaveTypeLabel = (tp: string) => {
+    const m: Record<string, string> = isRTL
+      ? { annual: "سنوية", sick: "مرضية", unpaid: "بدون راتب", permission: "مغادرة" }
+      : { annual: "Annual", sick: "Sick", unpaid: "Unpaid", permission: "Permission" };
+    return m[tp] || tp;
+  };
+  // Mark every day within each leave's range (not just the start day)
   const leaveDays = new Set<number>();
   for (const l of leaves) {
-    const d = new Date(l.startDate || l.start_date);
-    if (!isNaN(d.getTime()) && d.getFullYear() === cursor.y && d.getMonth() === cursor.m) leaveDays.add(d.getDate());
+    const s = new Date(l.startDate || l.start_date);
+    const e = new Date(l.endDate || l.end_date || l.startDate || l.start_date);
+    if (isNaN(s.getTime())) continue;
+    for (let d = new Date(s.getFullYear(), s.getMonth(), s.getDate()); d <= e; d.setDate(d.getDate() + 1)) {
+      if (d.getFullYear() === cursor.y && d.getMonth() === cursor.m) leaveDays.add(d.getDate());
+    }
   }
   const eventDays = new Set<number>(events.map((e) => parseInt(e.date.substring(8, 10), 10)));
   const dateStr = (day: number) => `${cursor.y}-${String(cursor.m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   const selectedEvents = selected ? events.filter((e) => e.date === selected) : [];
+  // Who is on leave on the selected day (date falls within the leave range)
+  const selectedLeaves = selected ? leaves.filter((l) => {
+    const s = new Date(l.startDate || l.start_date);
+    const e = new Date(l.endDate || l.end_date || l.startDate || l.start_date);
+    if (isNaN(s.getTime())) return false;
+    const sk = dayKey(s), ek = dayKey(e);
+    return selected >= sk && selected <= ek;
+  }) : [];
 
   const firstDow = new Date(cursor.y, cursor.m, 1).getDay();
   const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
@@ -88,6 +108,20 @@ function MiniCalendar({ leaves, isRTL }: { leaves: any[]; isRTL: boolean }) {
 
       {selected && (
         <div className="mt-3 pt-3 border-t border-slate-100">
+          {/* Who was on leave that day */}
+          {selectedLeaves.length > 0 && (
+            <div className="mb-3">
+              <div className="text-xs font-semibold text-amber-700 mb-1.5">{isRTL ? "مجازون هذا اليوم" : "On leave this day"} ({selectedLeaves.length})</div>
+              <div className="space-y-1">
+                {selectedLeaves.map((l, i) => (
+                  <div key={i} className="flex items-center justify-between gap-2 text-xs bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
+                    <span className="text-slate-800 truncate">{l.employeeName || l.employee_name || l.employeeId || l.employee_id}</span>
+                    <span className="text-[10px] text-amber-700 font-semibold flex-shrink-0">{leaveTypeLabel(l.leaveType || l.leave_type)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="text-xs font-semibold text-slate-700 mb-2">{isRTL ? "أحداث يوم" : "Events on"} {selected}</div>
           <div className="space-y-1 mb-2">
             {selectedEvents.length === 0 ? (
@@ -162,6 +196,13 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [settings, setSettings] = useState<any>(null);
+  const [onDuty, setOnDuty] = useState<any[]>([]);
+  const [onLeaveToday, setOnLeaveToday] = useState<any[]>([]);
+  const [onlineToday, setOnlineToday] = useState<any[]>([]);
+  const [dutyOpen, setDutyOpen] = useState(false);
+  const [qDuty, setQDuty] = useState("");
+  const [qLeave, setQLeave] = useState("");
+  const [qOnline, setQOnline] = useState("");
   const [payrollPeriod, setPayrollPeriod] = useState<{ month: number | null; year: number | null }>({ month: null, year: null });
 
   useEffect(() => {
@@ -173,8 +214,9 @@ export default function DashboardPage() {
       api.get("/tasks"),
       api.get("/announcements"),
       api.get("/settings"),
+      api.get("/dashboard/on-duty").catch(() => ({ data: { on_duty: [] } })),
     ])
-      .then(([prRes, empRes, raRes, leavesRes, tasksRes, annRes, setRes]) => {
+      .then(([prRes, empRes, raRes, leavesRes, tasksRes, annRes, setRes, dutyRes]) => {
         setPayroll(prRes.data.results || []);
         setPayrollPeriod({ month: prRes.data.period_month ?? null, year: prRes.data.period_year ?? null });
         setEmployees(empRes.data || []);
@@ -183,6 +225,9 @@ export default function DashboardPage() {
         setTasks(tasksRes.data || []);
         setAnnouncements(annRes.data || []);
         setSettings(setRes.data);
+        setOnDuty(dutyRes.data?.on_duty || []);
+        setOnLeaveToday(dutyRes.data?.on_leave || []);
+        setOnlineToday(dutyRes.data?.on_online || []);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -236,6 +281,68 @@ export default function DashboardPage() {
         <StatCard title={isRTL ? "إجازات معلقة" : "Pending Leaves"} value={pendingLeaves} icon={Calendar} color="orange" />
       </div>
 
+      {/* Today's status — collapsed by default; click to expand into 3 columns */}
+      <div className="card">
+        <button type="button" onClick={() => setDutyOpen((v) => !v)} className="w-full flex items-center justify-between text-start">
+          <div className="card-title">
+            <Users size={16} className="text-emerald-600" />{isRTL ? "حالة اليوم" : "Today's Status"}
+            <span className="ms-2 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">{onDuty.length} {isRTL ? "مداوم" : "in"}</span>
+            {onLeaveToday.length > 0 && <span className="ms-1 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold">{onLeaveToday.length} {isRTL ? "إجازة" : "leave"}</span>}
+            {onlineToday.length > 0 && <span className="ms-1 px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] font-bold">{onlineToday.length} {isRTL ? "أونلاين" : "online"}</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 hidden sm:inline">{new Date().toLocaleDateString(isRTL ? "ar" : "en", { weekday: "long", day: "numeric", month: "short" })}</span>
+            <ChevronDown size={16} className={`text-slate-400 transition-transform ${dutyOpen ? "rotate-180" : ""}`} />
+          </div>
+        </button>
+        {dutyOpen && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100">
+            {/* Working */}
+            <div>
+              <div className="text-xs font-semibold text-emerald-700 mb-2 flex items-center gap-1">{isRTL ? "مداومون" : "Working"} <span className="text-slate-400">({onDuty.length})</span></div>
+              <input value={qDuty} onChange={(e) => setQDuty(e.target.value)} placeholder={isRTL ? "بحث..." : "Search..."}
+                className="w-full mb-2 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                {(() => { const list = onDuty.filter((e) => `${e.name || ""} ${e.department || ""} ${e.job_title || ""}`.toLowerCase().includes(qDuty.toLowerCase())); return list.length === 0 ? <div className="text-xs text-slate-400">—</div> : list.map((e) => (
+                  <div key={e.employee_id} className="flex items-center gap-2 min-w-0">
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">{(e.name || "?").charAt(0).toUpperCase()}</div>
+                    <div className="min-w-0"><div className="text-xs font-medium text-slate-800 truncate leading-tight">{e.name}</div>{(e.department || e.job_title) && <div className="text-[10px] text-slate-400 truncate leading-tight">{e.department || e.job_title}</div>}</div>
+                  </div>
+                )); })()}
+              </div>
+            </div>
+            {/* On leave */}
+            <div>
+              <div className="text-xs font-semibold text-amber-700 mb-2 flex items-center gap-1">{isRTL ? "بإجازة" : "On leave"} <span className="text-slate-400">({onLeaveToday.length})</span></div>
+              <input value={qLeave} onChange={(e) => setQLeave(e.target.value)} placeholder={isRTL ? "بحث..." : "Search..."}
+                className="w-full mb-2 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500" />
+              <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                {(() => { const list = onLeaveToday.filter((e) => (e.name || "").toLowerCase().includes(qLeave.toLowerCase())); return list.length === 0 ? <div className="text-xs text-slate-400">—</div> : list.map((e, i) => (
+                  <div key={i} className="flex items-center gap-2 min-w-0">
+                    <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">{(e.name || "?").charAt(0).toUpperCase()}</div>
+                    <div className="text-xs font-medium text-slate-800 truncate leading-tight">{e.name}</div>
+                  </div>
+                )); })()}
+              </div>
+            </div>
+            {/* On departure */}
+            <div>
+              <div className="text-xs font-semibold text-sky-700 mb-2 flex items-center gap-1">{isRTL ? "أونلاين" : "Online"} <span className="text-slate-400">({onlineToday.length})</span></div>
+              <input value={qOnline} onChange={(e) => setQOnline(e.target.value)} placeholder={isRTL ? "بحث..." : "Search..."}
+                className="w-full mb-2 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500" />
+              <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                {(() => { const list = onlineToday.filter((e) => (e.name || "").toLowerCase().includes(qOnline.toLowerCase())); return list.length === 0 ? <div className="text-xs text-slate-400">—</div> : list.map((e, i) => (
+                  <div key={i} className="flex items-center gap-2 min-w-0">
+                    <div className="w-6 h-6 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">{(e.name || "?").charAt(0).toUpperCase()}</div>
+                    <div className="text-xs font-medium text-slate-800 truncate leading-tight">{e.name}</div>
+                  </div>
+                )); })()}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="card">
           <div className="card-header"><div className="card-title"><MapPin size={16} className="text-brand-600" />{t("remoteWorkStatus")}</div></div>
@@ -264,9 +371,9 @@ export default function DashboardPage() {
           {announcements.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noData")}</div> : (
             <div className="space-y-3">
               {announcements.slice(0, 5).map((ann) => (
-                <div key={ann.id} className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                  <div className="text-sm font-semibold text-slate-900 mb-1">{ann.title}</div>
-                  <div className="text-xs text-slate-600 mb-2">{ann.message}</div>
+                <div key={ann.id} className="p-3 bg-blue-50 dark:bg-slate-800/60 border border-blue-100 dark:border-slate-700 rounded-lg">
+                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">{ann.title}</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-300 mb-2">{ann.message}</div>
                   <div className="text-xs text-slate-400">{ann.createdAt ? new Date(ann.createdAt).toLocaleDateString() : "-"}</div>
                 </div>
               ))}

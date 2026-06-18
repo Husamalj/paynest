@@ -26,6 +26,7 @@ const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
 const defaultForm = {
   company_name: "PayNest",
   system_mode: "daily",
+  calc_mode: "daily",
   language: "ar",
   req_hours: 9,
   month_days: 176,          // hourly mode: req hours/month | daily mode: workdays/month (26)
@@ -34,7 +35,27 @@ const defaultForm = {
   deduction_rate: 1.0,
   extra_rate: 1.0,
   work_start_time: "09:00", // daily mode only
+  timezone: "Asia/Amman",
 };
+
+const TIMEZONES: { value: string; ar: string; en: string }[] = [
+  { value: "Asia/Amman", ar: "الأردن (عمّان)", en: "Jordan (Amman)" },
+  { value: "Asia/Riyadh", ar: "السعودية (الرياض)", en: "Saudi Arabia (Riyadh)" },
+  { value: "Asia/Dubai", ar: "الإمارات (دبي)", en: "UAE (Dubai)" },
+  { value: "Asia/Kuwait", ar: "الكويت", en: "Kuwait" },
+  { value: "Asia/Qatar", ar: "قطر", en: "Qatar" },
+  { value: "Asia/Bahrain", ar: "البحرين", en: "Bahrain" },
+  { value: "Asia/Muscat", ar: "عُمان (مسقط)", en: "Oman (Muscat)" },
+  { value: "Asia/Baghdad", ar: "العراق (بغداد)", en: "Iraq (Baghdad)" },
+  { value: "Asia/Beirut", ar: "لبنان (بيروت)", en: "Lebanon (Beirut)" },
+  { value: "Asia/Damascus", ar: "سوريا (دمشق)", en: "Syria (Damascus)" },
+  { value: "Africa/Cairo", ar: "مصر (القاهرة)", en: "Egypt (Cairo)" },
+  { value: "America/New_York", ar: "أمريكا - شرقي (نيويورك)", en: "USA - Eastern (New York)" },
+  { value: "America/Chicago", ar: "أمريكا - وسط (شيكاغو)", en: "USA - Central (Chicago)" },
+  { value: "America/Denver", ar: "أمريكا - جبلي (دنفر)", en: "USA - Mountain (Denver)" },
+  { value: "America/Los_Angeles", ar: "أمريكا - غربي (لوس أنجلوس)", en: "USA - Pacific (Los Angeles)" },
+  { value: "Europe/London", ar: "بريطانيا (لندن)", en: "UK (London)" },
+];
 
 export default function SettingsPage() {
   const { t, lang } = useLanguage();
@@ -56,6 +77,7 @@ export default function SettingsPage() {
           setForm({
             company_name:    s.company_name    || "PayNest",
             system_mode:     s.system_mode     || "daily",
+            calc_mode:       s.calc_mode       || s.system_mode || "daily",
             language:        s.language        || "ar",
             req_hours:       s.req_hours       ?? 9,
             month_days:      s.month_days      ?? (s.system_mode === "hourly" ? 176 : 26),
@@ -64,6 +86,7 @@ export default function SettingsPage() {
             deduction_rate:  s.deduction_rate  ?? 1.0,
             extra_rate:      s.extra_rate      ?? 1.0,
             work_start_time: s.work_start_time || "09:00",
+            timezone:        s.timezone        || "Asia/Amman",
           });
         }
         setEmployees(eRes.data || []);
@@ -83,21 +106,41 @@ export default function SettingsPage() {
     try {
       await api.put("/settings", form);
       setSuccess(ar ? "تم حفظ الإعدادات بنجاح" : "Settings saved successfully");
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) {
+      // Retry once on a transient network/cold-start failure (no server response)
+      const transient = /network|wak|fetch|connect/i.test(err?.message || "");
+      if (transient) {
+        try {
+          await new Promise((r) => setTimeout(r, 1200));
+          await api.put("/settings", form);
+          setSuccess(ar ? "تم حفظ الإعدادات بنجاح" : "Settings saved successfully");
+          return;
+        } catch (err2: any) { setError(err2.message); return; }
+      }
+      setError(err.message);
+    }
     finally { setSaving(false); }
   };
 
   const handleSSToggle = async (emp: any, value: boolean) => {
-    setSavingEmp((p) => ({ ...p, [emp.employee_id]: true }));
+    // Optimistic: flip immediately, save in the background, revert on failure
+    setEmployees((p) => p.map((e) => e.employee_id === emp.employee_id ? { ...e, social_security: value } : e));
+    const save = () => api.put(`/employees/${emp.employee_id}`, { social_security: value });
     try {
-      await api.put(`/employees/${emp.employee_id}`, { social_security: value });
-      setEmployees((p) => p.map((e) => e.employee_id === emp.employee_id ? { ...e, social_security: value } : e));
-    } catch (err: any) { setError(err.message); }
-    finally { setSavingEmp((p) => ({ ...p, [emp.employee_id]: false })); }
+      try { await save(); }
+      catch (e1: any) {
+        if (/network|wak|fetch|connect/i.test(e1?.message || "")) { await new Promise((r) => setTimeout(r, 1200)); await save(); }
+        else { throw e1; }
+      }
+    } catch (err: any) {
+      // revert on real failure
+      setEmployees((p) => p.map((e) => e.employee_id === emp.employee_id ? { ...e, social_security: !value } : e));
+      setError(err.message);
+    }
   };
 
-  const isDaily  = form.system_mode === "daily";
-  const isHourly = form.system_mode === "hourly";
+  const isDaily  = form.calc_mode === "daily";
+  const isHourly = form.calc_mode === "hourly";
 
   return (
     <div className="space-y-6">
@@ -122,15 +165,15 @@ export default function SettingsPage() {
           </div>
           <p className="text-sm text-slate-500 mb-3">
             {ar
-              ? "اختر طريقة احتساب الراتب: يومي (حسب أيام الدوام) أو ساعي (حسب ساعات الدوام)"
-              : "Choose how salaries are calculated — Daily (by workdays) or Hourly (by clocked hours)"}
+              ? "اختر طريقة احتساب الراتب: شهري (حسب أيام الدوام) أو ساعي (حسب ساعات الدوام)"
+              : "Choose how salaries are calculated — Monthly (by workdays) or Hourly (by clocked hours)"}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
               {
                 value: "daily",
                 icon: "📅",
-                label:    ar ? "يومي (Daily)"   : "Daily-based",
+                label:    ar ? "شهري (Monthly)"   : "Monthly-based",
                 sublabel: ar
                   ? "الراتب = الأساسي ÷ أيام الشهر × أيام الدوام"
                   : "Salary = Base ÷ month days × days worked",
@@ -147,10 +190,10 @@ export default function SettingsPage() {
               <button
                 key={opt.value}
                 type="button"
-                onClick={() => setForm((f) => ({ ...f, system_mode: opt.value }))}
+                onClick={() => setForm((f) => ({ ...f, calc_mode: opt.value }))}
                 className={clsx(
                   "rounded-xl border-2 p-4 text-left transition-all",
-                  form.system_mode === opt.value
+                  form.calc_mode === opt.value
                     ? "border-brand-500 bg-brand-50"
                     : "border-slate-200 hover:border-brand-300"
                 )}
@@ -159,6 +202,14 @@ export default function SettingsPage() {
                 <div className="text-xs text-slate-500">{opt.sublabel}</div>
               </button>
             ))}
+          </div>
+
+          <div className="mt-4 max-w-md">
+            <label className="form-label">{ar ? "المنطقة الزمنية للشركة" : "Company timezone"}</label>
+            <select className="form-input" value={form.timezone} onChange={(e) => setForm((f) => ({ ...f, timezone: e.target.value }))}>
+              {TIMEZONES.map((z) => <option key={z.value} value={z.value}>{ar ? z.ar : z.en}</option>)}
+            </select>
+            <p className="text-xs text-slate-400 mt-1">{ar ? "تُحدّد بداية ونهاية اليوم (المداومون/الإجازات اليوم)." : "Defines the day boundary (who's working/on leave today)."}</p>
           </div>
         </div>
 

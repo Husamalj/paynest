@@ -1,8 +1,9 @@
 var R=require("../../../chunks/ssr/[turbopack]_runtime.js")("server/app/(app)/hr-team/page.js")
-R.c("server/chunks/ssr/[root-of-the-server]__0dj8g~e._.js")
-R.c("server/chunks/ssr/node_modules_next_dist_esm_build_templates_app-page_0_0xgpz.js")
-R.c("server/chunks/ssr/[root-of-the-server]__0vdzm3h._.js")
-R.c("server/chunks/ssr/node_modules_next_dist_0-g.jog._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__0n0eqh4._.js")
+R.c("server/chunks/ssr/node_modules_05l396c._.js")
+R.c("server/chunks/ssr/node_modules_next_dist_esm_build_templates_app-page_0.y~zs-.js")
+R.c("server/chunks/ssr/[root-of-the-server]__0z3gbxc._.js")
+R.c("server/chunks/ssr/node_modules_next_dist_0ppctuh._.js")
 R.c("server/chunks/ssr/[root-of-the-server]__0ufbppj._.js")
 R.c("server/chunks/ssr/app_error_tsx_11t4ysq._.js")
 R.c("server/chunks/ssr/app_not-found_tsx_0u42gv_._.js")
@@ -11,5 +12,5 @@ R.c("server/chunks/ssr/node_modules_next_dist_client_components_builtin_unauthor
 R.c("server/chunks/ssr/node_modules_next_dist_client_components_builtin_global-error_0lgvd_..js")
 R.c("server/chunks/ssr/app_(app)_layout_tsx_0i-3xbc._.js")
 R.c("server/chunks/ssr/_next-internal_server_app_(app)_hr-team_page_actions_0vop9s7.js")
-R.m(60538)
-module.exports=R.m(60538).exports
+R.m(74429)
+module.exports=R.m(74429).exports

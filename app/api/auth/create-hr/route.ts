@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     const employeeId = employee_number || `HR-${user.id}`;
 
     await prisma.employee.upsert({
-      where: { employeeId_systemMode_companyId: { employeeId, systemMode, companyId: session.companyId } },
+      where: { employeeId_companyId: { employeeId, companyId: session.companyId } },
       create: {
         employeeId,
         name,

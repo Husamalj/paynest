@@ -77,11 +77,6 @@ export default function LeavesPage() {
     catch (err: any) { setError(err.message); }
   };
 
-  const handleDeleteLeave = async (id: number) => {
-    if (!window.confirm(t("deleteLeaveConfirm"))) return;
-    try { await api.delete(`/leaves/${id}`); setLeaves((p) => p.filter((l) => l.id !== id)); setSuccess(t("leaveDeleted")); }
-    catch (err: any) { setError(err.message); }
-  };
 
   const handleDeleteHoliday = async (id: number) => {
     if (!window.confirm(t("deleteConfirm"))) return;
@@ -175,8 +170,9 @@ export default function LeavesPage() {
                       </td>
                       <td className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {leave.status === "pending" && (<><button className="btn btn-sm btn-success" onClick={() => handleApprove(leave.id)}><Check size={12} />{t("approve")}</button><button className="btn btn-sm btn-danger" onClick={() => handleReject(leave.id)}><XCircle size={12} />{t("reject")}</button></>)}
-                          <button className="btn btn-sm btn-danger" onClick={() => handleDeleteLeave(leave.id)}><Trash2 size={12} /></button>
+                          {leave.status === "pending"
+                            ? (<><button className="btn btn-sm btn-success" onClick={() => handleApprove(leave.id)}><Check size={12} />{t("approve")}</button><button className="btn btn-sm btn-danger" onClick={() => handleReject(leave.id)}><XCircle size={12} />{t("reject")}</button></>)
+                            : <span className="text-xs text-slate-400">—</span>}
                         </div>
                       </td>
                     </tr>

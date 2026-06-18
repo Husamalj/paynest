@@ -26,6 +26,7 @@ export default function SuperAdminPage() {
   const [success, setSuccess] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
   const [form, setForm] = useState({ companyName: "", slug: "", ownerName: "", email: "", password: "123456", maxEmployees: "" });
+  const [extraOwners, setExtraOwners] = useState<{ name: string; email: string }[]>([]);
   const [editMax, setEditMax] = useState<{ company: any; value: string } | null>(null);
 
   const signOut = () => {
@@ -54,7 +55,7 @@ export default function SuperAdminPage() {
     e.preventDefault();
     setError(""); setSuccess("");
     try {
-      const createRes = await api.post("/auth/register-company", form);
+      const createRes = await api.post("/auth/register-company", { ...form, additionalOwners: extraOwners.filter((o) => o.email.trim()) });
       if (createRes.data.pending) {
         const allRes = await api.get("/companies");
         const created = (allRes.data || []).find((c: any) => c.slug === form.slug);
@@ -63,6 +64,7 @@ export default function SuperAdminPage() {
       setSuccess("Company created and activated");
       setShowAdd(false);
       setForm({ companyName: "", slug: "", ownerName: "", email: "", password: "123456", maxEmployees: "" });
+      setExtraOwners([]);
       await load();
     } catch (e: any) { setError(safeErr(e)); }
   };
@@ -264,6 +266,21 @@ export default function SuperAdminPage() {
               <div><label className="form-label">Slug *</label><input className="form-input" value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} placeholder="alpha-tech" required /></div>
               <div><label className="form-label">Owner Name *</label><input className="form-input" value={form.ownerName} onChange={(e) => setForm((f) => ({ ...f, ownerName: e.target.value }))} placeholder="Owner Name" required /></div>
               <div><label className="form-label">Owner Email *</label><input type="email" className="form-input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="owner@company.com" required /></div>
+
+              <div className="rounded-xl border border-slate-200 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="form-label !mb-0">Additional Owners (optional)</label>
+                  <button type="button" className="btn btn-sm btn-secondary" onClick={() => setExtraOwners((p) => [...p, { name: "", email: "" }])}><Plus size={13} /> Add owner</button>
+                </div>
+                {extraOwners.length === 0 && <p className="text-xs text-slate-400">You can add more than one owner to this company.</p>}
+                {extraOwners.map((o, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input className="form-input flex-1" placeholder="Name" value={o.name} onChange={(e) => setExtraOwners((p) => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} />
+                    <input type="email" className="form-input flex-1" placeholder="email@company.com" value={o.email} onChange={(e) => setExtraOwners((p) => p.map((x, j) => j === i ? { ...x, email: e.target.value } : x))} />
+                    <button type="button" className="text-rose-400 hover:text-rose-600" onClick={() => setExtraOwners((p) => p.filter((_, j) => j !== i))}><X size={16} /></button>
+                  </div>
+                ))}
+              </div>
               <div><label className="form-label">Temporary Password</label><input className="form-input" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} /></div>
               <div>
                 <label className="form-label">Max Employees</label>

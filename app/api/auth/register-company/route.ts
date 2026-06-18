@@ -13,7 +13,7 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { companyName, slug, ownerName, email, phone, password, maxEmployees } = body as {
+    const { companyName, slug, ownerName, email, phone, password, maxEmployees, additionalOwners } = body as {
       companyName?: string;
       slug?: string;
       ownerName?: string;
@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
       phone?: string;
       password?: string;
       maxEmployees?: number | string;
+      additionalOwners?: { name?: string; email?: string }[];
     };
     if (!companyName || !slug || !ownerName || !email || !password) {
       throw new HttpError(400, "Missing required fields");
@@ -89,6 +90,31 @@ export async function POST(req: NextRequest) {
     await prisma.companySettings.create({
       data: { companyId: company.id, companyName },
     });
+
+    // Optional: additional co-owners for the same company.
+    const extras = (additionalOwners || []).filter((o) => o && o.email && o.email.trim());
+    for (const o of extras) {
+      const oEmail = o.email!.trim().toLowerCase();
+      if (oEmail === email.toLowerCase()) continue; // already the primary owner
+      const dup = await prisma.user.findFirst({ where: { email: oEmail } });
+      if (dup) continue; // skip emails that already exist
+      const oUser = await prisma.user.create({
+        data: {
+          name: (o.name || "").trim() || oEmail,
+          email: oEmail,
+          password: hash,
+          role: "owner",
+          companyId: company.id,
+          isActive: true,
+          mustChangePassword: password === "123456",
+        },
+      });
+      const oEmpId = `OWNER-${oUser.id}`;
+      await prisma.employee.create({
+        data: { employeeId: oEmpId, name: oUser.name, email: oEmail, baseSalary: 0, socialSecurity: false, systemMode: "daily", companyId: company.id },
+      });
+      await prisma.user.update({ where: { id: oUser.id }, data: { employeeNumber: oEmpId } });
+    }
 
     // Send email verification
     try {

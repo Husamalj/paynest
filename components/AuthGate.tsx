@@ -18,10 +18,12 @@ export default function AuthGate({ allowedRoles, children }: AuthGateProps) {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    // The credential is an httpOnly cookie (not readable here). Gate the UI on
+    // the non-sensitive role/flag; the server still enforces real auth per API call.
+    const loggedIn = localStorage.getItem("paynest_logged_in");
     const role = localStorage.getItem("role");
 
-    if (!token || !role) {
+    if (!loggedIn || !role) {
       router.replace("/");
       return;
     }

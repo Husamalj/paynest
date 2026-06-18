@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Banknote, Check, XCircle, Trash2, AlertTriangle, X, CheckCircle2 } from "lucide-react";
+import { Banknote, Check, XCircle, AlertTriangle, X, CheckCircle2 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 import clsx from "clsx";
@@ -35,14 +35,6 @@ export default function AdvancesPage() {
       setSuccess(ar ? (status === "approved" ? "تمت الموافقة وخُصمت من الراتب" : "تم الرفض") : (status === "approved" ? "Approved and deducted from salary" : "Rejected"));
       await load();
     } catch (e: any) { setError(e.message); }
-    finally { setBusy(null); }
-  };
-
-  const remove = async (id: number) => {
-    if (!window.confirm(ar ? "حذف هذا الطلب؟" : "Delete this request?")) return;
-    setBusy(id);
-    try { await api.delete(`/advances/${id}`); await load(); }
-    catch (e: any) { setError(e.message); }
     finally { setBusy(null); }
   };
 
@@ -92,11 +84,12 @@ export default function AdvancesPage() {
                     </td>
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        {r.status === "pending" && (<>
-                          <button className="btn btn-sm btn-success" disabled={busy === r.id} onClick={() => decide(r.id, "approved")}><Check size={12} />{ar ? "موافقة" : "Approve"}</button>
-                          <button className="btn btn-sm btn-danger" disabled={busy === r.id} onClick={() => decide(r.id, "rejected")}><XCircle size={12} />{ar ? "رفض" : "Reject"}</button>
-                        </>)}
-                        <button className="btn btn-sm btn-danger" disabled={busy === r.id} onClick={() => remove(r.id)}><Trash2 size={12} /></button>
+                        {r.status === "pending"
+                          ? (<>
+                              <button className="btn btn-sm btn-success" disabled={busy === r.id} onClick={() => decide(r.id, "approved")}><Check size={12} />{ar ? "موافقة" : "Approve"}</button>
+                              <button className="btn btn-sm btn-danger" disabled={busy === r.id} onClick={() => decide(r.id, "rejected")}><XCircle size={12} />{ar ? "رفض" : "Reject"}</button>
+                            </>)
+                          : <span className="text-xs text-slate-400">—</span>}
                       </div>
                     </td>
                   </tr>

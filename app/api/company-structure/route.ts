@@ -18,34 +18,40 @@ export async function GET(req: NextRequest) {
     const settings = await prisma.companySettings.findFirst({ where: { companyId: session.companyId } });
     const mode = settings?.systemMode ?? "daily";
 
-    const owners = await prisma.user.findMany({
-      where: { companyId: session.companyId, role: { in: ["owner", "super_admin"] } },
+    // Map every staff account's employeeNumber -> role (owner / hr / super_admin)
+    const staff = await prisma.user.findMany({
+      where: { companyId: session.companyId, role: { in: ["owner", "hr", "super_admin"] } },
       select: { employeeNumber: true, role: true },
     });
-    const superNums = owners.filter((u) => u.role === "super_admin").map((u) => u.employeeNumber).filter(Boolean) as string[];
-    const ownerNums = new Set(owners.filter((u) => u.role === "owner").map((u) => u.employeeNumber).filter(Boolean) as string[]);
+    const roleByNum = new Map<string, string>();
+    staff.forEach((u) => { if (u.employeeNumber) roleByNum.set(u.employeeNumber, u.role); });
+    const superNums = staff.filter((u) => u.role === "super_admin").map((u) => u.employeeNumber).filter(Boolean) as string[];
 
     const employees = await prisma.employee.findMany({
       where: {
         companyId: session.companyId,
-        systemMode: mode,
         ...(superNums.length > 0 ? { NOT: { employeeId: { in: superNums } } } : {}),
       },
-      select: { id: true, employeeId: true, name: true, jobTitle: true, photoUrl: true, supervisorId: true, supervisorIds: true },
+      select: { id: true, employeeId: true, name: true, email: true, jobTitle: true, photoUrl: true, supervisorId: true, supervisorIds: true },
       orderBy: { name: "asc" },
     });
 
     const validIds = new Set(employees.map((e) => e.id));
-    const out = employees.map((e) => ({
-      id: e.id,
-      employeeId: e.employeeId,
-      name: e.name,
-      jobTitle: e.jobTitle,
-      photoUrl: e.photoUrl,
-      supervisorId: e.supervisorId != null && validIds.has(e.supervisorId) ? e.supervisorId : null,
-      supervisorIds: (e.supervisorIds || []).filter((x) => validIds.has(x)),
-      isOwner: e.employeeId ? ownerNums.has(e.employeeId) : false,
-    }));
+    const out = employees.map((e) => {
+      const role = (e.employeeId && roleByNum.get(e.employeeId)) || "employee";
+      return {
+        id: e.id,
+        employeeId: e.employeeId,
+        name: e.name,
+        email: e.email || null,
+        jobTitle: e.jobTitle,
+        photoUrl: e.photoUrl,
+        role,
+        supervisorId: e.supervisorId != null && validIds.has(e.supervisorId) ? e.supervisorId : null,
+        supervisorIds: (e.supervisorIds || []).filter((x) => validIds.has(x)),
+        isOwner: role === "owner",
+      };
+    });
 
     return NextResponse.json(out);
   } catch (err) {

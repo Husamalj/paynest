@@ -32,7 +32,6 @@ export async function GET(req: NextRequest) {
     const employees = await prisma.employee.findMany({
       where: {
         companyId: session.companyId,
-        systemMode: mode,
         ...(adminNums.length > 0 ? { NOT: { employeeId: { in: adminNums } } } : {}),
       },
       orderBy: { name: "asc" },
@@ -51,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     const mode = await getSystemMode(session.companyId);
     const body = await req.json();
-    const { employee_id, name, email, phone, base_salary, social_security, religion, allowance, job_title, nationality, gender, national_id, birth_date } = body;
+    const { employee_id, name, email, phone, base_salary, social_security, religion, allowance, job_title, nationality, gender, national_id, birth_date, work_type, workdays, req_hours } = body;
 
     // Validate contact info — email must be a real deliverable address, phone must be valid.
     if (email) {
@@ -71,7 +70,7 @@ export async function POST(req: NextRequest) {
     if (company?.maxEmployees != null) {
       // Check if this is a NEW employee (not updating existing)
       const existing = await prisma.employee.findUnique({
-        where: { employeeId_systemMode_companyId: { employeeId: employee_id, systemMode: mode, companyId: session.companyId } },
+        where: { employeeId_companyId: { employeeId: employee_id, companyId: session.companyId } },
         select: { id: true },
       });
       if (!existing) {
@@ -84,7 +83,6 @@ export async function POST(req: NextRequest) {
         const currentCount = await prisma.employee.count({
           where: {
             companyId: session.companyId,
-            systemMode: mode,
             ...(adminNums.length > 0 ? { NOT: { employeeId: { in: adminNums } } } : {}),
           },
         });
@@ -98,7 +96,7 @@ export async function POST(req: NextRequest) {
     }
 
     const employee = await prisma.employee.upsert({
-      where: { employeeId_systemMode_companyId: { employeeId: employee_id, systemMode: mode, companyId: session.companyId } },
+      where: { employeeId_companyId: { employeeId: employee_id, companyId: session.companyId } },
       create: {
         employeeId: employee_id,
         name,
@@ -113,6 +111,9 @@ export async function POST(req: NextRequest) {
         birthDate: birth_date ? new Date(birth_date) : null,
         socialSecurity: !!social_security,
         religion: religion ?? "",
+        workType: work_type || "standard",
+        workdays: workdays || null,
+        reqHours: req_hours != null && req_hours !== "" ? Number(req_hours) : null,
         systemMode: mode,
         companyId: session.companyId,
       },
@@ -129,6 +130,9 @@ export async function POST(req: NextRequest) {
         birthDate: birth_date ? new Date(birth_date) : null,
         socialSecurity: !!social_security,
         religion: religion ?? "",
+        workType: work_type || "standard",
+        workdays: workdays || null,
+        reqHours: req_hours != null && req_hours !== "" ? Number(req_hours) : null,
         companyId: session.companyId,
       },
     });
@@ -198,6 +202,9 @@ function toSnake(e: any) {
     join_date: e.joinDate,
     contract_end_date: e.contractEndDate,
     social_security: e.socialSecurity,
+    work_type: e.workType,
+    workdays: e.workdays,
+    req_hours: e.reqHours != null ? Number(e.reqHours) : null,
     remote_days: e.remoteDays,
     system_mode: e.systemMode,
     created_at: e.createdAt,

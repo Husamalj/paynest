@@ -53,7 +53,9 @@ export function buildLeaveMap(
       const inPeriod = key >= periodStartKey && key <= periodEndKey;
       let mark: string | null = null;
 
-      if (type === "unpaid") {
+      if (type === "online") {
+        mark = "online"; // approved online workday — counts as a full present day
+      } else if (type === "unpaid") {
         mark = "unpaid";
       } else if (type === "annual" || type === "sick") {
         const limit =
@@ -100,13 +102,11 @@ export function calculateDailyPayroll(
   leaveMap: Record<string, Record<string, string>>
 ) {
   const { month, year } = period;
-  const workdayNames = settings.workdays
+  const companyWorkdayNames = settings.workdays
     ? settings.workdays.split(",").map((s: string) => s.trim())
     : ["Sun", "Mon", "Tue", "Wed", "Thu"];
   const holidaySet = new Set<string>(Array.isArray(settings.holidays) ? settings.holidays : []);
-  // Official holidays are paid days off — drop them from the working days
-  const workdays = getWorkdaysInMonth(year, month, workdayNames).filter((d) => !holidaySet.has(d));
-  const reqHours = parseFloat(settings.req_hours ?? settings.reqHours) || 8;
+  const companyReqHours = parseFloat(settings.req_hours ?? settings.reqHours) || 8;
   const monthDays = parseFloat(settings.month_days ?? settings.monthDays) || 26;
   const lateTolerance = parseFloat(settings.late_tolerance ?? settings.lateTolerance) || 0;
   const deductionRate = parseFloat(settings.deduction_rate ?? settings.deductionRate) || 1.0;
@@ -114,11 +114,70 @@ export function calculateDailyPayroll(
 
   return employees.map((emp) => {
     const baseSalary = parseFloat(emp.base_salary ?? emp.baseSalary) || 0;
-    const hourlyRate = baseSalary / (monthDays * reqHours);
     const empId = emp.employee_id ?? emp.employeeId;
     const empAttendance = attendanceMap[empId] || {};
     const empBonuses = bonusesMap[empId] || [];
     const empLeaves = (leaveMap && leaveMap[empId]) || {};
+
+    // Per-employee schedule (override company defaults)
+    const workType = String(emp.work_type ?? emp.workType ?? "standard");
+    const isFixed = workType === "fixed";
+    const empWorkdayRaw = emp.workdays ?? emp.work_days;
+    const workdayNames = empWorkdayRaw
+      ? String(empWorkdayRaw).split(",").map((s: string) => s.trim()).filter(Boolean)
+      : companyWorkdayNames;
+    const reqHours = parseFloat(emp.req_hours ?? emp.reqHours) || companyReqHours;
+    // Official holidays are paid days off — drop them from the working days
+    const workdays = getWorkdaysInMonth(year, month, workdayNames).filter((d) => !holidaySet.has(d));
+    const hourlyRate = baseSalary / (monthDays * reqHours);
+
+    // ── Daily-wage (مياومة): paid only for days actually attended ──
+    // baseSalary holds the DAILY rate. Each attended day pays the daily rate,
+    // minus a shortfall (if under required hours) or plus overtime (if over).
+    // Absent days pay nothing. No social security.
+    if (workType === "daily_wage") {
+      const dailyRate = baseSalary;
+      const hrRate = reqHours > 0 ? dailyRate / reqHours : 0;
+      let earned = 0;
+      let dwHours = 0;
+      let daysWorked = 0;
+      const breakdown: any[] = [];
+      for (const [dateKey, record] of Object.entries(empAttendance)) {
+        if (!hasValidClock(record)) continue;
+        const hours = parseFloat((record as any).hours_worked ?? (record as any).hoursWorked) || 0;
+        dwHours += hours;
+        daysWorked += 1;
+        let dayPay = dailyRate;
+        if (hours < reqHours) dayPay = dailyRate - (reqHours - hours) * hrRate * deductionRate;
+        else if (hours > reqHours) dayPay = dailyRate + (hours - reqHours) * hrRate * extraRate;
+        if (dayPay < 0) dayPay = 0;
+        earned += dayPay;
+        breakdown.push({ date: dateKey, hours_worked: hours, required: reqHours, diff: parseFloat((hours - reqHours).toFixed(4)), adjustment: parseFloat(dayPay.toFixed(4)), status: "present", check_in: (record as any).clock_in ?? (record as any).clockIn ?? null, check_out: (record as any).clock_out ?? (record as any).clockOut ?? null });
+      }
+      breakdown.sort((a, b) => a.date.localeCompare(b.date));
+      let bonusT = 0, dedT = 0;
+      for (const bd of empBonuses) {
+        if (bd.type === "bonus") bonusT += parseFloat(bd.amount) || 0;
+        else if (bd.type === "deduction") dedT += parseFloat(bd.amount) || 0;
+      }
+      const net = earned + bonusT - dedT; // no social security for daily wage
+      const reqTotal = daysWorked * reqHours;
+      return {
+        employee_id: empId,
+        name: emp.name,
+        base_salary: parseFloat(earned.toFixed(4)), // earned from attendance
+        total_hours: parseFloat(dwHours.toFixed(4)),
+        required_hours: parseFloat(reqTotal.toFixed(4)),
+        hour_diff: parseFloat((dwHours - reqTotal).toFixed(4)),
+        adjustment: 0,
+        social_security_deduct: 0,
+        bonus_total: parseFloat(bonusT.toFixed(4)),
+        deduction_total: parseFloat(dedT.toFixed(4)),
+        net_salary: parseFloat(net.toFixed(4)),
+        status: daysWorked === 0 ? "Has Deductions" : "Full Attendance",
+        daily_breakdown: breakdown,
+      };
+    }
 
     let totalAdjustment = 0;
     let totalHours = 0;
@@ -129,10 +188,15 @@ export function calculateDailyPayroll(
       const leaveStatus = empLeaves[workday];
       const record = empAttendance[workday];
 
-      if (leaveStatus === "paid" || leaveStatus === "unpaid") {
+      if (leaveStatus === "online" && !(record && hasValidClock(record))) {
+        // Approved online workday with no check-in/out — counts as a full present day.
+        // (If the employee DID check in/out, the attendance branch below uses real hours.)
+        paidLeaveDays += 1;
+        dailyBreakdown.push({ date: workday, hours_worked: reqHours, required: reqHours, diff: 0, adjustment: 0, status: "online" });
+      } else if (leaveStatus === "paid" || leaveStatus === "unpaid") {
         const isUnpaid = leaveStatus === "unpaid";
         if (!isUnpaid) paidLeaveDays += 1;
-        if (isUnpaid) {
+        if (isUnpaid && !isFixed) {
           const fullDayDeduct = -(reqHours * hourlyRate);
           totalAdjustment += fullDayDeduct;
           dailyBreakdown.push({ date: workday, hours_worked: 0, required: reqHours, diff: -reqHours, adjustment: parseFloat(fullDayDeduct.toFixed(4)), status: "absent" });
@@ -146,13 +210,19 @@ export function calculateDailyPayroll(
         const effectiveRequired = reqHours - toleranceHours;
         const diff = hoursWorked - reqHours;
         let dayAdjustment = 0;
-        if (hoursWorked < effectiveRequired) {
-          dayAdjustment = -(( reqHours - hoursWorked) * hourlyRate * deductionRate);
-        } else if (hoursWorked > reqHours) {
-          dayAdjustment = (hoursWorked - reqHours) * hourlyRate * extraRate;
+        // Fixed/exempt employees: presence recorded, but no deduction or overtime
+        if (!isFixed) {
+          if (hoursWorked < effectiveRequired) {
+            dayAdjustment = -(( reqHours - hoursWorked) * hourlyRate * deductionRate);
+          } else if (hoursWorked > reqHours) {
+            dayAdjustment = (hoursWorked - reqHours) * hourlyRate * extraRate;
+          }
         }
         totalAdjustment += dayAdjustment;
-        dailyBreakdown.push({ date: workday, hours_worked: hoursWorked, required: reqHours, diff: parseFloat(diff.toFixed(4)), adjustment: parseFloat(dayAdjustment.toFixed(4)), status: "present", check_in: record.clock_in ?? record.clockIn ?? null, check_out: record.clock_out ?? record.clockOut ?? null });
+        dailyBreakdown.push({ date: workday, hours_worked: hoursWorked, required: isFixed ? 0 : reqHours, diff: parseFloat(diff.toFixed(4)), adjustment: parseFloat(dayAdjustment.toFixed(4)), status: "present", check_in: record.clock_in ?? record.clockIn ?? null, check_out: record.clock_out ?? record.clockOut ?? null });
+      } else if (isFixed) {
+        // Fixed employee who didn't clock in this day — no penalty
+        dailyBreakdown.push({ date: workday, hours_worked: 0, required: 0, diff: 0, adjustment: 0, status: "present" });
       } else {
         const fullDayDeduct = -(reqHours * hourlyRate);
         totalAdjustment += fullDayDeduct;
@@ -167,7 +237,7 @@ export function calculateDailyPayroll(
       if (record && hasValidClock(record)) {
         const hoursWorked = parseFloat(record.hours_worked ?? record.hoursWorked) || 0;
         totalHours += hoursWorked;
-        const dayAdjustment = hoursWorked * hourlyRate * extraRate;
+        const dayAdjustment = isFixed ? 0 : hoursWorked * hourlyRate * extraRate;
         totalAdjustment += dayAdjustment;
         dailyBreakdown.push({ date: holiday, hours_worked: hoursWorked, required: 0, diff: parseFloat(hoursWorked.toFixed(4)), adjustment: parseFloat(dayAdjustment.toFixed(4)), status: "holiday", check_in: record.clock_in ?? record.clockIn ?? null, check_out: record.clock_out ?? record.clockOut ?? null });
       } else {
@@ -186,10 +256,8 @@ export function calculateDailyPayroll(
     const requiredHours = Math.max(0, (workdays.length - paidLeaveDays) * reqHours);
     const hourDiff = totalHours - requiredHours;
 
-    let status = "Full Attendance";
-    if (dailyBreakdown.some((d) => d.status === "absent")) status = "Absent";
-    else if (totalAdjustment < 0) status = "Has Deductions";
-    else if (totalAdjustment > 0) status = "Has Extras";
+    // Two states only: worked less than required → deductions, otherwise complete
+    const status = totalAdjustment < 0 ? "Has Deductions" : "Full Attendance";
 
     return {
       employee_id: empId,
@@ -257,10 +325,13 @@ export function calculateHoursPayroll(
       totalHours += parseFloat((record as any).hours_worked ?? (record as any).hoursWorked) || 0;
     }
 
+    const isFixed = String(emp.work_type ?? emp.workType ?? "standard") === "fixed";
     const diff = totalHours - requiredHours;
     let adjustment = 0;
-    if (diff < 0) adjustment = diff * hourlyRate * deductionRate;
-    else if (diff > 0) adjustment = diff * hourlyRate * extraRate;
+    if (!isFixed) {
+      if (diff < 0) adjustment = diff * hourlyRate * deductionRate;
+      else if (diff > 0) adjustment = diff * hourlyRate * extraRate;
+    }
 
     const socialSecurityDeduct = emp.social_security || emp.socialSecurity ? baseSalary * 0.075 : 0;
     let bonusTotal = 0;
@@ -271,10 +342,8 @@ export function calculateHoursPayroll(
     }
     const netSalary = baseSalary + adjustment - socialSecurityDeduct + bonusTotal - deductionTotal;
 
-    let status = "Full Attendance";
-    if (diff < 0) status = "Has Deductions";
-    else if (diff > 0) status = "Has Extras";
-    if (totalHours === 0 && paidLeaveDays === 0) status = "Absent";
+    // Two states only: worked less than required → deductions, otherwise complete
+    const status = adjustment < 0 ? "Has Deductions" : "Full Attendance";
 
     return {
       employee_id: empId,

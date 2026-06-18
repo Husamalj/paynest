@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, AlertTriangle, Bell } from "lucide-react";
+import { AlertTriangle, Bell } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 import Layout from "@/components/Layout";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
@@ -113,7 +114,7 @@ function NotificationBell() {
               notifications.map((n) => (
                 <div
                   key={n.id}
-                  onClick={() => { if (!n.read) markRead(n.id); }}
+                  onClick={() => { if (!n.read) markRead(n.id); if (n.link) { setOpen(false); window.location.href = n.link; } }}
                   className={`px-4 py-3 border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors ${!n.read ? "bg-brand-50/40" : ""}`}
                 >
                   <div className="flex items-start gap-2">
@@ -141,8 +142,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) { router.replace("/"); return; }
+    // Credential is an httpOnly cookie; gate on the flag and let /auth/me verify.
+    const loggedIn = localStorage.getItem("paynest_logged_in");
+    if (!loggedIn) { router.replace("/"); return; }
 
     const init = async () => {
       try {
@@ -209,10 +211,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-elevated">
-          <Building2 size={26} className="text-white" strokeWidth={2.5} />
-        </div>
-        <div className="text-lg font-bold text-slate-900">PayNest</div>
+        <BrandLogo variant="stacked" markClass="h-16" textClass="h-7" showHr />
         <span className="spinner spinner-dark w-5 h-5" />
         <p className="text-sm text-slate-500">{t("loadingData")}</p>
         {error && (

@@ -164,6 +164,7 @@ export interface EmployeeRecord {
   base_salary: number;
   social_security: boolean;
   email?: string | null;
+  phone?: string | null;
   department?: string | null;
   join_date?: string | null;
   contract_end_date?: string | null;
@@ -324,6 +325,7 @@ function parseSalaryV2(rows: unknown[][], headerRow: number): EmployeeRecord[] {
   const iStart   = col("تاريخ بدء العقد", "بدء العقد");
   const iEnd     = col("تاريخ انتهاء العقد", "انتهاء العقد");
   const iEmail   = col("البريد الالكتروني", "البريد", "email");
+  const iPhone   = col("رقم الهاتف", "الهاتف", "هاتف", "موبايل", "جوال", "phone", "mobile", "tel");
   const iDept    = col("القسم التابع له", "القسم", "department");
   const iSalary  = col("الراتب الأساسي", "الراتب الاساسي", "الراتب", "base salary", "basic salary");
   const iGuar    = col("راتب الضمان", "الضمان الاجتماعي", "نسبة الضمان");
@@ -349,6 +351,7 @@ function parseSalaryV2(rows: unknown[][], headerRow: number): EmployeeRecord[] {
     seen.add(employee_id);
 
     const email = iEmail >= 0 ? String(row[iEmail] || "").trim() : "";
+    const phone = iPhone >= 0 ? String(row[iPhone] || "").trim() : "";
     const department = iDept >= 0 ? String(row[iDept] || "").trim() : "";
     const join_date = iStart >= 0 ? parseDateValue(row[iStart]) : null;
     const contract_end_date = iEnd >= 0 ? parseDateValue(row[iEnd]) : null;
@@ -361,6 +364,7 @@ function parseSalaryV2(rows: unknown[][], headerRow: number): EmployeeRecord[] {
       base_salary: salary,
       social_security,
       email: email || null,
+      phone: phone || null,
       department: department || null,
       join_date,
       contract_end_date,

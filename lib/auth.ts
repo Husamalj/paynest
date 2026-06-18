@@ -23,9 +23,18 @@ export function verifyJwtNode(token: string): SessionUser {
   return jwt.verify(token, SECRET) as SessionUser;
 }
 
-export async function requireAuth(req: NextRequest): Promise<SessionUser> {
+// Name of the httpOnly auth cookie. Keeping the credential in an httpOnly
+// cookie (instead of localStorage) makes it unreadable to injected JS (XSS).
+export const AUTH_COOKIE = "token";
+
+export function getTokenFromRequest(req: NextRequest): string {
   const header = req.headers.get("authorization") || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
+  if (header.startsWith("Bearer ")) return header.slice(7);
+  return req.cookies.get(AUTH_COOKIE)?.value || "";
+}
+
+export async function requireAuth(req: NextRequest): Promise<SessionUser> {
+  const token = getTokenFromRequest(req);
   if (!token) throw new HttpError(401, "Missing token");
   try {
     return verifyJwtNode(token);

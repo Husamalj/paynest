@@ -80,7 +80,10 @@ model CompanySettings {
   id            Int      @id @default(autoincrement())
   companyId     Int      @default(1) @map("company_id")
   companyName   String   @default("PayNest") @map("company_name") @db.VarChar(255)
+  // systemMode = legacy identity bucket (kept "daily" for everyone now).
+  // calcMode   = the payroll calculation method (daily/monthly vs hourly).
   systemMode    String   @default("daily") @map("system_mode") @db.VarChar(20)
+  calcMode      String   @default("daily") @map("calc_mode") @db.VarChar(20)
   language      String   @default("ar") @db.VarChar(10)
   reqHours      Decimal  @default(8) @map("req_hours")
   monthDays     Int      @default(26) @map("month_days")
@@ -89,6 +92,7 @@ model CompanySettings {
   deductionRate Decimal  @default(1.0) @map("deduction_rate")
   extraRate     Decimal  @default(1.0) @map("extra_rate")
   workStartTime String   @default("09:00") @map("work_start_time") @db.VarChar(5)
+  timezone      String   @default("Asia/Amman") @db.VarChar(60)
   createdAt     DateTime @default(now()) @map("created_at")
 
   company Company @relation(fields: [companyId], references: [id])
@@ -118,6 +122,10 @@ model Employee {
   contractEndDate DateTime? @map("contract_end_date") @db.Date
   department      String?   @map("department") @db.VarChar(50)
   systemMode     String   @default("daily") @map("system_mode") @db.VarChar(20)
+  // Per-employee work schedule (override company defaults). null = use company setting.
+  workType       String   @default("standard") @map("work_type") @db.VarChar(20) // standard | fixed
+  workdays       String?  @db.VarChar(50)   // e.g. "Sat,Sun,Mon,Tue,Wed"
+  reqHours       Decimal? @map("req_hours") // required hours per day
   supervisorId   Int?     @map("supervisor_id")
   supervisorIds  Int[]    @default([]) @map("supervisor_ids")
   createdAt      DateTime @default(now()) @map("created_at")
@@ -127,7 +135,10 @@ model Employee {
   supervisor   Employee?  @relation("EmployeeSupervisor", fields: [supervisorId], references: [id], onDelete: SetNull)
   subordinates Employee[] @relation("EmployeeSupervisor")
 
-  @@unique([employeeId, systemMode, companyId], map: "employees_emp_mode_company_uidx")
+  // Identity is independent of the calculation system (monthly/hourly).
+  // One record per person per company; systemMode is kept only as a legacy
+  // default and is no longer part of the identity key.
+  @@unique([employeeId, companyId], map: "employees_emp_company_uidx")
   @@index([supervisorId])
   @@map("employees")
 }
@@ -216,6 +227,14 @@ model UploadedFile {
   rowCount      Int?     @map("row_count")
   employeeCount Int      @default(0) @map("employee_count")
   systemMode    String   @default("daily") @map("system_mode") @db.VarChar(20)
+  // Original uploaded file kept (base64) so HR can re-download it if the local
+  // copy is lost. Nullable: files uploaded before this feature have no bytes.
+  fileData      String?  @map("file_data") @db.Text
+  mimeType      String?  @map("mime_type") @db.VarChar(150)
+  // The month/year this file's data belongs to (a label, independent of the
+  // upload date — e.g. a May payroll file uploaded in June).
+  periodMonth   Int?     @map("period_month")
+  periodYear    Int?     @map("period_year")
   createdAt     DateTime @default(now()) @map("created_at")
 
   company Company @relation(fields: [companyId], references: [id])
@@ -274,17 +293,43 @@ model OfficialHoliday {
   @@map("official_holidays")
 }
 
+/// Per-month salary snapshot. The salary file uploaded for a given month is the
+/// definitive roster + salaries for THAT month — independent of other months.
+model MonthlySalary {
+  id             Int      @id @default(autoincrement())
+  companyId      Int      @map("company_id")
+  periodMonth    Int      @map("period_month")
+  periodYear     Int      @map("period_year")
+  employeeId     String   @map("employee_id") @db.VarChar(50)
+  name           String   @db.VarChar(255)
+  baseSalary     Decimal  @default(0) @map("base_salary")
+  socialSecurity Boolean  @default(false) @map("social_security")
+  systemMode     String   @default("daily") @map("system_mode") @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([companyId, periodYear, periodMonth, employeeId, systemMode], map: "monthly_salary_period_emp_uidx")
+  @@index([companyId, periodYear, periodMonth, systemMode])
+  @@map("monthly_salaries")
+}
+
 model Task {
   id           Int       @id @default(autoincrement())
   companyId    Int       @default(1) @map("company_id")
   taskName     String    @map("task_name") @db.VarChar(255)
   employeeId   String?   @map("employee_id") @db.VarChar(50)
+  startDate    DateTime? @map("start_date") @db.Date
   deadline     DateTime? @db.Date
   status       String    @default("pending") @db.VarChar(50)
+  // urgent | high | medium | low  (assignment priority set by the supervisor)
+  priority     String    @default("medium") @db.VarChar(20)
   // Optional measurable target (independent of evaluation/bonus)
   targetValue  Float?    @map("target_value")
   currentValue Float     @default(0) @map("current_value")
   unit         String?   @db.VarChar(30)
+  attachment     String? @db.Text
+  attachmentName String? @map("attachment_name") @db.VarChar(255)
+  report         String? @db.Text  // employee's progress report to the supervisor
+  reportAt       DateTime? @map("report_at")
   systemMode   String    @default("daily") @map("system_mode") @db.VarChar(20)
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
@@ -458,4 +503,37 @@ model CompanyEvent {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("company_events")
+}
+
+// HR-defined custom request type, scoped to a company. `fields` is a JSON array
+// of { key, label, type: text|textarea|number|date|file, required }.
+model RequestType {
+  id        Int      @id @default(autoincrement())
+  companyId Int      @map("company_id")
+  name      String   @db.VarChar(255)
+  fields    Json     @default("[]")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([companyId, active])
+  @@map("request_types")
+}
+
+// An employee's submission of a custom request type. `values` is a JSON object
+// keyed by the type's field keys.
+model CustomRequest {
+  id            Int      @id @default(autoincrement())
+  companyId     Int      @map("company_id")
+  requestTypeId Int      @map("request_type_id")
+  typeName      String   @map("type_name") @db.VarChar(255)
+  employeeId    String?  @map("employee_id") @db.VarChar(50)
+  employeeName  String?  @map("employee_name") @db.VarChar(255)
+  values        Json     @default("{}")
+  status        String   @default("pending") @db.VarChar(20)
+  adminNote     String?  @map("admin_note")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([companyId, status])
+  @@map("custom_requests")
 }

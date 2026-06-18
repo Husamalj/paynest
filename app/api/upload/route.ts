@@ -25,8 +25,21 @@ export async function GET(req: NextRequest) {
       where: { companyId, systemMode: mode },
       orderBy: { createdAt: "desc" },
       take: 100,
+      // Exclude the heavy base64 blob from the list; expose only whether a
+      // downloadable copy exists via `hasFile`.
+      select: {
+        id: true, companyId: true, filename: true, originalName: true,
+        fileType: true, uploadBatch: true, rowCount: true, employeeCount: true,
+        systemMode: true, mimeType: true, periodMonth: true, periodYear: true, createdAt: true,
+        fileData: false,
+      },
     });
-    return NextResponse.json(files);
+    const withFlag = await prisma.$queryRawUnsafe<{ id: number; has: boolean }[]>(
+      `SELECT id, (file_data IS NOT NULL) AS has FROM uploaded_files WHERE company_id = $1 AND system_mode = $2`,
+      companyId, mode,
+    );
+    const hasMap = new Map(withFlag.map((r) => [r.id, r.has]));
+    return NextResponse.json(files.map((f) => ({ ...f, hasFile: hasMap.get(f.id) ?? false })));
   } catch (err) {
     return errorResponse(err);
   }
@@ -71,6 +84,9 @@ export async function POST(req: NextRequest) {
     const companyId = session.companyId;
     const url = new URL(req.url);
     const fileType = url.searchParams.get("type") || "attendance";
+    const now = new Date();
+    const periodMonth = parseInt(url.searchParams.get("month") || "", 10) || (now.getMonth() + 1);
+    const periodYear = parseInt(url.searchParams.get("year") || "", 10) || now.getFullYear();
     const batchId = `batch_${Date.now()}`;
     const systemMode = await getSystemMode(companyId);
 
@@ -108,7 +124,7 @@ export async function POST(req: NextRequest) {
           await prisma.$transaction(
             uniqueEmpIds.map((id) =>
               prisma.employee.upsert({
-                where: { employeeId_systemMode_companyId: { employeeId: id, systemMode, companyId } },
+                where: { employeeId_companyId: { employeeId: id, companyId } },
                 create: { employeeId: id, name: empNameMap.get(id) || id, systemMode, companyId },
                 update: {
                   name:
@@ -229,19 +245,45 @@ export async function POST(req: NextRequest) {
             }
           }
 
+          // 1b. Dedup by NAME: if an incoming employee number is new but a
+          //     person with the same name already exists, reuse that existing
+          //     record so the same person isn't duplicated across months.
+          const normName = (s: string) => (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+          const existingForDedup = await prisma.employee.findMany({
+            where: { companyId, systemMode },
+            select: { employeeId: true, name: true },
+          });
+          const existingIdSet2 = new Set(existingForDedup.map((e) => e.employeeId).filter(Boolean) as string[]);
+          const nameToId = new Map<string, string>();
+          for (const e of existingForDedup) {
+            const k = normName(e.name);
+            if (e.employeeId && k && !nameToId.has(k)) nameToId.set(k, e.employeeId);
+          }
+          for (const emp of emps) {
+            if (!existingIdSet2.has(emp.employee_id)) {
+              const match = nameToId.get(normName(emp.name));
+              if (match) emp.employee_id = match; // reuse the existing person's id
+            }
+          }
+
           // 2. Batch upsert all employees — one transaction.
           //    New SANA format also carries email / department / contract dates.
+          //    Collapse rows that now share an id (keep the last seen).
           const toDate = (d?: string | null) => (d ? new Date(d) : null);
+          const empById = new Map<string, (typeof emps)[number]>();
+          for (const emp of emps) empById.set(emp.employee_id, emp);
+          const dedupedEmps = Array.from(empById.values());
           await prisma.$transaction(
-            emps.map((emp) =>
+            dedupedEmps.map((emp) =>
               prisma.employee.upsert({
-                where: { employeeId_systemMode_companyId: { employeeId: emp.employee_id, systemMode, companyId } },
+                where: { employeeId_companyId: { employeeId: emp.employee_id, companyId } },
                 create: {
                   employeeId: emp.employee_id,
                   name: emp.name,
                   baseSalary: emp.base_salary,
                   socialSecurity: emp.social_security,
                   email: emp.email ?? "",
+                  phone: emp.phone ?? "",
                   department: emp.department ?? null,
                   joinDate: toDate(emp.join_date),
                   contractEndDate: toDate(emp.contract_end_date),
@@ -253,6 +295,7 @@ export async function POST(req: NextRequest) {
                   baseSalary: emp.base_salary,
                   socialSecurity: emp.social_security,
                   ...(emp.email ? { email: emp.email } : {}),
+                  ...(emp.phone ? { phone: emp.phone } : {}),
                   ...(emp.department ? { department: emp.department } : {}),
                   ...(emp.join_date ? { joinDate: toDate(emp.join_date) } : {}),
                   ...(emp.contract_end_date ? { contractEndDate: toDate(emp.contract_end_date) } : {}),
@@ -260,6 +303,21 @@ export async function POST(req: NextRequest) {
               })
             )
           );
+
+          // 2b. Snapshot THIS month's roster + salaries (the file is the
+          //     definitive payroll source for the selected period). Replace any
+          //     previous snapshot for the same period so re-uploads stay clean.
+          await prisma.monthlySalary.deleteMany({ where: { companyId, periodMonth, periodYear, systemMode } });
+          await prisma.monthlySalary.createMany({
+            data: emps.map((emp) => ({
+              companyId, periodMonth, periodYear, systemMode,
+              employeeId: emp.employee_id,
+              name: emp.name,
+              baseSalary: emp.base_salary,
+              socialSecurity: emp.social_security,
+            })),
+            skipDuplicates: true,
+          });
 
           // 3. Auto-create login accounts for employees that have an email and
           //    don't already have a user. Temp password "123456" + forced change.
@@ -301,6 +359,12 @@ export async function POST(req: NextRequest) {
           rowCount,
           employeeCount,
           systemMode,
+          // Keep the original bytes so HR can re-download the file later.
+          fileData: buf.toString("base64"),
+          mimeType: file.type || "application/octet-stream",
+          // The month/year this file belongs to (chosen at upload).
+          periodMonth,
+          periodYear,
         },
       });
 

@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Users, Bell, CheckSquare, Calendar, LogOut, X,
   Plus, AlertTriangle, CheckCircle2, ChevronDown, ShieldCheck,
   Edit2, Trash2, Phone, Mail, Hash, FileText, CheckCircle,
   Upload, ChevronRight, Languages, Eye, EyeOff,
+  LayoutDashboard, Wallet, DollarSign, TrendingDown, TrendingUp, Gift, Shield, Banknote, Briefcase, Clock,
 } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 import clsx from "clsx";
 import api, { apiPostForm } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -47,7 +49,7 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-const TABS = ["employees", "team", "leaves", "announcements", "hr_team"] as const;
+const TABS = ["overview", "employees", "team", "announcements", "hr_team"] as const;
 type Tab = typeof TABS[number];
 
 const emptyEmp  = { employee_id: "", name: "", email: "", phone: "", base_salary: "", social_security: false, religion: "" };
@@ -59,7 +61,7 @@ export default function OwnerPortalPage() {
 
   const [user] = useState(() => typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {});
   const [profileOpen, setProfileOpen] = useState(false);
-  const [tab, setTab] = useState<Tab>("employees");
+  const [tab, setTab] = useState<Tab>("overview");
 
   /* ─── data ─── */
   const [employees,     setEmployees]     = useState<any[]>([]);
@@ -118,19 +120,33 @@ export default function OwnerPortalPage() {
   const [leaveBusy, setLeaveBusy] = useState<number | null>(null);
   const [taskBusy,  setTaskBusy]  = useState<number | null>(null);
 
+  /* ─── overview / financial ─── */
+  const [payrollLatest, setPayrollLatest] = useState<any[]>([]);
+  const [payrollPeriod, setPayrollPeriod] = useState<{ month: number | null; year: number | null }>({ month: null, year: null });
+  const [payrollHistory, setPayrollHistory] = useState<any[]>([]);
+  const [advances, setAdvances] = useState<any[]>([]);
+  const [advBusy, setAdvBusy] = useState<number | null>(null);
+
   /* ─── load ─── */
   const load = async () => {
     setLoading(true);
     try {
-      const [empRes, leavesRes, tasksRes, annRes, hrsRes] = await Promise.all([
+      const [empRes, leavesRes, tasksRes, annRes, hrsRes, plRes, phRes, advRes] = await Promise.all([
         api.get("/employees"),
         api.get("/leaves"),
         api.get("/tasks"),
         api.get("/announcements"),
         api.get("/auth/company-hrs"),
+        api.get("/payroll/latest").catch(() => ({ data: {} })),
+        api.get("/payroll/history").catch(() => ({ data: [] })),
+        api.get("/advances").catch(() => ({ data: [] })),
       ]);
       const list = empRes.data || [];
       setEmployees(list);
+      setPayrollLatest(plRes.data?.results || []);
+      setPayrollPeriod({ month: plRes.data?.period_month ?? null, year: plRes.data?.period_year ?? null });
+      setPayrollHistory(phRes.data || []);
+      setAdvances(advRes.data || []);
       setLeaves(leavesRes.data || []);
       setTasks(tasksRes.data || []);
       setAnnouncements(annRes.data || []);
@@ -309,6 +325,12 @@ export default function OwnerPortalPage() {
     catch (e: any) { setError(e.message); }
     finally { setLeaveBusy(null); }
   };
+  const handleAdvance = async (id: number, status: "approved" | "rejected") => {
+    setAdvBusy(id);
+    try { await api.put(`/advances/${id}`, { status }); await load(); setSuccess(ar ? "تم تحديث طلب السلفة" : "Advance updated"); }
+    catch (e: any) { setError(e.message); }
+    finally { setAdvBusy(null); }
+  };
   const toggleTask = async (task: any) => {
     setTaskBusy(task.id);
     try {
@@ -322,11 +344,57 @@ export default function OwnerPortalPage() {
   const pendingLeaves  = leaves.filter((l) => l.status === "pending").length;
   const openTasksCount = tasks.filter((t) => t.status !== "completed").length;
 
+  /* ─── financial / overview computations ─── */
+  const MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+  const num = (v: unknown) => parseFloat(v as string) || 0;
+  const fin = useMemo(() => {
+    const totalBase = payrollLatest.reduce((s, r) => s + num(r.base_salary), 0);
+    const totalNet = payrollLatest.reduce((s, r) => s + num(r.net_salary), 0);
+    const totalSS = payrollLatest.reduce((s, r) => s + num(r.social_security_deduct), 0);
+    const totalDed = payrollLatest.reduce((s, r) => s + num(r.deduction_total), 0);
+    const totalBonus = payrollLatest.reduce((s, r) => s + num(r.bonus_total), 0);
+    const count = payrollLatest.length;
+    const nets = payrollLatest.map((r) => num(r.net_salary)).filter((n) => n > 0);
+    const avg = count ? totalNet / count : 0;
+    const withDeduction = payrollLatest.filter((r) => r.status === "Has Deductions").length;
+    // cost per department (from payroll base, joined to employee dept)
+    const deptOf: Record<string, string> = {};
+    employees.forEach((e) => { deptOf[e.employee_id] = e.department || (ar ? "غير محدد" : "Unassigned"); });
+    const byDept: Record<string, { net: number; n: number }> = {};
+    payrollLatest.forEach((r) => {
+      const d = deptOf[r.employee_id] || (ar ? "غير محدد" : "Unassigned");
+      if (!byDept[d]) byDept[d] = { net: 0, n: 0 };
+      byDept[d].net += num(r.net_salary); byDept[d].n += 1;
+    });
+    const deptList = Object.entries(byDept).map(([dept, v]) => ({ dept, ...v })).sort((a, b) => b.net - a.net);
+    return { totalBase, totalNet, totalSS, totalDed, totalBonus, count, avg,
+      maxNet: nets.length ? Math.max(...nets) : 0, minNet: nets.length ? Math.min(...nets) : 0,
+      withDeduction, deptList };
+  }, [payrollLatest, employees, ar]);
+
+  // contracts expiring within 45 days + new hires this month
+  const today = new Date();
+  const in45 = new Date(today.getTime() + 45 * 86400000);
+  const expiringContracts = employees.filter((e) => {
+    if (!e.contract_end_date) return false;
+    const d = new Date(e.contract_end_date);
+    return d >= today && d <= in45;
+  });
+  const newHires = employees.filter((e) => {
+    if (!e.join_date) return false;
+    const d = new Date(e.join_date);
+    return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  });
+  const pendingAdvances = advances.filter((a) => a.status === "pending");
+  const advancesOutstanding = advances.filter((a) => a.status === "approved").reduce((s, a) => s + num(a.amount), 0);
+  const trend = [...payrollHistory].slice(0, 6).reverse();
+  const trendMax = Math.max(1, ...trend.map((t) => num(t.total_net)));
+
   const TAB_CONFIG = [
+    { key: "overview",      label: ar ? "نظرة عامة"   : "Overview",      icon: LayoutDashboard, badge: 0 },
     { key: "employees",     label: ar ? "الموظفون"    : "Employees",     icon: Users,       badge: employees.length },
     { key: "team",          label: ar ? "فريقي"       : "My Team",       icon: Users,       badge: subordinates.length },
     { key: "hr_team",       label: ar ? "فريق HR"     : "HR Team",       icon: ShieldCheck, badge: hrs.length },
-    { key: "leaves",        label: ar ? "الإجازات"    : "Leaves",        icon: Calendar,    badge: pendingLeaves },
     { key: "announcements", label: ar ? "الإعلانات"   : "Announcements", icon: Bell,        badge: announcements.length },
   ] as const;
 
@@ -345,6 +413,7 @@ export default function OwnerPortalPage() {
           </span>
         </div>
 
+        <ThemeToggle />
         <div className="relative">
           <button onClick={() => setProfileOpen((o) => !o)} className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors">
             <div className="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
@@ -384,22 +453,6 @@ export default function OwnerPortalPage() {
         {error   && <div className="alert alert-error"><AlertTriangle size={16} className="flex-shrink-0" /><span className="flex-1">{error}</span><button onClick={() => setError("")}><X size={14} /></button></div>}
         {success && <div className="alert alert-success"><CheckCircle2 size={16} className="flex-shrink-0" /><span className="flex-1">{success}</span><button onClick={() => setSuccess("")}><X size={14} /></button></div>}
 
-        {/* Stat cards / tab switcher */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          {TAB_CONFIG.map(({ key, label, icon: Icon, badge }) => (
-            <button key={key} onClick={() => setTab(key as Tab)}
-              className={clsx("card p-4 flex items-center gap-3 text-left transition-all", tab === key ? "ring-2 ring-violet-500 bg-violet-50" : "hover:shadow-elevated")}>
-              <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", tab === key ? "bg-violet-600 text-white" : "bg-slate-100 text-slate-500")}>
-                <Icon size={18} />
-              </div>
-              <div>
-                <div className={clsx("text-xl font-bold", tab === key ? "text-violet-700" : "text-slate-900")}>{badge}</div>
-                <div className="text-xs text-slate-500">{label}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-
         {/* Tab nav */}
         <div className="flex gap-1 bg-white rounded-xl border border-slate-200 p-1 w-fit flex-wrap">
           {TAB_CONFIG.map(({ key, label, icon: Icon }) => (
@@ -410,6 +463,62 @@ export default function OwnerPortalPage() {
             </button>
           ))}
         </div>
+
+        {/* ══ OVERVIEW TAB ══ */}
+        {tab === "overview" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="text-sm text-slate-500">
+                {payrollPeriod.month
+                  ? <>{ar ? "فترة الرواتب: " : "Payroll period: "}<span className="font-semibold text-slate-700">{(ar ? MONTHS_AR : MONTHS_AR)[(payrollPeriod.month || 1) - 1]} {payrollPeriod.year}</span></>
+                  : (ar ? "لا توجد رواتب محسوبة بعد — احسب الرواتب أولاً." : "No payroll calculated yet.")}
+              </div>
+            </div>
+
+            {/* KPI grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                { label: ar ? "إجمالي الرواتب الأساسية" : "Total base salaries", value: formatCurrency(fin.totalBase), icon: Wallet, color: "text-blue-600 bg-blue-50" },
+                { label: ar ? "قديش صرفت (الصافي)" : "Total spent (net)", value: formatCurrency(fin.totalNet), icon: Banknote, color: "text-emerald-600 bg-emerald-50" },
+                { label: ar ? "الفرق عن الراتب الأصلي" : "Base − Net difference", value: formatCurrency(fin.totalBase - fin.totalNet), icon: DollarSign, color: "text-cyan-600 bg-cyan-50" },
+                { label: ar ? "عدد الموظفين" : "Employees", value: String(employees.length), icon: Users, color: "text-brand-600 bg-brand-50" },
+                { label: ar ? "إجمالي الخصومات" : "Total deductions", value: formatCurrency(fin.totalDed), icon: TrendingDown, color: "text-rose-600 bg-rose-50" },
+                { label: ar ? "إجمالي المكافآت" : "Total bonuses", value: formatCurrency(fin.totalBonus), icon: Gift, color: "text-amber-600 bg-amber-50" },
+                { label: ar ? "تكلفة الضمان" : "Social security cost", value: formatCurrency(fin.totalSS), icon: Shield, color: "text-violet-600 bg-violet-50" },
+                { label: ar ? "السلف المتبقية" : "Advances outstanding", value: formatCurrency(advancesOutstanding), icon: Briefcase, color: "text-orange-600 bg-orange-50" },
+              ].map((k, i) => (
+                <div key={i} className="card">
+                  <div className="flex items-center justify-between">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${k.color}`}><k.icon size={17} /></div>
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-2 truncate">{k.label}</div>
+                  <div className="text-xl font-bold text-slate-900 mt-0.5">{k.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              {/* Cost per department */}
+              <div className="card">
+                <div className="card-header"><div className="card-title"><Briefcase size={16} className="text-violet-600" />{ar ? "تكلفة كل قسم" : "Cost per department"}</div></div>
+                {fin.deptList.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{ar ? "لا بيانات" : "No data"}</div> : (
+                  <div className="space-y-2.5">
+                    {fin.deptList.map((d, i) => {
+                      const pct = fin.totalNet > 0 ? Math.round((d.net / fin.totalNet) * 100) : 0;
+                      return (
+                        <div key={i}>
+                          <div className="flex justify-between text-xs mb-1"><span className="text-slate-700 font-medium truncate">{d.dept} <span className="text-slate-400">({d.n})</span></span><span className="font-mono text-slate-600">{formatCurrency(d.net)} · {pct}%</span></div>
+                          <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full bg-violet-500 rounded-full" style={{ width: `${pct}%` }} /></div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+          </div>
+        )}
 
         {/* ══ EMPLOYEES TAB ══ */}
         {tab === "employees" && (
@@ -627,40 +736,6 @@ export default function OwnerPortalPage() {
         )}
 
         {/* ══ LEAVES TAB ══ */}
-        {tab === "leaves" && (
-          <div className="card">
-            <div className="card-header"><div className="card-title"><Calendar size={16} className="text-violet-600" />{ar ? "طلبات الإجازة" : "Leave Requests"}</div></div>
-            {leaves.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{ar ? "لا يوجد طلبات" : "No requests"}</div> : (
-              <div className="table-wrapper">
-                <table>
-                  <thead><tr><th>{ar ? "الموظف" : "Employee"}</th><th>{ar ? "النوع" : "Type"}</th><th>{ar ? "من" : "From"}</th><th>{ar ? "إلى" : "To"}</th><th>{ar ? "الحالة" : "Status"}</th><th className="text-right">{ar ? "إجراء" : "Action"}</th></tr></thead>
-                  <tbody>
-                    {leaves.map((l) => (
-                      <tr key={l.id}>
-                        <td className="font-medium">{l.employee_name || l.employee_id}</td>
-                        <td className="text-slate-500 text-sm">{l.leave_type}</td>
-                        <td className="text-sm">{l.start_date ? new Date(l.start_date).toLocaleDateString() : "-"}</td>
-                        <td className="text-sm">{l.end_date ? new Date(l.end_date).toLocaleDateString() : "-"}</td>
-                        <td>
-                          {l.status === "approved" && <span className="badge badge-green">{ar ? "موافق" : "Approved"}</span>}
-                          {l.status === "rejected" && <span className="badge badge-red">{ar ? "مرفوض" : "Rejected"}</span>}
-                          {l.status === "pending"  && <span className="badge badge-yellow">{ar ? "معلق" : "Pending"}</span>}
-                        </td>
-                        <td>{l.status === "pending" && (
-                          <div className="flex justify-end gap-2">
-                            <button className="btn btn-sm btn-success" disabled={leaveBusy === l.id} onClick={() => handleLeave(l.id, "approved")}>{ar ? "موافقة" : "Approve"}</button>
-                            <button className="btn btn-sm btn-danger"  disabled={leaveBusy === l.id} onClick={() => handleLeave(l.id, "rejected")}>{ar ? "رفض" : "Reject"}</button>
-                          </div>
-                        )}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* ══ ANNOUNCEMENTS TAB ══ */}
         {tab === "announcements" && (
           <div className="card">

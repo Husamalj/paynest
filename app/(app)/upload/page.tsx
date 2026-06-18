@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Upload as UploadIcon, Clock, Wallet, FileSpreadsheet, Trash2, CheckCircle2, AlertTriangle, X, Eye, Users, Crown } from "lucide-react";
+import { Upload as UploadIcon, Clock, Wallet, FileSpreadsheet, Trash2, Download, Pencil, CheckCircle2, AlertTriangle, X, Eye, Users, Crown } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 import axios from "axios";
@@ -58,6 +58,10 @@ export default function UploadPage() {
   const [periodMonth, setPeriodMonth] = useState(now.getMonth() + 1);
   const [periodYear, setPeriodYear]   = useState(now.getFullYear());
   const [calculating, setCalculating] = useState(false);
+  // Inline editing of a file's month/year label
+  const [editId, setEditId] = useState<number | null>(null);
+  const [emMonth, setEmMonth] = useState(now.getMonth() + 1);
+  const [emYear, setEmYear] = useState(now.getFullYear());
   const ar = lang === "ar";
   const months = ar ? MONTHS_AR : MONTHS_EN;
   const yearOptions = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1];
@@ -140,8 +144,9 @@ export default function UploadPage() {
     files.forEach((f) => formData.append("files", f));
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.post(`/api/upload?type=${type}`, formData, {
-        headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
+      const res = await axios.post(`/api/upload?type=${type}&month=${periodMonth}&year=${periodYear}`, formData, {
+        headers: { "Content-Type": "multipart/form-data", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        withCredentials: true, // send the httpOnly auth cookie
         timeout: 60000,
       });
       const filesResult = res.data.files || [];
@@ -168,12 +173,83 @@ export default function UploadPage() {
     } finally { setUploading(""); }
   };
 
+  // Upload both staged files (attendance + salary) in one click. Runs them
+  // sequentially so the two employee upserts don't race, then clears & reloads.
+  const handleUploadAll = async () => {
+    if (attendanceFiles.length === 0 && salaryFiles.length === 0) return;
+    setUploading("all"); setError(""); setSuccess(""); setPreview([]); setLastUpload(null);
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const postOne = async (files: File[], type: string) => {
+      const fd = new FormData();
+      files.forEach((f) => fd.append("files", f));
+      const res = await axios.post(`/api/upload?type=${type}&month=${periodMonth}&year=${periodYear}`, fd, {
+        headers: { "Content-Type": "multipart/form-data", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        withCredentials: true,
+        timeout: 60000,
+      });
+      return (res.data.files || []).reduce((s: number, f: any) => s + (f.employee_count || 0), 0);
+    };
+    try {
+      const done: string[] = [];
+      if (salaryFiles.length > 0) { const n = await postOne(salaryFiles, "salary"); done.push(`${ar ? "الرواتب" : "Salary"}: ${n}`); }
+      if (attendanceFiles.length > 0) { await postOne(attendanceFiles, "attendance"); done.push(ar ? "الحضور ✓" : "Attendance ✓"); }
+      setSuccess(`✓ ${done.join(" · ")}`);
+      setAttendanceFiles([]); setSalaryFiles([]);
+      const nextFiles = await loadUploadedFiles();
+      await maybeAutoCalculate(uploadedFiles, nextFiles);
+    } catch (err: any) {
+      const msg = err.response?.data?.error || err.message;
+      if (typeof msg === "string" && msg.startsWith("QUOTA_EXCEEDED")) setQuotaError(msg.replace("QUOTA_EXCEEDED: ", ""));
+      else if (typeof msg === "string" && msg.startsWith("WRONG_BOX_SALARY")) setError(ar ? "⚠️ ملف الرواتب موضوع في خانة الحضور بالغلط." : "⚠️ A salary file is in the Attendance box.");
+      else if (typeof msg === "string" && msg.startsWith("WRONG_BOX_ATTENDANCE")) setError(ar ? "⚠️ ملف الحضور موضوع في خانة الرواتب بالغلط." : "⚠️ An attendance file is in the Salary box.");
+      else setError(msg);
+    } finally { setUploading(""); }
+  };
+
   const handleDelete = async (file: any) => {
     if (!window.confirm(t("deleteConfirm"))) return;
     try {
       await api.delete(`/upload?id=${file.id}`);
       setUploadedFiles((p) => p.filter((f) => f.id !== file.id));
       setSuccess(t("deleteSuccess"));
+    } catch (err: any) { setError(err.message); }
+  };
+
+  const handleDownload = async (file: any) => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const res = await fetch(`/api/upload/${file.id}/download`, {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        const msg = res.status === 410
+          ? (lang === "ar" ? "هذا الملف رُفع قبل تفعيل الميزة، فما تم حفظ نسخته الأصلية." : "This file was uploaded before the feature; its original copy was not stored.")
+          : (lang === "ar" ? "تعذّر تنزيل الملف" : "Could not download the file");
+        throw new Error(msg);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.originalName || file.filename || "file.xlsx";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch (err: any) { setError(err.message); }
+  };
+
+  const startEditMonth = (file: any) => {
+    setEditId(file.id);
+    setEmMonth(file.periodMonth || now.getMonth() + 1);
+    setEmYear(file.periodYear || now.getFullYear());
+  };
+
+  const saveMonth = async (file: any) => {
+    try {
+      await api.patch(`/upload/${file.id}`, { period_month: emMonth, period_year: emYear });
+      setUploadedFiles((p) => p.map((f) => (f.id === file.id ? { ...f, periodMonth: emMonth, periodYear: emYear } : f)));
+      setEditId(null);
+      setSuccess(ar ? "تم تحديث الشهر" : "Month updated");
     } catch (err: any) { setError(err.message); }
   };
 
@@ -206,8 +282,8 @@ export default function UploadPage() {
         </div>
         <p className="text-xs text-slate-500 mt-2">
           {ar
-            ? "اختر الشهر والسنة لكل من رفع الملفات واحتساب الرواتب. سيتم استخدام هذه القيم لتحديد الفترة المحاسبية."
-            : "Pick the month and year — used for both file uploads and payroll calculation."}
+            ? "اختر الشهر والسنة أولاً. ملف الرواتب الذي ترفعه يصبح المرجع الكامل لموظفي هذا الشهر ورواتبهم — كل شهر مستقل عن الآخر."
+            : "Pick the month and year first. The salary file you upload becomes the definitive roster & salaries for that month — each month is independent."}
         </p>
       </div>
 
@@ -255,6 +331,14 @@ export default function UploadPage() {
           )}
         </div>
       </div>
+
+      {attendanceFiles.length > 0 && salaryFiles.length > 0 && (
+        <button className="btn btn-primary w-full" disabled={uploading !== ""} onClick={handleUploadAll}>
+          {uploading === "all"
+            ? <><span className="spinner" /> {t("uploading")}</>
+            : <><UploadIcon size={16} />{ar ? `رفع الملفّين معاً (${attendanceFiles.length + salaryFiles.length})` : `Upload both files (${attendanceFiles.length + salaryFiles.length})`}</>}
+        </button>
+      )}
 
       {/* ── Manual attendance + missing punches ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -319,15 +403,41 @@ export default function UploadPage() {
         {uploadedFiles.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noData")}</div> : (
           <div className="table-wrapper">
             <table>
-              <thead><tr><th>{t("name")}</th><th>{t("type")}</th><th className="text-right">{t("employees")}</th><th>{t("uploadedAt")}</th><th className="text-right">{t("actions")}</th></tr></thead>
+              <thead><tr><th>{t("name")}</th><th>{t("type")}</th><th className="text-right">{t("employees")}</th><th>{ar ? "الشهر" : "Month"}</th><th>{t("uploadedAt")}</th><th className="text-right">{t("actions")}</th></tr></thead>
               <tbody>
                 {uploadedFiles.map((file) => (
                   <tr key={file.id}>
                     <td className="font-medium"><span className="flex items-center gap-2"><FileSpreadsheet size={14} className="text-slate-400" /><span className="truncate max-w-[260px]">{file.originalName || file.filename}</span></span></td>
                     <td><span className={clsx("badge", file.fileType === "attendance" ? "badge-blue" : "badge-green")}>{file.fileType === "attendance" ? <Clock size={11} /> : <Wallet size={11} />}{file.fileType}</span></td>
                     <td className="text-right font-mono">{file.employeeCount || 0}</td>
+                    <td className="text-sm">
+                      {editId === file.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <select className="form-select text-xs py-1 w-28" value={emMonth} onChange={(e) => setEmMonth(+e.target.value)}>
+                            {months.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                          </select>
+                          <select className="form-select text-xs py-1 w-20" value={emYear} onChange={(e) => setEmYear(+e.target.value)}>
+                            {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+                          </select>
+                          <button className="btn btn-sm btn-success" onClick={() => saveMonth(file)} title={ar ? "حفظ" : "Save"}><CheckCircle2 size={13} /></button>
+                          <button className="btn btn-sm btn-secondary" onClick={() => setEditId(null)} title={ar ? "إلغاء" : "Cancel"}><X size={13} /></button>
+                        </div>
+                      ) : (
+                        <button className="inline-flex items-center gap-1.5 text-slate-700 hover:text-sky-600" onClick={() => startEditMonth(file)} title={ar ? "تعديل الشهر" : "Edit month"}>
+                          {file.periodMonth ? `${months[file.periodMonth - 1]} ${file.periodYear ?? ""}` : <span className="text-slate-400">{ar ? "— غير محدد" : "— not set"}</span>}
+                          <Pencil size={12} className="text-slate-400" />
+                        </button>
+                      )}
+                    </td>
                     <td className="text-xs text-slate-500">{file.createdAt ? new Date(file.createdAt).toLocaleDateString() : "-"}</td>
-                    <td className="text-right"><button className="btn btn-sm btn-danger" onClick={() => handleDelete(file)}><Trash2 size={13} />{t("delete")}</button></td>
+                    <td className="text-right">
+                      <div className="flex justify-end gap-2">
+                        {file.hasFile && (
+                          <button className="btn btn-sm btn-secondary" onClick={() => handleDownload(file)} title={lang === "ar" ? "تنزيل الملف الأصلي" : "Download original file"}><Download size={13} />{lang === "ar" ? "تنزيل" : "Download"}</button>
+                        )}
+                        <button className="btn btn-sm btn-danger" onClick={() => handleDelete(file)}><Trash2 size={13} />{t("delete")}</button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

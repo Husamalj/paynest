@@ -11,7 +11,7 @@ function formatCurrency(val: unknown) {
 }
 
 export default function BonusesPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [list, setList] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,8 +22,13 @@ export default function BonusesPage() {
   const [form, setForm] = useState({ employee_id: "", employee_name: "", type: "bonus", reason: "", amount: "", period_month: new Date().getMonth() + 1, period_year: new Date().getFullYear() });
 
   useEffect(() => {
-    Promise.all([api.get("/bonuses"), api.get("/employees")])
-      .then(([bRes, eRes]) => { setList(bRes.data || []); setEmployees(eRes.data || []); })
+    Promise.all([api.get("/bonuses"), api.get("/employees"), api.get("/payroll/latest").catch(() => ({ data: {} }))])
+      .then(([bRes, eRes, plRes]) => {
+        setList(bRes.data || []); setEmployees(eRes.data || []);
+        // Default the deduction/bonus period to the latest calculated payroll period
+        const pm = plRes.data?.period_month, py = plRes.data?.period_year;
+        if (pm && py) setForm((f) => ({ ...f, period_month: pm, period_year: py }));
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
@@ -112,6 +117,7 @@ export default function BonusesPage() {
                 <div><label className="form-label">{t("month")}</label><input type="number" min="1" max="12" className="form-input" value={form.period_month} onChange={(e) => setForm((f) => ({ ...f, period_month: parseInt(e.target.value) }))} /></div>
                 <div><label className="form-label">{t("year")}</label><input type="number" className="form-input" value={form.period_year} onChange={(e) => setForm((f) => ({ ...f, period_year: parseInt(e.target.value) }))} /></div>
               </div>
+              <p className="text-[11px] text-amber-600">{lang === "ar" ? "ملاحظة: يظهر هذا البند في راتب هذا الشهر فقط — وأعد احتساب الرواتب بعد الحفظ." : "Note: this item shows only in this month's payroll — recalculate payroll after saving."}</p>
               <div className="flex justify-end gap-2"><button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>{t("cancel")}</button><button type="submit" className="btn btn-primary">{t("save")}</button></div>
             </form>
           </div>

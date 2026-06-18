@@ -61,8 +61,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       // HR / owner / super_admin set the HR decision; supervisor's decision stays as-is.
       const newHrStatus = body.hr_status ?? body.status;
       if (newHrStatus === "approved" || newHrStatus === "rejected" || newHrStatus === "pending") {
-        const newStatus = calcStatus(existing.supervisorStatus ?? "pending", newHrStatus);
-        updateData = { hrStatus: newHrStatus, status: newStatus, adminNote: body.admin_note ?? existing.adminNote };
+        // The owner is the top authority, and online-work requests are HR-only:
+        // in both cases the HR/owner decision is final (no second sign-off needed).
+        if (session.role === "owner" || existing.leaveType === "online") {
+          const newStatus = calcStatus(newHrStatus, newHrStatus);
+          updateData = { supervisorStatus: newHrStatus, hrStatus: newHrStatus, status: newStatus, adminNote: body.admin_note ?? existing.adminNote };
+        } else {
+          const newStatus = calcStatus(existing.supervisorStatus ?? "pending", newHrStatus);
+          updateData = { hrStatus: newHrStatus, status: newStatus, adminNote: body.admin_note ?? existing.adminNote };
+        }
       } else {
         // No decision supplied — just an admin note update
         updateData = { adminNote: body.admin_note ?? null };
@@ -148,7 +155,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireAuth(req);
-    requireRole(session, ["owner", "hr", "super_admin"]);
+    requireRole(session, ["owner", "hr", "super_admin", "employee"]);
     if (session.companyId == null) throw new HttpError(403, "No company scope");
     const { id } = await params;
 
@@ -156,6 +163,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       where: { id: Number(id), companyId: session.companyId },
     });
     if (!leave) throw new HttpError(404, "Leave request not found");
+
+    // An employee may only delete their OWN request while it's still pending.
+    if (session.role === "employee") {
+      if (leave.employeeId !== session.employeeNumber) throw new HttpError(403, "Not your request");
+      if (leave.status !== "pending") throw new HttpError(400, "Can only cancel a pending request");
+    }
 
     if (leave.status === "approved" && leave.startDate && leave.daysCount) {
       const leaveYear = new Date(leave.startDate).getFullYear();

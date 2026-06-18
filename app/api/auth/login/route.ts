@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signJwt, errorResponse, HttpError } from "@/lib/auth";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -9,6 +10,10 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password } = (await req.json()) as { email?: string; password?: string };
     if (!email || !password) throw new HttpError(400, "Email and password required");
+
+    // Throttle brute-force: max 5 attempts per IP+email / 15 min.
+    const limited = rateLimit(`login:${getClientIp(req)}:${email.toLowerCase().trim()}`, 5, 15 * 60_000);
+    if (limited) return limited;
 
     const user = await prisma.user.findFirst({
       where: { email },
@@ -44,7 +49,7 @@ export async function POST(req: NextRequest) {
       employeeNumber: user.employeeNumber,
     });
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       token,
       user: {
         id: user.id,
@@ -62,6 +67,17 @@ export async function POST(req: NextRequest) {
         is_active: user.company?.isActive ?? null,
       },
     });
+
+    // Store the credential in an httpOnly cookie so it is never exposed to JS
+    // (XSS-safe). SameSite=Lax blocks cross-site CSRF on the auth cookie.
+    res.cookies.set("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60, // 7 days, matches JWT expiry
+    });
+    return res;
   } catch (err) {
     return errorResponse(err);
   }

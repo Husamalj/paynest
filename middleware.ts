@@ -3,7 +3,12 @@ import { verifyJwtEdge } from "@/lib/auth";
 
 const PUBLIC_API_PREFIXES = [
   "/api/auth/login",
+  "/api/auth/logout",
   "/api/auth/register-company",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+  "/api/auth/verify-email",
+  "/api/cron/",
   "/api/health",
 ];
 
@@ -13,7 +18,7 @@ export async function middleware(req: NextRequest) {
   if (PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p))) return NextResponse.next();
 
   const auth = req.headers.get("authorization") || "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : (req.cookies.get("token")?.value || "");
   if (!token) return NextResponse.json({ error: "Missing token" }, { status: 401 });
 
   try {

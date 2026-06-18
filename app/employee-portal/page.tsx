@@ -10,8 +10,9 @@ const DownloadPayslipButton = dynamic(
 import {
   AlertTriangle, Bell, Calendar, CheckCircle2, CheckSquare, ChevronDown,
   ClipboardList, Clock, KeyRound, Languages, LogOut, Palmtree, Paperclip, Send,
-  ThumbsDown, ThumbsUp, User, UserCheck, Users, X, Plus,
+  ThumbsDown, ThumbsUp, User, UserCheck, Users, X, Plus, Wifi, Inbox,
 } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 import { useRef } from "react";
 import api from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -102,6 +103,40 @@ function TargetProgress({ task, isRTL, onSave }: { task: any; isRTL: boolean; on
   );
 }
 
+/** Employee-side report box: send / edit a progress report on a task. */
+function TaskReportBox({ task, isRTL, onSave }: { task: any; isRTL: boolean; onSave: (text: string) => Promise<void> }) {
+  const existing = task.report || "";
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState(existing);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setVal(existing); }, [existing]);
+  return (
+    <div className="mt-2">
+      {existing && !open && (
+        <div className="text-[11px] bg-sky-50 border border-sky-100 rounded-lg px-2 py-1.5 text-slate-700">
+          <span className="font-semibold text-sky-700">{isRTL ? "تقريرك: " : "Your report: "}</span>{existing}
+          <button type="button" onClick={() => setOpen(true)} className="text-sky-600 hover:underline ms-2">{isRTL ? "تعديل" : "edit"}</button>
+        </div>
+      )}
+      {!existing && !open && (
+        <button type="button" onClick={() => setOpen(true)} className="text-[11px] text-slate-400 hover:text-sky-600 flex items-center gap-1">
+          <Send size={11} />{isRTL ? "إرسال تقرير للمشرف" : "Send report to supervisor"}
+        </button>
+      )}
+      {open && (
+        <div className="space-y-1.5">
+          <textarea rows={2} value={val} onChange={(e) => setVal(e.target.value)} placeholder={isRTL ? "اكتب ما أنجزته..." : "Describe what you've done..."}
+            className="w-full text-xs px-2.5 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500" />
+          <div className="flex gap-1.5">
+            <button type="button" disabled={busy} onClick={async () => { setBusy(true); try { await onSave(val); setOpen(false); } finally { setBusy(false); } }} className="btn btn-sm btn-primary">{isRTL ? "إرسال" : "Send"}</button>
+            <button type="button" onClick={() => { setVal(existing); setOpen(false); }} className="btn btn-sm btn-secondary">{isRTL ? "إلغاء" : "Cancel"}</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function EmployeePortalPage() {
   const { lang, toggleLanguage } = useLanguage();
   const isRTL = lang === "ar";
@@ -151,6 +186,10 @@ export default function EmployeePortalPage() {
   const [employeeId, setEmployeeId] = useState(savedUser.employeeNumber || savedUser.employee_number || (typeof window !== "undefined" ? localStorage.getItem("paynest_employee_id") : "") || "");
   const [employee, setEmployee] = useState<any>(null);
   const [payroll, setPayroll] = useState<any[]>([]);
+  const [detailModal, setDetailModal] = useState<null | "deductions" | "hours">(null);
+  const [salHistory, setSalHistory] = useState<any[]>([]);
+  const [salMonth, setSalMonth] = useState<number>(new Date().getMonth() + 1);
+  const [salYear, setSalYear] = useState<number>(new Date().getFullYear());
   const [tasks, setTasks] = useState<any[]>([]);
   const [leaves, setLeaves] = useState<any[]>([]);
   const [balances, setBalances] = useState<any[]>([]);
@@ -170,10 +209,19 @@ export default function EmployeePortalPage() {
   // Salary advance
   const [advForm, setAdvForm] = useState({ amount: "", reason: "", installments: "1" });
   const [advances, setAdvances] = useState<any[]>([]);
+  const [customTypes, setCustomTypes] = useState<any[]>([]);
+  const [myCustomReqs, setMyCustomReqs] = useState<any[]>([]);
+  const [activeCT, setActiveCT] = useState<any>(null);
+  const [ctValues, setCtValues] = useState<Record<string, any>>({});
+  const [ctBusy, setCtBusy] = useState(false);
   const [onLeave, setOnLeave] = useState<any[]>([]);
   // Quick-action modals
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showPermModal, setShowPermModal] = useState(false);
+  const [showOnlineModal, setShowOnlineModal] = useState(false);
+  const [onlineForm, setOnlineForm] = useState({ start: new Date().toISOString().slice(0, 10), end: new Date().toISOString().slice(0, 10), reason: "" });
+  const [checkinBusy, setCheckinBusy] = useState(false);
+  const [checkin, setCheckin] = useState<any>(null);
   const [showAdvModal, setShowAdvModal] = useState(false);
   const [reqOpen, setReqOpen] = useState(false);
   const [showOrg, setShowOrg] = useState(false);
@@ -203,9 +251,17 @@ export default function EmployeePortalPage() {
   const [taskSub, setTaskSub] = useState<any>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [taskName, setTaskName] = useState("");
+  const [taskPriority, setTaskPriority] = useState("medium");
+  const [taskStartDate, setTaskStartDate] = useState("");
   const [taskDeadline, setTaskDeadline] = useState("");
   const [taskTarget, setTaskTarget] = useState("");
   const [taskUnit, setTaskUnit] = useState("");
+  const [taskAttachment, setTaskAttachment] = useState("");
+  const [taskAttachmentName, setTaskAttachmentName] = useState("");
+  const [expandedSub, setExpandedSub] = useState<string | null>(null);
+  const [showDoneMine, setShowDoneMine] = useState(false);
+  const [teamMonth, setTeamMonth] = useState(new Date().getMonth() + 1);
+  const [teamYear, setTeamYear] = useState(new Date().getFullYear());
   const [taskSaving, setTaskSaving] = useState(false);
   const [taskError, setTaskError] = useState("");
   const [taskSuccess, setTaskSuccess] = useState("");
@@ -226,6 +282,28 @@ export default function EmployeePortalPage() {
     setLeaveForm((f) => ({ ...f, attachment: b64 }));
   };
 
+  const handleTaskAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setTaskError(isRTL ? "الملف أكبر من 5MB" : "File exceeds 5MB"); return; }
+    setTaskAttachment(await toBase64(file));
+    setTaskAttachmentName(file.name);
+  };
+
+  const openAttachment = (dataUrl: string, name?: string) => {
+    try {
+      const [meta, b64] = dataUrl.split(",");
+      const mime = (meta.match(/data:(.*?);/) || [])[1] || "application/octet-stream";
+      const bin = atob(b64); const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([arr], { type: mime }));
+      const a = document.createElement("a"); a.href = url; a.target = "_blank";
+      if (!mime.startsWith("image/") && mime !== "application/pdf") a.download = name || "attachment";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch { window.open(dataUrl, "_blank"); }
+  };
+
   const handlePermAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -241,12 +319,44 @@ export default function EmployeePortalPage() {
     } catch (err: any) { setError(err.message); }
   };
 
+  const loadCheckin = async () => {
+    try { const r = await api.get("/attendance/checkin"); setCheckin(r.data); } catch { setCheckin(null); }
+  };
+  const doCheck = async (action: "in" | "out") => {
+    setCheckinBusy(true);
+    try { await api.post("/attendance/checkin", { action }); await loadCheckin(); }
+    catch (err: any) { setError(err.message); }
+    finally { setCheckinBusy(false); }
+  };
+
+  const submitOnline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!employee || !onlineForm.start) return;
+    setCheckinBusy(true);
+    try {
+      const res = await api.post("/leaves", {
+        employee_id: employee.employeeId || employee.employee_id,
+        employee_name: employee.name,
+        leave_type: "online",
+        start_date: onlineForm.start,
+        end_date: onlineForm.end || onlineForm.start,
+        reason: onlineForm.reason,
+      });
+      setLeaves((prev) => [res.data, ...prev]);
+      setShowOnlineModal(false);
+      setSuccess(isRTL ? "تم إرسال طلب العمل أونلاين" : "Online work request sent");
+    } catch (err: any) { setError(err.message); }
+    finally { setCheckinBusy(false); }
+  };
+
   const openTaskModal = (sub: any) => {
     setTaskSub(sub);
     setTaskName("");
-    setTaskDeadline("");
+    setTaskStartDate(""); setTaskDeadline("");
     setTaskTarget("");
     setTaskUnit("");
+    setTaskAttachment("");
+    setTaskAttachmentName("");
     setTaskError("");
     setTaskSuccess("");
     setShowTaskModal(true);
@@ -263,10 +373,14 @@ export default function EmployeePortalPage() {
       const res = await api.post("/tasks", {
         task_name: taskName.trim(),
         employee_id: empId,
+        start_date: taskStartDate || null,
         deadline: taskDeadline || null,
         status: "pending",
+        priority: taskPriority,
         target_value: taskTarget || null,
         unit: taskUnit || null,
+        attachment: taskAttachment || null,
+        attachment_name: taskAttachmentName || null,
       });
       setTasks((prev) => [res.data, ...prev]);
       setTaskSuccess(isRTL ? "تمت إضافة المهمة بنجاح" : "Task assigned successfully");
@@ -327,13 +441,21 @@ export default function EmployeePortalPage() {
       const safe = async (p: Promise<any>, fallback: any = null) => { try { return await p; } catch { return { data: fallback }; } };
 
       if (isEmployeeLogin) {
-        const [meRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes] = await Promise.all([
+        // One parallel batch for everything that doesn't depend on `me`, so a
+        // cold DB pooler is woken once instead of stacking sequential calls
+        // (this was the main cause of a very slow "Loading…").
+        const [meRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes, advRes, olRes, orgRes, ctRes, crRes] = await Promise.all([
           api.get("/employees/me"),
           safe(api.get("/payroll/latest"), { results: [] }),
           safe(api.get("/tasks"), []),
           safe(api.get("/leaves"), []),
           safe(api.get("/leaves/balances"), []),
           safe(api.get("/announcements"), []),
+          safe(api.get("/advances"), []),
+          safe(api.get("/leaves/on-leave"), []),
+          safe(api.get("/company-structure"), []),
+          safe(api.get("/request-types"), []),
+          safe(api.get("/custom-requests"), []),
         ]);
         const me = meRes.data;
         const meId = me.employeeId || me.employee_id;
@@ -341,13 +463,13 @@ export default function EmployeePortalPage() {
         setTasks(tasksRes.data || []); setLeaves(leavesRes.data || []);
         setBalances(balancesRes.data || []); setAnnouncements(announcementsRes.data || []);
         setPayroll(payrollRes.data?.results || []);
-        // Load subordinate leave requests if this employee is a supervisor
+        setAdvances(advRes.data || []); setOnLeave(olRes.data || []); setOrgEmployees(orgRes.data || []);
+        setCustomTypes(ctRes.data || []);
+        setMyCustomReqs(crRes.data || []);
+        // Subordinate leaves depend on `me` (supervisor check), so load after.
         if (me.subordinates && me.subordinates.length > 0) {
           try { const slRes = await api.patch("/leaves", {}); setSubLeaves(slRes.data || []); } catch { /* no subs */ }
         }
-        try { const advRes = await api.get("/advances"); setAdvances(advRes.data || []); } catch { /* ignore */ }
-        try { const olRes = await api.get("/leaves/on-leave"); setOnLeave(olRes.data || []); } catch { /* ignore */ }
-        try { const orgRes = await api.get("/company-structure"); setOrgEmployees(orgRes.data || []); } catch { /* ignore */ }
       } else {
         const [employeesRes, payrollRes, tasksRes, leavesRes, balancesRes, announcementsRes] = await Promise.all([
           api.get("/employees"),
@@ -366,21 +488,64 @@ export default function EmployeePortalPage() {
     finally { setLoading(false); }
   };
 
+  // Load this employee's full payroll history (each month)
+  useEffect(() => {
+    if (!employeeId) return;
+    api.get("/payroll/my").then((r) => {
+      const list = r.data || [];
+      setSalHistory(list);
+      // Default the picker to the most recent month that actually has a payslip
+      if (list.length) { setSalMonth(list[0].period_month); setSalYear(list[0].period_year); }
+    }).catch(() => {});
+  }, [employeeId]);
+
+  // The salary record to display = the month picked (null if no payslip that month)
   const myPayroll = useMemo(() => {
+    const hit = salHistory.find((r) => r.period_month === salMonth && r.period_year === salYear);
+    if (hit) return hit;
+    // Fallback to the latest-period record only when no specific month is selected yet
     if (!employeeId || !Array.isArray(payroll)) return null;
-    return payroll.find((row) => (row.employeeId || row.employee_id) === employeeId) || null;
-  }, [employeeId, payroll]);
+    return null;
+  }, [employeeId, payroll, salMonth, salYear, salHistory]);
+
+  // Years available in the picker: a range around the current year + any with data
+  const salYears = useMemo(() => {
+    const cur = new Date().getFullYear();
+    const ys = new Set<number>(salHistory.map((r) => r.period_year));
+    for (let y = cur - 3; y <= cur + 1; y++) ys.add(y);
+    return [...ys].sort((a, b) => b - a);
+  }, [salHistory]);
 
   const myTasks = useMemo(() => tasks.filter((task) => (task.employeeId || task.employee_id) === employeeId), [tasks, employeeId]);
-  // Subordinates' tasks that have a measurable target (for supervisor tracking)
-  const teamTargets = useMemo(() => {
-    const subIds = new Set((employee?.subordinates || []).map((s: any) => s.employeeId || s.employee_id));
-    return tasks.filter((task) => {
-      const eid = task.employeeId || task.employee_id;
-      const tgt = Number(task.targetValue ?? task.target_value);
-      return subIds.has(eid) && tgt > 0;
-    });
-  }, [tasks, employee]);
+  // All subordinate tasks grouped by employee (for tidy supervisor tracking)
+  const teamBySub = useMemo(() => {
+    const subs = (employee?.subordinates || []) as any[];
+    return subs
+      .map((sub) => {
+        const eid = sub.employeeId || sub.employee_id;
+        const subTasks = tasks.filter((t) => {
+          if ((t.employeeId || t.employee_id) !== eid) return false;
+          if (!t.deadline) return true; // tasks without a date always show
+          const d = new Date(t.deadline);
+          return d.getMonth() + 1 === teamMonth && d.getFullYear() === teamYear;
+        });
+        if (subTasks.length === 0) return null;
+        const measurable = subTasks.filter((t) => Number(t.targetValue ?? t.target_value) > 0);
+        const avgPct = measurable.length
+          ? Math.round(
+              measurable.reduce((a, t) => {
+                const tgt = Number(t.targetValue ?? t.target_value);
+                return a + Math.min(100, (Number(t.currentValue ?? t.current_value ?? 0) / tgt) * 100);
+              }, 0) / measurable.length
+            )
+          : null;
+        const doneCount = subTasks.filter((t) => t.status === "completed").length;
+        const deadlines = subTasks.map((t) => t.deadline).filter(Boolean).sort();
+        const nextDeadline = deadlines[0] || null;
+        return { sub, eid, tasks: subTasks, avgPct, doneCount, total: subTasks.length, nextDeadline };
+      })
+      .filter(Boolean) as any[];
+  }, [tasks, employee, teamMonth, teamYear]);
   const myLeaves = useMemo(() => leaves.filter((leave) => (leave.employeeId || leave.employee_id) === employeeId), [leaves, employeeId]);
   const myBalance = useMemo(() => balances.find((b) => (b.employeeId || b.employee_id) === employeeId) || null, [balances, employeeId]);
 
@@ -408,6 +573,28 @@ export default function EmployeePortalPage() {
       setPermSuccess(isRTL ? "تم إرسال طلب المغادرة" : "Permission request sent");
     } catch (err: any) { setPermError(err.message); }
     finally { setPermSaving(false); }
+  };
+
+  const openCustom = (t: any) => { setActiveCT(t); setCtValues({}); setReqOpen(false); };
+  const setCtField = async (f: any, file: File | null, value?: string) => {
+    if (f.type === "file" && file) {
+      const b64 = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(file); });
+      setCtValues((v) => ({ ...v, [f.key]: b64 }));
+    } else {
+      setCtValues((v) => ({ ...v, [f.key]: value ?? "" }));
+    }
+  };
+  const submitCustom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeCT) return;
+    setCtBusy(true);
+    try {
+      const res = await api.post("/custom-requests", { request_type_id: activeCT.id, values: ctValues });
+      setMyCustomReqs((p) => [res.data, ...p]);
+      setSuccess(isRTL ? "تم إرسال الطلب" : "Request submitted");
+      setActiveCT(null); setCtValues({});
+    } catch (err: any) { setError(err.message); }
+    finally { setCtBusy(false); }
   };
 
   const submitAdvance = async (e: React.FormEvent) => {
@@ -454,6 +641,12 @@ export default function EmployeePortalPage() {
       const res = await api.put(`/tasks/${taskId}`, { status });
       setTasks((prev) => prev.map((task) => (task.id === taskId ? res.data : task)));
     } catch (err: any) { setError(err.message); }
+  };
+
+  const cancelLeave = async (id: number) => {
+    if (!confirm(isRTL ? "إلغاء هذا الطلب؟" : "Cancel this request?")) return;
+    try { await api.delete(`/leaves/${id}`); setLeaves((p) => p.filter((l) => l.id !== id)); setSuccess(isRTL ? "تم إلغاء الطلب" : "Request cancelled"); }
+    catch (err: any) { setError(err.message); }
   };
 
   const updateTaskProgress = async (taskId: number, current_value: number) => {
@@ -545,6 +738,7 @@ export default function EmployeePortalPage() {
               </select>
             )}
 
+            <ThemeToggle />
             {/* Profile dropdown (same shape as HR Layout) */}
             <div className="relative" ref={profileRef}>
               <button
@@ -638,8 +832,33 @@ export default function EmployeePortalPage() {
                     <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-base">💵</div>
                     <div className="text-sm font-medium text-slate-900">{isRTL ? "طلب سلفة" : "Request Advance"}</div>
                   </button>
+                  <button type="button" onClick={() => { setShowOnlineModal(true); setReqOpen(false); loadCheckin(); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
+                    <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center flex-shrink-0"><Wifi size={16} /></div>
+                    <div className="text-sm font-medium text-slate-900">{isRTL ? "طلب عمل أونلاين" : "Online Work"}</div>
+                  </button>
+                  {customTypes.map((ct) => (
+                    <button key={ct.id} type="button" onClick={() => openCustom(ct)} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
+                      <div className="w-8 h-8 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0"><Inbox size={16} /></div>
+                      <div className="text-sm font-medium text-slate-900">{ct.name}</div>
+                    </button>
+                  ))}
                 </div>
               )}
+            </div>
+
+            {/* Contract dates */}
+            <div className="card">
+              <div className="card-header"><div className="card-title text-sm"><Calendar size={15} className="text-brand-600" />{isRTL ? "بيانات العقد" : "Contract"}</div></div>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">{isRTL ? "بداية العقد" : "Contract start"}</span>
+                  <span className="font-medium text-slate-800">{(() => { const d = employee.joinDate || employee.join_date; return d ? new Date(d).toLocaleDateString() : "—"; })()}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">{isRTL ? "نهاية العقد" : "Contract end"}</span>
+                  <span className="font-medium text-slate-800">{(() => { const d = employee.contractEndDate || employee.contract_end_date; return d ? new Date(d).toLocaleDateString() : "—"; })()}</span>
+                </div>
+              </div>
             </div>
 
             {orgEmployees.length > 0 && (
@@ -670,16 +889,68 @@ export default function EmployeePortalPage() {
                   {advances.slice(0, 5).map((a) => (
                     <div key={a.id} className="flex items-center justify-between gap-2">
                       <span className="font-mono text-sm font-semibold text-slate-900">{(parseFloat(a.amount) || 0).toFixed(2)}</span>
-                      <span className={`badge text-[10px] ${a.status === "approved" ? "badge-green" : a.status === "rejected" ? "badge-red" : "badge-yellow"}`}>{a.status === "approved" ? (isRTL ? "موافق" : "Approved") : a.status === "rejected" ? (isRTL ? "مرفوض" : "Rejected") : (isRTL ? "معلّق" : "Pending")}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`badge text-[10px] ${a.status === "approved" ? "badge-green" : a.status === "rejected" ? "badge-red" : "badge-yellow"}`}>{a.status === "approved" ? (isRTL ? "موافق" : "Approved") : a.status === "rejected" ? (isRTL ? "مرفوض" : "Rejected") : (isRTL ? "معلّق" : "Pending")}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+
+            {myCustomReqs.length > 0 && (
+              <div className="card">
+                <div className="card-header"><div className="card-title text-sm"><Inbox size={15} className="text-violet-600" />{isRTL ? "طلباتي المخصّصة" : "My requests"}</div></div>
+                <div className="space-y-2">
+                  {myCustomReqs.slice(0, 6).map((r) => (
+                    <div key={r.id} className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{r.typeName}</span>
+                      <span className={`badge text-[10px] shrink-0 ${r.status === "approved" ? "badge-green" : r.status === "rejected" ? "badge-red" : "badge-yellow"}`}>{r.status === "approved" ? (isRTL ? "موافق" : "Approved") : r.status === "rejected" ? (isRTL ? "مرفوض" : "Rejected") : (isRTL ? "معلّق" : "Pending")}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Leave balances */}
+            <div className="card flex items-center gap-3 border-emerald-100 bg-emerald-50/40">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0"><Palmtree size={18} /></div>
+              <div>
+                <div className="text-xs font-semibold text-slate-500">{isRTL ? "رصيد الإجازة السنوية" : "Annual leave balance"}</div>
+                <div className="text-xl font-bold text-emerald-700">{myBalance?.annual_remaining ?? "—"} <span className="text-xs font-medium text-slate-400">{isRTL ? "يوم" : "days"}</span></div>
+              </div>
+            </div>
+            <div className="card flex items-center gap-3 border-rose-100 bg-rose-50/40">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center flex-shrink-0">🩺</div>
+              <div>
+                <div className="text-xs font-semibold text-slate-500">{isRTL ? "رصيد الإجازة المرضية" : "Sick leave balance"}</div>
+                <div className="text-xl font-bold text-rose-700">{myBalance?.sick_remaining ?? "—"} <span className="text-xs font-medium text-slate-400">{isRTL ? "يوم" : "days"}</span></div>
+              </div>
+            </div>
           </aside>
 
           {/* ── Main column ── */}
           <div className="flex-1 min-w-0 space-y-5">
+            {/* Salary month picker — whole year */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="text-sm font-semibold text-slate-700">{isRTL ? "راتب شهر:" : "Salary for:"}</div>
+              <div className="flex items-center gap-2">
+                <select className="form-select w-auto text-sm h-9 py-0" value={salMonth} onChange={(e) => setSalMonth(Number(e.target.value))}>
+                  {(isRTL ? MONTHS_AR : MONTHS_EN).map((m, i) => (
+                    <option key={i + 1} value={i + 1}>{m}</option>
+                  ))}
+                </select>
+                <select className="form-select w-auto text-sm h-9 py-0" value={salYear} onChange={(e) => setSalYear(Number(e.target.value))}>
+                  {salYears.map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+            </div>
+            {!myPayroll && (
+              <div className="card text-center py-4 text-sm text-slate-400">
+                {isRTL ? "لا يوجد راتب محسوب لهذا الشهر" : "No payslip for this month"}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.base}</div><div className="text-xl font-bold text-slate-900">{formatCurrency(myPayroll?.baseSalary || myPayroll?.base_salary || employee.baseSalary || employee.base_salary)}</div></div>
               <div className="card relative">
@@ -708,34 +979,99 @@ export default function EmployeePortalPage() {
                   </div>
                 )}
               </div>
-              <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.deductions}</div><div className="text-xl font-bold text-rose-700">{formatCurrency(Math.max(0, -(parseFloat(myPayroll?.adjustment) || 0)) + (parseFloat(myPayroll?.deductionTotal || myPayroll?.deduction_total) || 0) + (parseFloat(myPayroll?.socialSecurityDeduct || myPayroll?.social_security_deduct) || 0))}</div></div>
-              <div className="card"><div className="text-xs font-semibold text-slate-500 mb-1">{text.hoursDiff}</div><div className={clsx("text-xl font-bold", parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff || 0) < 0 ? "text-rose-700" : "text-emerald-700")}>{(parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff) || 0).toFixed(2)}</div></div>
+              <button type="button" onClick={() => myPayroll && setDetailModal("deductions")} className="card text-start hover:ring-2 hover:ring-rose-200 transition-all"><div className="text-xs font-semibold text-slate-500 mb-1 flex items-center justify-between">{text.deductions}<span className="text-[10px] text-rose-400">{isRTL ? "تفاصيل" : "details"}</span></div><div className="text-xl font-bold text-rose-700">{formatCurrency(Math.max(0, -(parseFloat(myPayroll?.adjustment) || 0)) + (parseFloat(myPayroll?.deductionTotal || myPayroll?.deduction_total) || 0) + (parseFloat(myPayroll?.socialSecurityDeduct || myPayroll?.social_security_deduct) || 0))}</div></button>
+              <button type="button" onClick={() => myPayroll && setDetailModal("hours")} className="card text-start hover:ring-2 hover:ring-slate-200 transition-all"><div className="text-xs font-semibold text-slate-500 mb-1 flex items-center justify-between">{text.hoursDiff}<span className="text-[10px] text-slate-400">{isRTL ? "تفاصيل" : "details"}</span></div><div className={clsx("text-xl font-bold", parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff || 0) < 0 ? "text-rose-700" : "text-emerald-700")}>{(parseFloat(myPayroll?.hourDiff || myPayroll?.hour_diff) || 0).toFixed(2)}</div></button>
             </div>
 
             {/* ── My Tasks card (reusable inline) ── */}
             {(() => {
+              const activeMine = myTasks.filter((t) => t.status !== "completed");
+              const doneMine = myTasks.filter((t) => t.status === "completed");
+
+              const fullTaskCard = (task: any) => (
+                <div key={task.id} className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-slate-900">{task.task_name || task.taskName}</div>
+                      <div className="text-xs text-slate-500 flex items-center gap-1 mt-1"><Clock size={12} />{formatDate(task.deadline)}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={task.status} isRTL={isRTL} />
+                      {task.status !== "completed" && (
+                        <button className="btn btn-sm btn-success" onClick={() => updateTaskStatus(task.id, "completed")}>{isRTL ? "تم" : "Done"}</button>
+                      )}
+                    </div>
+                  </div>
+                  <TargetProgress task={task} isRTL={isRTL} onSave={(v) => updateTaskProgress(task.id, v)} />
+                  <div className="flex items-center gap-3 mt-2">
+                    {task.attachment ? (
+                      <button type="button" onClick={() => openAttachment(task.attachment, task.attachmentName || task.attachment_name)}
+                        className="text-[11px] text-brand-600 hover:underline flex items-center gap-1">
+                        <Paperclip size={11} />{task.attachmentName || task.attachment_name || (isRTL ? "عرض الملف" : "View file")}
+                      </button>
+                    ) : (
+                      <label className="text-[11px] text-slate-400 hover:text-brand-600 cursor-pointer flex items-center gap-1">
+                        <Paperclip size={11} />{isRTL ? "إرفاق ملف" : "Attach file"}
+                        <input type="file" className="hidden" onChange={async (e) => {
+                          const f = e.target.files?.[0]; if (!f) return;
+                          if (f.size > 5 * 1024 * 1024) { setError(isRTL ? "الملف أكبر من 5MB" : "File exceeds 5MB"); return; }
+                          const b64 = await toBase64(f);
+                          const res = await api.put(`/tasks/${task.id}`, { attachment: b64, attachment_name: f.name });
+                          setTasks((prev) => prev.map((t) => (t.id === task.id ? res.data : t)));
+                        }} />
+                      </label>
+                    )}
+                  </div>
+                  <TaskReportBox task={task} isRTL={isRTL} onSave={async (text) => {
+                    const res = await api.put(`/tasks/${task.id}`, { report: text });
+                    setTasks((prev) => prev.map((t) => (t.id === task.id ? res.data : t)));
+                  }} />
+                </div>
+              );
+
               const myTasksCard = (
                 <div className="card h-full">
-                  <div className="card-header"><div className="card-title"><CheckSquare size={16} className="text-brand-600" />{text.myTasks}</div></div>
+                  <div className="card-header"><div className="card-title"><CheckSquare size={16} className="text-brand-600" />{text.myTasks}</div>
+                    {myTasks.length > 0 && <span className="text-[11px] text-slate-400">{activeMine.length} {isRTL ? "نشطة" : "active"}</span>}
+                  </div>
                   {myTasks.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{text.noData}</div> : (
                     <div className="space-y-3">
-                      {myTasks.map((task) => (
-                        <div key={task.id} className="rounded-lg border border-slate-200 bg-white p-3">
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                              <div className="font-semibold text-slate-900">{task.task_name || task.taskName}</div>
-                              <div className="text-xs text-slate-500 flex items-center gap-1 mt-1"><Clock size={12} />{formatDate(task.deadline)}</div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <StatusBadge status={task.status} isRTL={isRTL} />
-                              {task.status !== "completed" && (
-                                <button className="btn btn-sm btn-success" onClick={() => updateTaskStatus(task.id, "completed")}>{isRTL ? "تم" : "Done"}</button>
-                              )}
-                            </div>
-                          </div>
-                          <TargetProgress task={task} isRTL={isRTL} onSave={(v) => updateTaskProgress(task.id, v)} />
+                      {activeMine.length === 0 && (
+                        <div className="text-center py-5 text-sm text-emerald-600 flex items-center justify-center gap-1.5">
+                          <CheckCircle2 size={15} />{isRTL ? "خلّصت كل مهامك! 🎉" : "All tasks done! 🎉"}
                         </div>
-                      ))}
+                      )}
+                      {activeMine.map(fullTaskCard)}
+
+                      {/* Completed — collapsed compact list */}
+                      {doneMine.length > 0 && (
+                        <div className="rounded-lg border border-slate-200 overflow-hidden">
+                          <button type="button" onClick={() => setShowDoneMine((v) => !v)}
+                            className="w-full flex items-center gap-2 p-2.5 hover:bg-slate-50 transition-colors text-start">
+                            <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
+                            <span className="text-sm font-semibold text-slate-700 flex-1">{isRTL ? "المنجزة" : "Completed"} ({doneMine.length})</span>
+                            <ChevronDown size={16} className={`text-slate-400 shrink-0 transition-transform ${showDoneMine ? "rotate-180" : ""}`} />
+                          </button>
+                          {showDoneMine && (
+                            <div className="border-t border-slate-100 bg-slate-50/60 divide-y divide-slate-100">
+                              {doneMine.map((task) => {
+                                const tgt = Number(task.targetValue ?? task.target_value);
+                                const cur = Number(task.currentValue ?? task.current_value ?? 0);
+                                return (
+                                  <div key={task.id} className="flex items-center gap-2 px-3 py-2 text-sm">
+                                    <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                                    <span className="flex-1 min-w-0 truncate text-slate-700">{task.task_name || task.taskName}</span>
+                                    {tgt > 0 && <span className="text-[11px] text-slate-400 shrink-0">{cur}/{tgt}{task.unit ? ` ${task.unit}` : ""}</span>}
+                                    {task.attachment && (
+                                      <button type="button" onClick={() => openAttachment(task.attachment, task.attachmentName || task.attachment_name)} className="text-brand-500 shrink-0"><Paperclip size={12} /></button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -838,26 +1174,84 @@ export default function EmployeePortalPage() {
                         </div>
                       </div>
                     )}
-                    {teamTargets.length > 0 && (
+                    {(
                       <div className="card">
-                        <div className="card-header">
+                        <div className="card-header flex-wrap gap-2">
                           <div className="card-title">
                             <CheckSquare size={16} className="text-brand-600" />
-                            {isRTL ? "أهداف الفريق" : "Team Targets"}
+                            {isRTL ? "مهام وأهداف الفريق" : "Team Tasks & Targets"}
+                          </div>
+                          <div className="flex items-center gap-1.5 ms-auto">
+                            <select className="form-select text-xs py-1 px-2 h-7 w-24" value={teamMonth} onChange={(e) => setTeamMonth(+e.target.value)}>
+                              {(isRTL ? MONTHS_AR : MONTHS_EN).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                            </select>
+                            <select className="form-select text-xs py-1 px-2 h-7 w-20" value={teamYear} onChange={(e) => setTeamYear(+e.target.value)}>
+                              {[teamYear - 1, teamYear, teamYear + 1].map((y) => <option key={y} value={y}>{y}</option>)}
+                            </select>
                           </div>
                         </div>
-                        <div className="space-y-3">
-                          {teamTargets.map((task: any) => {
-                            const eid = task.employeeId || task.employee_id;
-                            const sub = (employee.subordinates || []).find((s: any) => (s.employeeId || s.employee_id) === eid);
+                        {teamBySub.length === 0 && (
+                          <div className="text-center py-6 text-sm text-slate-400">{isRTL ? "لا مهام في هذا الشهر" : "No tasks this month"}</div>
+                        )}
+                        <div className="space-y-2">
+                          {teamBySub.map(({ sub, eid, tasks: subTasks, avgPct, doneCount, total, nextDeadline }: any) => {
+                            const open = expandedSub === eid;
                             return (
-                              <div key={task.id} className="rounded-lg border border-slate-200 bg-white p-3">
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="font-semibold text-slate-900 text-sm">{task.task_name || task.taskName}</div>
-                                  <StatusBadge status={task.status} isRTL={isRTL} />
-                                </div>
-                                <div className="text-[11px] text-slate-500 truncate">{sub?.name || eid}</div>
-                                <TargetProgress task={task} isRTL={isRTL} onSave={(v) => updateTaskProgress(task.id, v)} />
+                              <div key={eid} className="rounded-lg border border-slate-200 overflow-hidden">
+                                {/* Employee row (click to expand) */}
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedSub(open ? null : eid)}
+                                  className="w-full flex items-center gap-2.5 p-2.5 hover:bg-slate-50 transition-colors text-start"
+                                >
+                                  <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                    {(sub.name || "?").charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="font-semibold text-slate-900 text-sm truncate">{sub.name}</div>
+                                    <div className="text-[11px] text-slate-500">
+                                      {total} {isRTL ? "مهمة" : "tasks"} · {doneCount} {isRTL ? "منجزة" : "done"}
+                                      {avgPct != null && <span className="text-brand-600 font-semibold"> · {avgPct}%</span>}
+                                    </div>
+                                    {nextDeadline && (
+                                      <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5"><Clock size={10} />{isRTL ? "أقرب موعد:" : "Next:"} {formatDate(nextDeadline)}</div>
+                                    )}
+                                  </div>
+                                  {avgPct != null && (
+                                    <div className="w-14 h-1.5 rounded-full bg-slate-100 overflow-hidden hidden sm:block">
+                                      <div className={`h-full rounded-full ${avgPct >= 100 ? "bg-emerald-500" : "bg-brand-500"}`} style={{ width: `${avgPct}%` }} />
+                                    </div>
+                                  )}
+                                  <ChevronDown size={16} className={`text-slate-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+                                </button>
+                                {/* Expanded: that employee's tasks */}
+                                {open && (
+                                  <div className="border-t border-slate-100 bg-slate-50/60 p-2.5 space-y-2">
+                                    {subTasks.map((task: any) => (
+                                      <div key={task.id} className="rounded-lg border border-slate-200 bg-white p-2.5">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <div className="font-semibold text-slate-900 text-sm">{task.task_name || task.taskName}</div>
+                                          <StatusBadge status={task.status} isRTL={isRTL} />
+                                        </div>
+                                        {task.deadline && (
+                                          <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5"><Clock size={11} />{formatDate(task.deadline)}</div>
+                                        )}
+                                        {(task.attachment) && (
+                                          <button type="button" onClick={() => openAttachment(task.attachment, task.attachmentName || task.attachment_name)}
+                                            className="text-[11px] text-brand-600 hover:underline flex items-center gap-1 mt-1">
+                                            <Paperclip size={11} />{task.attachmentName || task.attachment_name || (isRTL ? "عرض الملف" : "View file")}
+                                          </button>
+                                        )}
+                                        <TargetProgress task={task} isRTL={isRTL} onSave={(v) => updateTaskProgress(task.id, v)} />
+                                        {task.report && (
+                                          <div className="mt-2 text-[11px] bg-sky-50 border border-sky-100 rounded-lg px-2 py-1.5 text-slate-700">
+                                            <span className="font-semibold text-sky-700">{isRTL ? "تقرير الموظف: " : "Report: "}</span>{task.report}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
@@ -987,6 +1381,44 @@ export default function EmployeePortalPage() {
             )}
 
             {/* ── Request Advance modal ── */}
+            {showOnlineModal && (
+            <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowOnlineModal(false); }}>
+              <div className="card w-full max-w-md" dir={isRTL ? "rtl" : "ltr"}>
+                <div className="card-header"><div className="card-title"><Wifi size={16} className="text-sky-600" />{isRTL ? "طلب عمل أونلاين" : "Online Work Request"}</div><button type="button" onClick={() => setShowOnlineModal(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button></div>
+                <form className="space-y-4" onSubmit={submitOnline}>
+                  <p className="text-xs text-slate-500">{isRTL ? "اطلب يوم عمل أونلاين — يروح للموارد البشرية للموافقة. عند الموافقة يُحتسب حضور كامل لذلك اليوم." : "Request an online workday — sent to HR for approval. Once approved it counts as a full attendance day."}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><label className="form-label">{isRTL ? "من تاريخ" : "From"}</label><input type="date" className="form-input" value={onlineForm.start} onChange={(e) => setOnlineForm((f) => ({ ...f, start: e.target.value }))} /></div>
+                    <div><label className="form-label">{isRTL ? "إلى تاريخ" : "To"}</label><input type="date" className="form-input" value={onlineForm.end} onChange={(e) => setOnlineForm((f) => ({ ...f, end: e.target.value }))} /></div>
+                  </div>
+                  <div><label className="form-label">{isRTL ? "ملاحظة (اختياري)" : "Note (optional)"}</label><textarea rows={2} className="form-textarea" value={onlineForm.reason} onChange={(e) => setOnlineForm((f) => ({ ...f, reason: e.target.value }))} /></div>
+                </form>
+
+                {/* Check in / out for today's online work */}
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <div className="text-xs font-semibold text-slate-500 mb-2">{isRTL ? "تسجيل حضور اليوم (أونلاين)" : "Today's online attendance"}</div>
+                  <div className="grid grid-cols-2 gap-3 text-center mb-2">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+                      <div className="text-[11px] text-slate-500">{isRTL ? "الدخول" : "Check in"}</div>
+                      <div className="text-base font-bold text-slate-900">{checkin?.clock_in || "—"}</div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+                      <div className="text-[11px] text-slate-500">{isRTL ? "الخروج" : "Check out"}</div>
+                      <div className="text-base font-bold text-slate-900">{checkin?.clock_out || "—"}</div>
+                    </div>
+                  </div>
+                  {checkin?.clock_in && checkin?.clock_out && (
+                    <div className="text-center text-xs text-emerald-600 font-semibold mb-2">{isRTL ? "ساعات اليوم" : "Hours today"}: {checkin.hours_worked}</div>
+                  )}
+                  <div className="flex gap-2">
+                    <button type="button" disabled={checkinBusy || !!checkin?.clock_in} onClick={() => doCheck("in")} className="btn btn-success flex-1 disabled:opacity-50">{isRTL ? "تسجيل دخول" : "Check in"}</button>
+                    <button type="button" disabled={checkinBusy || !checkin?.clock_in || !!checkin?.clock_out} onClick={() => doCheck("out")} className="btn btn-primary flex-1 disabled:opacity-50">{isRTL ? "تسجيل خروج" : "Check out"}</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            )}
+
             {showAdvModal && (
             <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAdvModal(false); }}>
               <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto" dir={isRTL ? "rtl" : "ltr"}>
@@ -1018,6 +1450,31 @@ export default function EmployeePortalPage() {
                     {advSaving ? <span className="spinner" /> : <Send size={15} />}{isRTL ? "إرسال طلب السلفة" : "Send Advance Request"}
                   </button>
                   <p className="text-[11px] text-slate-400 text-center">{isRTL ? "يصل الطلب للموارد البشرية، وعند الموافقة يُخصم من راتبك." : "Goes to HR; once approved it's deducted from your salary."}</p>
+                </form>
+              </div>
+            </div>
+            )}
+
+            {/* ── Custom request modal ── */}
+            {activeCT && (
+            <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setActiveCT(null); }}>
+              <div className="card w-full max-w-md max-h-[90vh] overflow-y-auto" dir={isRTL ? "rtl" : "ltr"}>
+                <div className="card-header"><div className="card-title"><Inbox size={16} className="text-violet-600" />{activeCT.name}</div><button type="button" onClick={() => setActiveCT(null)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button></div>
+                <form onSubmit={submitCustom} className="space-y-3">
+                  {(activeCT.fields || []).length === 0 && <p className="text-sm text-slate-500">{isRTL ? "اضغط إرسال لتقديم الطلب." : "Press send to submit."}</p>}
+                  {(activeCT.fields || []).map((f: any) => (
+                    <div key={f.key}>
+                      <label className="form-label">{f.label}{f.required ? " *" : ""}</label>
+                      {f.type === "textarea" ? (
+                        <textarea className="form-textarea" rows={2} required={f.required} value={ctValues[f.key] || ""} onChange={(e) => setCtField(f, null, e.target.value)} />
+                      ) : f.type === "file" ? (
+                        <input type="file" className="form-input" required={f.required} onChange={(e) => setCtField(f, e.target.files?.[0] || null)} />
+                      ) : (
+                        <input type={f.type === "number" ? "number" : f.type === "date" ? "date" : "text"} className="form-input" required={f.required} value={ctValues[f.key] || ""} onChange={(e) => setCtField(f, null, e.target.value)} />
+                      )}
+                    </div>
+                  ))}
+                  <button className="btn btn-primary w-full gap-2" disabled={ctBusy}>{ctBusy ? <span className="spinner" /> : <Send size={15} />}{isRTL ? "إرسال الطلب" : "Submit request"}</button>
                 </form>
               </div>
             </div>
@@ -1056,6 +1513,7 @@ export default function EmployeePortalPage() {
                           : lType === "annual" ? (isRTL ? "سنوية" : "Annual")
                           : lType === "sick"   ? (isRTL ? "مرضية" : "Sick")
                           : lType === "unpaid" ? (isRTL ? "بدون راتب" : "Unpaid")
+                          : lType === "online" ? (isRTL ? "عمل أونلاين" : "Online")
                           : lType;
                         const dc = leave.daysCount ?? leave.days_count ?? 0;
                         const duration = isPerm
@@ -1111,7 +1569,7 @@ export default function EmployeePortalPage() {
               {myLeaves.length === 0 ? <div className="text-center py-8 text-sm text-slate-400">{text.noData}</div> : (
                 <div className="table-wrapper">
                   <table>
-                    <thead><tr><th>{text.leaveType}</th><th>{text.startDate}</th><th>{text.endDate}</th><th>{isRTL ? "المدة" : "Duration"}</th><th>{isRTL ? "الحالة" : "Status"}</th></tr></thead>
+                    <thead><tr><th>{text.leaveType}</th><th>{text.startDate}</th><th>{text.endDate}</th><th>{isRTL ? "المدة" : "Duration"}</th><th>{isRTL ? "الحالة" : "Status"}</th><th></th></tr></thead>
                     <tbody>
                       {myLeaves.map((leave) => {
                         const lType   = leave.leaveType   || leave.leave_type   || "";
@@ -1127,7 +1585,9 @@ export default function EmployeePortalPage() {
                               ? (isRTL ? "مرضية" : "Sick")
                               : lType === "unpaid"
                                 ? (isRTL ? "بدون راتب" : "Unpaid")
-                                : lType;
+                                : lType === "online"
+                                  ? (isRTL ? "عمل أونلاين" : "Online")
+                                  : lType;
                         const duration = isPerm
                           ? `${dCount} ${isRTL ? (dCount === 1 ? "ساعة" : "ساعات") : (dCount === 1 ? "hr" : "hrs")}`
                           : `${dCount} ${isRTL ? "يوم" : "days"}`;
@@ -1142,6 +1602,11 @@ export default function EmployeePortalPage() {
                           <td>{isPerm ? "-" : formatDate(eDate)}</td>
                           <td>{duration}</td>
                           <td><StatusBadge status={leave.status} isRTL={isRTL} /></td>
+                          <td className="text-end">
+                            {leave.status === "pending" && (
+                              <button onClick={() => cancelLeave(leave.id)} className="text-rose-500 hover:text-rose-700 inline-flex items-center gap-1 text-xs"><X size={13} />{isRTL ? "إلغاء" : "Cancel"}</button>
+                            )}
+                          </td>
                         </tr>
                         );
                       })}
@@ -1157,9 +1622,9 @@ export default function EmployeePortalPage() {
               {announcements.length === 0 ? <div className="text-center py-6 text-sm text-slate-400">{text.noData}</div> : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {announcements.slice(0, 4).map((item) => (
-                    <div key={item.id} className="rounded-lg bg-brand-50 border border-brand-100 p-3">
-                      <div className="font-semibold text-slate-900">{item.title}</div>
-                      <div className="text-sm text-slate-600 mt-1">{item.message}</div>
+                    <div key={item.id} className="rounded-lg bg-brand-50 dark:bg-slate-800/60 border border-brand-100 dark:border-slate-700 p-3">
+                      <div className="font-semibold text-slate-900 dark:text-slate-100">{item.title}</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300 mt-1">{item.message}</div>
                     </div>
                   ))}
                 </div>
@@ -1349,17 +1814,33 @@ export default function EmployeePortalPage() {
                 />
               </div>
 
-              {/* Deadline */}
+              {/* Priority */}
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-                  {isRTL ? "الموعد النهائي (اختياري)" : "Deadline (optional)"}
+                  {isRTL ? "الأولوية" : "Priority"}
                 </label>
-                <input
-                  type="date"
-                  value={taskDeadline}
-                  onChange={(e) => setTaskDeadline(e.target.value)}
+                <select
+                  value={taskPriority}
+                  onChange={(e) => setTaskPriority(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-                />
+                >
+                  <option value="urgent">{isRTL ? "🔴 عاجل" : "🔴 Urgent"}</option>
+                  <option value="high">{isRTL ? "🟠 عالية" : "🟠 High"}</option>
+                  <option value="medium">{isRTL ? "🔵 متوسطة" : "🔵 Medium"}</option>
+                  <option value="low">{isRTL ? "⚪ منخفضة" : "⚪ Low"}</option>
+                </select>
+              </div>
+
+              {/* Start / End dates */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">{isRTL ? "تاريخ البداية" : "Start date"}</label>
+                  <input type="date" value={taskStartDate} onChange={(e) => setTaskStartDate(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">{isRTL ? "تاريخ النهاية" : "End date"}</label>
+                  <input type="date" value={taskDeadline} onChange={(e) => setTaskDeadline(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm" />
+                </div>
               </div>
 
               {/* Measurable target (optional) — independent of evaluation */}
@@ -1386,6 +1867,23 @@ export default function EmployeePortalPage() {
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
                   />
                 </div>
+              </div>
+
+              {/* Attachment (any file type) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                  {isRTL ? "إرفاق ملف (اختياري)" : "Attach file (optional)"}
+                </label>
+                <label className={`flex items-center gap-2 cursor-pointer border-2 border-dashed rounded-xl px-4 py-2.5 text-sm transition-all ${taskAttachment ? "border-emerald-400 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500 hover:border-brand-400"}`}>
+                  <Paperclip size={15} />
+                  {taskAttachment ? `✓ ${taskAttachmentName}` : (isRTL ? "اضغط لاختيار ملف (أي نوع)" : "Click to choose a file (any type)")}
+                  <input type="file" className="hidden" onChange={handleTaskAttachment} />
+                </label>
+                {taskAttachment && (
+                  <button type="button" className="text-xs text-rose-500 mt-1 hover:underline" onClick={() => { setTaskAttachment(""); setTaskAttachmentName(""); }}>
+                    {isRTL ? "حذف الملف" : "Remove file"}
+                  </button>
+                )}
               </div>
 
               {taskError && (
@@ -1452,6 +1950,46 @@ export default function EmployeePortalPage() {
           </div>
         </div>
       )}
+
+      {/* Deductions / Hour-diff details */}
+      {detailModal && myPayroll && (() => {
+        const att = parseFloat(myPayroll.adjustment) || 0;
+        const attDed = Math.max(0, -att);
+        const manualDed = parseFloat(myPayroll.deductionTotal || myPayroll.deduction_total) || 0;
+        const ss = parseFloat(myPayroll.socialSecurityDeduct || myPayroll.social_security_deduct) || 0;
+        const totalDed = attDed + manualDed + ss;
+        const worked = parseFloat(myPayroll.totalHours || myPayroll.total_hours) || 0;
+        const diff = parseFloat(myPayroll.hourDiff || myPayroll.hour_diff) || 0;
+        const required = worked - diff;
+        const Row = ({ label, val, neg }: { label: string; val: string; neg?: boolean }) => (
+          <div className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 text-sm">
+            <span className="text-slate-600">{label}</span><span className={`font-mono font-semibold ${neg ? "text-rose-600" : "text-slate-900"}`}>{val}</span>
+          </div>
+        );
+        return (
+          <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setDetailModal(null); }}>
+            <div className="card w-full max-w-md" dir={isRTL ? "rtl" : "ltr"}>
+              <div className="card-header"><div className="card-title">{detailModal === "deductions" ? (isRTL ? "تفاصيل الخصومات" : "Deductions breakdown") : (isRTL ? "تفاصيل فرق الساعات" : "Hours breakdown")}</div><button type="button" onClick={() => setDetailModal(null)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button></div>
+              {detailModal === "deductions" ? (
+                <div>
+                  <Row label={isRTL ? "خصم نقص ساعات الحضور" : "Attendance shortfall"} val={formatCurrency(attDed)} neg={attDed > 0} />
+                  <Row label={isRTL ? "خصومات يدوية (من الإدارة)" : "Manual deductions"} val={formatCurrency(manualDed)} neg={manualDed > 0} />
+                  <Row label={isRTL ? "الضمان الاجتماعي" : "Social security"} val={formatCurrency(ss)} neg={ss > 0} />
+                  <div className="flex items-center justify-between pt-3 mt-1 border-t-2 border-slate-200 text-sm font-bold"><span>{isRTL ? "إجمالي الخصومات" : "Total deductions"}</span><span className="font-mono text-rose-700">{formatCurrency(totalDed)}</span></div>
+                  <p className="text-[11px] text-slate-400 mt-3">{isRTL ? "خصم نقص الساعات يظهر عند عدم إكمال ساعات الدوام المطلوبة." : "Attendance shortfall appears when required work hours weren't completed."}</p>
+                </div>
+              ) : (
+                <div>
+                  <Row label={isRTL ? "ساعاتك الفعلية" : "Hours you worked"} val={worked.toFixed(2)} />
+                  <Row label={isRTL ? "الساعات المطلوبة" : "Required hours"} val={required.toFixed(2)} />
+                  <div className="flex items-center justify-between pt-3 mt-1 border-t-2 border-slate-200 text-sm font-bold"><span>{isRTL ? "الفرق" : "Difference"}</span><span className={`font-mono ${diff < 0 ? "text-rose-700" : "text-emerald-700"}`}>{diff.toFixed(2)}</span></div>
+                  <p className="text-[11px] text-slate-400 mt-3">{diff < 0 ? (isRTL ? "الفرق سالب: نقص في الساعات قد ينتج عنه خصم." : "Negative: you worked fewer hours than required (may cause a deduction).") : (isRTL ? "الفرق موجب: ساعات إضافية." : "Positive: extra hours worked.")}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

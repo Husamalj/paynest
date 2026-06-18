@@ -82,7 +82,58 @@ function PhoneInput({ value, onChange, error }: { value: string; onChange: (v: s
   );
 }
 
-const emptyForm = { employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", nationality: "", gender: "", national_id: "", birth_date: "", social_security: false, religion: "" };
+const emptyForm = { employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", nationality: "", gender: "", national_id: "", birth_date: "", social_security: false, religion: "", work_type: "standard", workdays: "", req_hours: "" };
+const WEEKDAYS: { key: string; ar: string; en: string }[] = [
+  { key: "Sat", ar: "السبت", en: "Sat" }, { key: "Sun", ar: "الأحد", en: "Sun" },
+  { key: "Mon", ar: "الاثنين", en: "Mon" }, { key: "Tue", ar: "الثلاثاء", en: "Tue" },
+  { key: "Wed", ar: "الأربعاء", en: "Wed" }, { key: "Thu", ar: "الخميس", en: "Thu" },
+  { key: "Fri", ar: "الجمعة", en: "Fri" },
+];
+
+function ScheduleFields({ f, set, ar }: { f: any; set: (u: any) => void; ar: boolean }) {
+  const days: string[] = f.workdays ? String(f.workdays).split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+  const fixed = f.work_type === "fixed";
+  const dailyWage = f.work_type === "daily_wage";
+  const toggle = (k: string) => {
+    const next = days.includes(k) ? days.filter((d) => d !== k) : [...days, k];
+    set({ workdays: WEEKDAYS.filter((w) => next.includes(w.key)).map((w) => w.key).join(",") });
+  };
+  return (
+    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3 sm:col-span-2">
+      <div className="text-xs font-semibold text-slate-500">
+        {ar ? "الدوام (اختياري — اتركه فاضي ليأخذ افتراضي الشركة)" : "Schedule (optional — leave empty to use company default)"}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="form-label">{ar ? "نوع الدوام" : "Work type"}</label>
+          <select className="form-input" value={f.work_type} onChange={(e) => set({ work_type: e.target.value })}>
+            <option value="standard">{ar ? "عادي (حسب الجدول)" : "Standard (by schedule)"}</option>
+            <option value="fixed">{ar ? "ثابت / مُعفى (راتب كامل بدون خصم حضور)" : "Fixed / exempt (full salary, no attendance deduction)"}</option>
+            <option value="daily_wage">{ar ? "مياومة (أجر عن أيام الحضور فقط)" : "Daily wage (paid only for attended days)"}</option>
+          </select>
+        </div>
+        <div>
+          <label className="form-label">{ar ? "عدد ساعات اليوم المطلوبة" : "Required hours/day"}</label>
+          <input type="number" step="any" className="form-input" placeholder={ar ? "افتراضي الشركة" : "company default"}
+            value={f.req_hours} onChange={(e) => set({ req_hours: e.target.value })} disabled={fixed} />
+        </div>
+      </div>
+      <div className={fixed || dailyWage ? "opacity-40 pointer-events-none" : ""}>
+        <label className="form-label">{ar ? "أيام الدوام" : "Work days"}</label>
+        <div className="flex flex-wrap gap-1.5">
+          {WEEKDAYS.map((w) => (
+            <button key={w.key} type="button" onClick={() => toggle(w.key)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${days.includes(w.key) ? "bg-brand-600 text-white border-brand-600" : "bg-white text-slate-600 border-slate-200 hover:border-brand-400"}`}>
+              {ar ? w.ar : w.en}
+            </button>
+          ))}
+        </div>
+      </div>
+      {fixed && <div className="text-[11px] text-amber-600">{ar ? "موظف ثابت: راتبه كامل دائماً، الحضور للتسجيل فقط بدون أي خصم." : "Fixed employee: always full salary; attendance is recorded only, no deductions."}</div>}
+      {dailyWage && <div className="text-[11px] text-sky-600">{ar ? "مياومة: خانة «الراتب الأساسي» = أجر اليوم الواحد. يأخذ أجراً عن كل يوم حضور (كامل إن أتمّ ساعاته، ناقص إن قصّر، إضافي إن زاد)، ولا أجر للأيام الغائبة، وبدون ضمان." : "Daily wage: the 'Base salary' field = the daily rate. Paid per attended day (full if hours met, less if short, extra if over); no pay for absent days; no social security."}</div>}
+    </div>
+  );
+}
 
 export default function EmployeesPage() {
   const { t, lang } = useLanguage();
@@ -119,7 +170,7 @@ export default function EmployeesPage() {
   const [showLetterModal, setShowLetterModal] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [editForm, setEditForm] = useState({ employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", nationality: "", gender: "", national_id: "", birth_date: "", social_security: false, religion: "", photo_url: "" });
+  const [editForm, setEditForm] = useState({ employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", nationality: "", gender: "", national_id: "", birth_date: "", social_security: false, religion: "", photo_url: "", work_type: "standard", workdays: "", req_hours: "" });
 
   // Existing employee documents
   const [empDocs, setEmpDocs] = useState<any[]>([]);
@@ -288,6 +339,9 @@ export default function EmployeesPage() {
       national_id: selectedEmployee.national_id || "",
       birth_date: selectedEmployee.birth_date ? String(selectedEmployee.birth_date).substring(0, 10) : "",
       photo_url: selectedEmployee.photo_url || "",
+      work_type: selectedEmployee.work_type || "standard",
+      workdays: selectedEmployee.workdays || "",
+      req_hours: selectedEmployee.req_hours != null ? String(selectedEmployee.req_hours) : "",
     });
     setPhoneError(""); setEmailError("");
     setShowEdit(true);
@@ -631,7 +685,7 @@ export default function EmployeesPage() {
                       const openDoc = async () => {
                         try {
                           const token = localStorage.getItem("token");
-                          const res = await fetch(downloadUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                          const res = await fetch(downloadUrl, { credentials: "include", headers: token ? { Authorization: `Bearer ${token}` } : {} });
                           if (!res.ok) throw new Error("Failed to load");
                           const blob = await res.blob();
                           const url = URL.createObjectURL(blob);
@@ -653,7 +707,7 @@ export default function EmployeesPage() {
                         if (!window.confirm(ar ? "تأكيد حذف هذه الوثيقة؟" : "Delete this document?")) return;
                         try {
                           const token = localStorage.getItem("token");
-                          const res = await fetch(downloadUrl, { method: "DELETE", headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                          const res = await fetch(downloadUrl, { method: "DELETE", credentials: "include", headers: token ? { Authorization: `Bearer ${token}` } : {} });
                           if (!res.ok) throw new Error("Delete failed");
                           await loadDocs(empIdParam);
                           setSuccess(ar ? "تم الحذف" : "Deleted");
@@ -751,6 +805,7 @@ export default function EmployeesPage() {
                 <div><label className="form-label">{ar ? "الجنس" : "Gender"}</label><select className="form-input" value={form.gender} onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))}><option value="">{ar ? "اختر الجنس" : "Select gender"}</option><option value="male">{ar ? "ذكر" : "Male"}</option><option value="female">{ar ? "أنثى" : "Female"}</option></select></div>
                 <div><label className="form-label">{religionTitle}</label><input className="form-input" value={form.religion} onChange={(e) => setForm((f) => ({ ...f, religion: e.target.value }))} placeholder={ar ? "مثال: مسلم" : "e.g. Muslim"} /></div>
                 <div className="flex items-center justify-between"><div className="text-sm font-medium text-slate-700">{t("socialSecurity")}</div><label className="toggle"><input type="checkbox" checked={form.social_security} onChange={(e) => setForm((f) => ({ ...f, social_security: e.target.checked }))} /><span className="toggle-slider" /></label></div>
+                <ScheduleFields f={form} set={(u) => setForm((prev) => ({ ...prev, ...u }))} ar={ar} />
                 <div className="flex justify-end gap-2">
                   <button type="button" className="btn btn-secondary" onClick={() => setShowAdd(false)}>{t("cancel")}</button>
                   <button type="submit" className="btn btn-primary">{ar ? "التالي" : "Next"} <ChevronRight size={15} /></button>
@@ -879,6 +934,7 @@ export default function EmployeesPage() {
               <div><label className="form-label">{ar ? "الجنس" : "Gender"}</label><select className="form-input" value={editForm.gender} onChange={(e) => setEditForm((f) => ({ ...f, gender: e.target.value }))}><option value="">{ar ? "اختر الجنس" : "Select gender"}</option><option value="male">{ar ? "ذكر" : "Male"}</option><option value="female">{ar ? "أنثى" : "Female"}</option></select></div>
               <div><label className="form-label">{religionTitle}</label><input className="form-input" value={editForm.religion} onChange={(e) => setEditForm((f) => ({ ...f, religion: e.target.value }))} placeholder={ar ? "مثال: مسلم" : "e.g. Muslim"} /></div>
               <div className="flex items-center justify-between"><div className="text-sm font-medium text-slate-700">{t("socialSecurity")}</div><label className="toggle"><input type="checkbox" checked={editForm.social_security} onChange={(e) => setEditForm((f) => ({ ...f, social_security: e.target.checked }))} /><span className="toggle-slider" /></label></div>
+              <ScheduleFields f={editForm} set={(u) => setEditForm((prev) => ({ ...prev, ...u }))} ar={ar} />
               <div className="flex justify-end gap-2"><button type="button" className="btn btn-secondary" onClick={() => setShowEdit(false)}>{t("cancel")}</button><button type="submit" className="btn btn-primary" disabled={savingEdit}>{savingEdit ? <span className="spinner" /> : null}{t("save")}</button></div>
             </form>
           </div>

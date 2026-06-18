@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowRight, Wallet, Clock, UserCircle, BarChart3, ShieldCheck, TrendingUp,
-  Globe, LogIn, PlayCircle, CheckCircle2, Sparkles, Building2,
+  Globe, LogIn, PlayCircle, CheckCircle2, Sparkles,
   Flower2, Sun, Sparkle, Diamond, Hexagon,
 } from "lucide-react";
 import clsx from "clsx";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useInView } from "@/lib/useInView";
+import BrandLogo from "@/components/BrandLogo";
 
 /* ─── Top navigation ─── */
 function TopNav({ ar }: { ar: boolean }) {
@@ -22,15 +23,7 @@ function TopNav({ ar }: { ar: boolean }) {
           onClick={() => router.push("/")}
           className="flex items-center gap-2"
         >
-          <img
-            src="/logo.png"
-            alt="PayNest"
-            className="h-9 w-9 object-contain"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-          />
-          <span className="font-black text-lg text-slate-900 tracking-tight">
-            Pay<span className="text-brand-600">Nest</span>
-          </span>
+          <BrandLogo variant="row" markClass="h-9" textClass="h-5" />
         </button>
 
         <nav className="flex items-center" />
@@ -44,7 +37,7 @@ function TopNav({ ar }: { ar: boolean }) {
             {lang === "ar" ? "EN" : "AR"}
           </button>
           <Link
-            href="/login"
+            href="/portal-select"
             className="text-slate-700 hover:text-slate-900 text-sm font-medium px-3 py-2 hidden sm:inline-flex items-center gap-1"
           >
             <LogIn size={14} />
@@ -178,7 +171,7 @@ function Hero({ ar }: { ar: boolean }) {
             <ArrowRight size={17} className={ar ? "rotate-180" : ""} />
           </button>
           <Link
-            href="/login"
+            href="/portal-select"
             className="inline-flex items-center gap-2 bg-white text-slate-700 hover:text-slate-900 border border-slate-200 hover:border-slate-300 text-base font-semibold px-6 py-3 rounded-xl shadow-sm transition-all"
           >
             <LogIn size={17} />
@@ -346,7 +339,7 @@ function Footer({ ar }: { ar: boolean }) {
           <button onClick={() => router.push("/privacy")} className="hover:text-slate-900 transition-colors">
             {ar ? "الخصوصية" : "Privacy"}
           </button>
-          <Link href="/login" className="hover:text-slate-900 transition-colors">
+          <Link href="/portal-select" className="hover:text-slate-900 transition-colors">
             {ar ? "تسجيل الدخول" : "Log In"}
           </Link>
           <button onClick={() => router.push("/signup")} className="hover:text-slate-900 transition-colors">

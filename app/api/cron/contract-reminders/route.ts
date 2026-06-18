@@ -62,6 +62,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ scanned: employees.length, created });
   } catch (err: any) {
     console.error("[contract-reminders]", err);
-    return NextResponse.json({ error: err?.message || "error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

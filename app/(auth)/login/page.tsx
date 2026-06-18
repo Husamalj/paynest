@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ShieldCheck, ArrowRight, ArrowLeft, Eye, EyeOff, Globe } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
+import BrandLogo from "@/components/BrandLogo";
 
 function LangToggle() {
   const { lang, toggleLanguage } = useLanguage();
@@ -38,18 +39,15 @@ export default function StaffLoginPage() {
       setError("");
 
       const res = await api.post("/auth/login", { email, password });
-      const { token, user } = res.data;
+      const { user } = res.data;
 
       if (user.role === "employee") {
-        setError(
-          ar
-            ? "هذه البوابة ليست للموظفين. يرجى استخدام بوابة الموظف."
-            : "This portal is not for employees. Please use the Employee Portal."
-        );
+        // Don't reveal that the account exists or that it's an employee account.
+        setError(ar ? "البريد الإلكتروني أو كلمة السر غير صحيحة" : "Invalid email or password");
         return;
       }
 
-      localStorage.setItem("token", token);
+      // Credential is set by the server as an httpOnly cookie (XSS-safe).
       localStorage.setItem("paynest_logged_in", "true");
       localStorage.setItem("role", user.role);
       localStorage.setItem("user", JSON.stringify(user));
@@ -99,9 +97,9 @@ export default function StaffLoginPage() {
         </button>
         <button
           onClick={() => router.push("/")}
-          className="font-bold text-slate-900 text-[15px] hover:opacity-70 transition-opacity"
+          className="hover:opacity-70 transition-opacity"
         >
-          Pay<span className="text-brand-600">Nest</span>
+          <BrandLogo variant="row" markClass="h-8" textClass="h-5" />
         </button>
         <LangToggle />
       </header>
