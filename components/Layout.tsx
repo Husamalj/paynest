@@ -155,7 +155,14 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
   // hrTeam stays owner-only; settings visible to owner + HR.
   const navItems = role === "owner"
     ? NAV_ITEMS
-    : NAV_ITEMS.filter((item) => item.key !== "hrTeam");
+    : NAV_ITEMS
+        .filter((item) => item.key !== "hrTeam")
+        // Company Structure is owner-only — hide it from HR's Employees menu.
+        .map((item) =>
+          item.key === "employees" && item.children
+            ? { ...item, children: item.children.filter((c) => c.key !== "companyStructure") }
+            : item
+        );
   const companyName = settings?.company_name || user.company_name || "PayNest";
 
   const currentNav = navItems.find((i) =>
