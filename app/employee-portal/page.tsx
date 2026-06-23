@@ -72,6 +72,17 @@ function StatusBadge({ status, isRTL }: { status: string; isRTL: boolean }) {
   return <span className={`badge ${cls[status] || "badge-gray"}`}>{labels[status] || status}</span>;
 }
 
+function PriorityBadge({ priority, isRTL }: { priority?: string; isRTL: boolean }) {
+  const map: Record<string, { cls: string; ar: string; en: string }> = {
+    urgent: { cls: "badge-red", ar: "عاجل", en: "Urgent" },
+    high: { cls: "badge-yellow", ar: "أهمية عالية", en: "High" },
+    medium: { cls: "badge-blue", ar: "متوسطة", en: "Medium" },
+    low: { cls: "badge-gray", ar: "أقل أهمية", en: "Low" },
+  };
+  const p = map[priority || ""] ? (priority as string) : "medium";
+  return <span className={`badge ${map[p].cls}`}>{isRTL ? map[p].ar : map[p].en}</span>;
+}
+
 /** Inline measurable-target progress bar with editable current value. */
 function TargetProgress({ task, isRTL, onSave }: { task: any; isRTL: boolean; onSave: (v: number) => void }) {
   const tgt = Number(task.targetValue ?? task.target_value);
@@ -985,7 +996,11 @@ export default function EmployeePortalPage() {
 
             {/* ── My Tasks card (reusable inline) ── */}
             {(() => {
-              const activeMine = myTasks.filter((t) => t.status !== "completed");
+              const prOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+              const activeMine = myTasks
+                .filter((t) => t.status !== "completed")
+                .slice()
+                .sort((a, b) => (prOrder[a.priority] ?? 2) - (prOrder[b.priority] ?? 2));
               const doneMine = myTasks.filter((t) => t.status === "completed");
 
               const fullTaskCard = (task: any) => (
@@ -996,6 +1011,7 @@ export default function EmployeePortalPage() {
                       <div className="text-xs text-slate-500 flex items-center gap-1 mt-1"><Clock size={12} />{formatDate(task.deadline)}</div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <PriorityBadge priority={task.priority} isRTL={isRTL} />
                       <StatusBadge status={task.status} isRTL={isRTL} />
                       {task.status !== "completed" && (
                         <button className="btn btn-sm btn-success" onClick={() => updateTaskStatus(task.id, "completed")}>{isRTL ? "تم" : "Done"}</button>
