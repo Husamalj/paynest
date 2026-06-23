@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -359,6 +360,14 @@ function Footer({ ar }: { ar: boolean }) {
 export default function Page() {
   const { lang } = useLanguage();
   const ar = lang === "ar";
+  // The marketing landing is a light-themed page — keep it light even if the
+  // app's dark mode is enabled (restore dark when navigating away).
+  useEffect(() => {
+    const html = document.documentElement;
+    const had = html.classList.contains("dark");
+    html.classList.remove("dark");
+    return () => { if (had) html.classList.add("dark"); };
+  }, []);
   return (
     <div dir={ar ? "rtl" : "ltr"} className="min-h-screen bg-brand-50/60 text-slate-900">
       <TopNav ar={ar} />
