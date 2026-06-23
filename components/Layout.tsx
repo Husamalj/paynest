@@ -307,7 +307,7 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
       </aside>
 
       <div className={clsx("min-h-screen flex flex-col transition-all", isRTL ? "lg:mr-[68px]" : "lg:ml-[68px]")}>
-        <header className="sticky top-0 z-20 h-16 bg-white/90 backdrop-blur border-b border-slate-200 px-4 lg:px-6 flex items-center justify-between">
+        <header className="sticky top-0 z-20 h-16 bg-white backdrop-blur border-b border-slate-200 px-4 lg:px-6 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <button className="lg:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg" onClick={() => setSidebarOpen(true)}>
               <Menu size={20} />
