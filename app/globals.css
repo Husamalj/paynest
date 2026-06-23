@@ -342,6 +342,10 @@ html.dark .bg-white,
 html.dark .bg-slate-50,
 html.dark .bg-slate-50\/60,
 html.dark .bg-slate-50\/40 { background-color: #131c2e !important; }
+/* Translucent surfaces (e.g. the sticky top header bg-white/90) */
+html.dark .bg-white\/90,
+html.dark .bg-white\/80,
+html.dark .bg-white\/70 { background-color: rgba(19, 28, 46, 0.9) !important; }
 html.dark .bg-slate-100,
 html.dark .bg-slate-100\/60 { background-color: #1e293b !important; }
 html.dark .bg-slate-200 { background-color: #334155 !important; }
