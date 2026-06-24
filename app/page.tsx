@@ -231,36 +231,25 @@ function TrustStrip({ ar }: { ar: boolean }) {
 
 /* ─── Feature card ─── */
 function FeatureCard({
-  icon: Icon, title, desc, accent, img, delay = 0,
+  icon: Icon, title, desc, accent, delay = 0,
 }: {
-  icon: any; title: string; desc: string; accent: string; img?: string; delay?: number;
+  icon: any; title: string; desc: string; accent: string; delay?: number;
 }) {
   const [ref, inView] = useInView<HTMLDivElement>(0.15);
   return (
     <div
       ref={ref}
       className={clsx(
-        "group bg-white rounded-2xl p-3.5 border border-slate-200/70 hover:border-slate-300 hover:shadow-elevated transition-all duration-500 overflow-hidden",
+        "group bg-white rounded-2xl p-5 border border-slate-200/70 hover:border-slate-300 hover:shadow-elevated transition-all duration-500",
         inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
       )}
       style={{ transitionDelay: `${delay}ms` }}
     >
-      {img && (
-        <img
-          src={img}
-          alt={title}
-          loading="lazy"
-          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-          className="w-full h-36 object-cover rounded-xl mb-3 bg-slate-100"
-        />
-      )}
-      <div className="flex items-center gap-2 mb-1.5 px-1">
-        <div className={clsx("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0", accent)}>
-          <Icon size={16} strokeWidth={2.2} />
-        </div>
-        <h3 className="font-bold text-slate-900 text-base">{title}</h3>
+      <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center mb-3", accent)}>
+        <Icon size={19} strokeWidth={2.2} />
       </div>
-      <p className="text-sm text-slate-500 leading-relaxed px-1">{desc}</p>
+      <h3 className="font-bold text-slate-900 text-base mb-1.5">{title}</h3>
+      <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
     </div>
   );
 }
@@ -271,7 +260,6 @@ function Features({ ar }: { ar: boolean }) {
     {
       icon: Wallet,
       accent: "bg-brand-50 text-brand-600",
-      img: "https://loremflickr.com/640/360/money,cash?lock=11",
       title: ar ? "رواتب ذكية" : "Smart Payroll",
       desc: ar
         ? "احتساب دقيق للرواتب والخصومات والمكافآت والضرائب"
@@ -280,7 +268,6 @@ function Features({ ar }: { ar: boolean }) {
     {
       icon: Clock,
       accent: "bg-emerald-50 text-emerald-600",
-      img: "https://loremflickr.com/640/360/engineer,worker?lock=22",
       title: ar ? "تتبع الحضور" : "Attendance Tracking",
       desc: ar
         ? "تتبع ساعات العمل، التأخير، الغيابات، والساعات الإضافية"
@@ -289,7 +276,6 @@ function Features({ ar }: { ar: boolean }) {
     {
       icon: UserCircle,
       accent: "bg-violet-50 text-violet-600",
-      img: "https://loremflickr.com/640/360/worker,factory?lock=33",
       title: ar ? "بوابة الموظف" : "Employee Portal",
       desc: ar
         ? "تمكين موظفيك من عرض كشوف الرواتب وطلب الإجازات"
@@ -298,7 +284,6 @@ function Features({ ar }: { ar: boolean }) {
     {
       icon: BarChart3,
       accent: "bg-amber-50 text-amber-600",
-      img: "https://loremflickr.com/640/360/chart,analytics?lock=44",
       title: ar ? "تقارير وتحليلات" : "Reports & Analytics",
       desc: ar
         ? "تقارير لحظية ورؤى لمساعدتك على اتخاذ قرارات أفضل"
@@ -307,7 +292,6 @@ function Features({ ar }: { ar: boolean }) {
     {
       icon: ShieldCheck,
       accent: "bg-rose-50 text-rose-600",
-      img: "https://loremflickr.com/640/360/security,lock?lock=55",
       title: ar ? "أمان وموثوقية" : "Secure & Reliable",
       desc: ar
         ? "وصول قائم على الصلاحيات، حماية البيانات، ومنصة قوية"
@@ -316,7 +300,6 @@ function Features({ ar }: { ar: boolean }) {
     {
       icon: TrendingUp,
       accent: "bg-sky-50 text-sky-600",
-      img: "https://loremflickr.com/640/360/business,growth?lock=66",
       title: ar ? "صُمّم للنمو" : "Built for Growth",
       desc: ar
         ? "منصة قابلة للتوسع تنمو مع أعمالك"
