@@ -200,10 +200,18 @@ export default function Chat() {
                     : <div className="w-14 h-14 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xl font-bold">{(profile.name || "?")[0]?.toUpperCase()}</div>}
                   <div className="min-w-0">
                     <div className="font-bold text-slate-900 text-lg truncate">{profile.name || profile.employee_id}</div>
-                    <div className="text-xs text-slate-400 font-mono">{profile.employee_id}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400 font-mono">{profile.employee_id}</span>
+                      {profile.role_label && <span className={`badge ${profile.role === "owner" || profile.role === "super_admin" ? "badge-purple" : profile.role === "hr" ? "badge-blue" : "badge-gray"}`}>{profile.role_label}</span>}
+                    </div>
                   </div>
                 </div>
 
+                {profile.restricted ? (
+                  <div className="text-center py-6 text-sm text-slate-400">
+                    {ar ? "تفاصيل هذا الحساب خاصة." : "This person's details are private."}
+                  </div>
+                ) : (
                 <div className="space-y-3 text-sm">
                   <Field label={ar ? "المسمى الوظيفي" : "Job Title"} value={profile.job_title} />
                   <Field label={ar ? "القسم" : "Department"} value={profile.department} />
@@ -237,6 +245,7 @@ export default function Chat() {
                     </>
                   )}
                 </div>
+                )}
               </div>
             ) : null}
           </div>

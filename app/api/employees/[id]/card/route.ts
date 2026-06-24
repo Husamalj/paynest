@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { roleRank, roleLabel, canViewProfile, canViewSensitive } from "@/lib/hierarchy";
 
 export const runtime = "nodejs";
 
@@ -11,10 +12,12 @@ async function getSystemMode(companyId: number) {
 
 /**
  * GET /api/employees/[id]/card
- * Lightweight, role-aware colleague profile for the chat panel.
- *  - Everyone in the company sees: name, id, job title, department, email, phone, photo.
- *  - Only owner/hr/super_admin additionally see sensitive fields:
- *    base salary, social security, join/contract dates, and leave balance.
+ * Role-aware colleague profile for the chat panel, governed by the company
+ * hierarchy (super_admin > owner > hr > employee):
+ *  - You may view the profile of peers and anyone BELOW you — never anyone above.
+ *    (So HR/employees cannot see the Owner's details.)
+ *  - Sensitive data (salary, social security, leave) needs HR+ AND rank >= target.
+ *  - Viewing your own card is always allowed.
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -29,20 +32,44 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     });
     if (!e) throw new HttpError(404, "Employee not found");
 
-    const canSeeSensitive = ["owner", "hr", "super_admin"].includes(session.role);
+    // Resolve the target's role from the users table (employeeNumber == employeeId).
+    const targetUser = await prisma.user.findFirst({
+      where: { companyId: session.companyId, employeeNumber: id },
+      select: { role: true },
+    });
+    const targetRole = targetUser?.role ?? "employee";
+    const isSelf = (session.employeeNumber ?? "") === id;
+
+    const viewProfile = isSelf || canViewProfile(session.role, targetRole);
+    const viewSensitive = isSelf ? roleRank(session.role) >= roleRank("hr") : canViewSensitive(session.role, targetRole);
+
+    // Minimal card when the viewer is below the target (e.g. HR opening the Owner).
+    if (!viewProfile) {
+      return NextResponse.json({
+        employee_id: e.employeeId,
+        name: e.name,
+        role: targetRole,
+        role_label: roleLabel(targetRole),
+        restricted: true,
+        can_see_sensitive: false,
+      });
+    }
 
     const card: any = {
       employee_id: e.employeeId,
       name: e.name,
+      role: targetRole,
+      role_label: roleLabel(targetRole),
+      restricted: false,
       job_title: e.jobTitle ?? null,
       department: e.department ?? null,
       email: e.email || null,
       phone: e.phone || null,
       photo_url: e.photoUrl ?? null,
-      can_see_sensitive: canSeeSensitive,
+      can_see_sensitive: viewSensitive,
     };
 
-    if (canSeeSensitive) {
+    if (viewSensitive) {
       card.base_salary = e.baseSalary != null ? Number(e.baseSalary) : null;
       card.social_security = !!e.socialSecurity;
       card.join_date = e.joinDate ?? null;
