@@ -101,6 +101,22 @@ export async function POST(req: NextRequest) {
       throw new HttpError(400, "Missing required fields");
     }
 
+    // Enforce the annual/sick balance — unpaid (and other types) are unlimited.
+    const lt = body.leave_type;
+    const days = Number(body.days_count) || 0;
+    if ((lt === "annual" || lt === "sick") && days > 0) {
+      const year = new Date(body.start_date).getFullYear();
+      const bal = await prisma.leaveBalance.findFirst({
+        where: { employeeId: finalEmployeeId, year, companyId: session.companyId },
+      });
+      const total = lt === "annual" ? (bal?.annualTotal ?? 14) : (bal?.sickTotal ?? 14);
+      const used = lt === "annual" ? (bal?.annualUsed ?? 0) : (bal?.sickUsed ?? 0);
+      const remaining = total - used;
+      if (days > remaining) {
+        throw new HttpError(400, `LEAVE_BALANCE_EXCEEDED:${lt}:${Math.max(0, remaining)}`);
+      }
+    }
+
     // Check if this employee has any supervisor — if so, supervisor must approve too
     const empRecord = await prisma.employee.findFirst({
       where: { employeeId: finalEmployeeId, companyId: session.companyId },

@@ -54,7 +54,13 @@ export default function LeavesPage() {
       const res = await api.post("/leaves", { ...leaveForm, days_count: parseInt(leaveForm.days_count) || 1 });
       setLeaves((p) => [res.data, ...p]); setSuccess(t("add")); setShowAddLeave(false);
       setLeaveForm({ employee_id: "", employee_name: "", leave_type: "annual", start_date: "", end_date: "", days_count: "", reason: "" });
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) {
+      const m = String(err.message || "");
+      if (m.startsWith("LEAVE_BALANCE_EXCEEDED")) {
+        const rem = m.split(":")[2] ?? "0";
+        setError(ar ? `رصيد الإجازة لا يكفي (متبقّي ${rem} يوم). اطلب إجازة بدون راتب.` : `Not enough leave balance (${rem} days left). Request unpaid leave.`);
+      } else setError(m);
+    }
   };
 
   const handleAddHoliday = async (e: React.FormEvent) => {
@@ -79,7 +85,14 @@ export default function LeavesPage() {
   };
 
   const updBal = (empId: string, field: string, value: string) =>
-    setBalances((p) => p.map((b) => b.employee_id === empId ? { ...b, [field]: value } : b));
+    setBalances((p) => p.map((b) => {
+      if (b.employee_id !== empId) return b;
+      let v: string = value;
+      // Used can't exceed the matching total.
+      if (field === "annual_used") v = String(Math.min(Number(value) || 0, Number(b.annual_total) || 0));
+      if (field === "sick_used") v = String(Math.min(Number(value) || 0, Number(b.sick_total) || 0));
+      return { ...b, [field]: v };
+    }));
 
   const [savingBal, setSavingBal] = useState<string | null>(null);
   const saveBalance = async (b: any) => {

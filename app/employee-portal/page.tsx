@@ -635,6 +635,15 @@ export default function EmployeePortalPage() {
       setError(isRTL ? "اختار تاريخ البداية والنهاية" : "Choose start and end dates");
       return;
     }
+    // Block annual/sick over the remaining balance — unpaid is unlimited.
+    if (leaveForm.leave_type === "annual" || leaveForm.leave_type === "sick") {
+      const remaining = leaveForm.leave_type === "annual" ? Number(myBalance?.annual_remaining ?? 14) : Number(myBalance?.sick_remaining ?? 14);
+      if (days > remaining) {
+        const kind = leaveForm.leave_type === "annual" ? (isRTL ? "السنوية" : "annual") : (isRTL ? "المرضية" : "sick");
+        setError(isRTL ? `رصيد الإجازة ${kind} لا يكفي (متبقّي ${Math.max(0, remaining)} يوم). تقدر تطلب إجازة بدون راتب.` : `Not enough ${kind} leave balance (${Math.max(0, remaining)} days left). You can request unpaid leave instead.`);
+        return;
+      }
+    }
     setSaving(true); setError(""); setSuccess("");
     try {
       const res = await api.post("/leaves", {
@@ -647,7 +656,13 @@ export default function EmployeePortalPage() {
       setLeaveForm({ leave_type: "annual", start_date: "", end_date: "", reason: "", attachment: "" });
       setShowLeaveModal(false);
       setSuccess(isRTL ? "تم إرسال طلب الإجازة" : "Leave request sent");
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) {
+      const m = String(err.message || "");
+      if (m.startsWith("LEAVE_BALANCE_EXCEEDED")) {
+        const rem = m.split(":")[2] ?? "0";
+        setError(isRTL ? `الرصيد لا يكفي (متبقّي ${rem} يوم). تقدر تطلب إجازة بدون راتب.` : `Not enough balance (${rem} days left). Request unpaid leave instead.`);
+      } else setError(m);
+    }
     finally { setSaving(false); }
   };
 

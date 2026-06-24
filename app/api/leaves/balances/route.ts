@@ -85,9 +85,10 @@ export async function PUT(req: NextRequest) {
     const year = parseInt(body.year, 10) || new Date().getFullYear();
     const num = (v: any, d: number) => { const n = parseInt(v, 10); return Number.isFinite(n) && n >= 0 ? n : d; };
     const annualTotal = num(body.annual_total, 14);
-    const annualUsed = num(body.annual_used, 0);
     const sickTotal = num(body.sick_total, 14);
-    const sickUsed = num(body.sick_used, 0);
+    // Used can never exceed the total.
+    const annualUsed = Math.min(num(body.annual_used, 0), annualTotal);
+    const sickUsed = Math.min(num(body.sick_used, 0), sickTotal);
 
     const saved = await prisma.leaveBalance.upsert({
       where: { employeeId_year: { employeeId, year } },
