@@ -498,6 +498,24 @@ model AdvanceRequest {
   @@map("advance_requests")
 }
 
+// Private 1-to-1 messages between two people of the same company. Only the
+// sender and receiver can read them — HR/owner have no special access.
+model Message {
+  id             Int      @id @default(autoincrement())
+  companyId      Int      @map("company_id")
+  senderId       String   @map("sender_id") @db.VarChar(50)
+  receiverId     String   @map("receiver_id") @db.VarChar(50)
+  body           String?
+  attachment     String?  @db.Text
+  attachmentName String?  @map("attachment_name") @db.VarChar(255)
+  read           Boolean  @default(false)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([companyId, senderId, receiverId, createdAt])
+  @@index([companyId, receiverId, read])
+  @@map("messages")
+}
+
 model CompanyEvent {
   id        Int      @id @default(autoincrement())
   companyId Int      @map("company_id")

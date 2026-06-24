@@ -10,12 +10,13 @@ const DownloadPayslipButton = dynamic(
 import {
   AlertTriangle, Bell, Calendar, CheckCircle2, CheckSquare, ChevronDown,
   ClipboardList, Clock, KeyRound, Languages, LogOut, Palmtree, Paperclip, Send,
-  ThumbsDown, ThumbsUp, User, UserCheck, Users, X, Plus, Wifi, Inbox,
+  ThumbsDown, ThumbsUp, User, UserCheck, Users, X, Plus, Wifi, Inbox, MessageSquare,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useRef } from "react";
 import api from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import Chat from "@/components/Chat";
 import OrgChart, { type OrgEmp } from "@/components/OrgChart";
 import clsx from "clsx";
 
@@ -236,6 +237,7 @@ export default function EmployeePortalPage() {
   const [showAdvModal, setShowAdvModal] = useState(false);
   const [reqOpen, setReqOpen] = useState(false);
   const [showOrg, setShowOrg] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const [orgEmployees, setOrgEmployees] = useState<OrgEmp[]>([]);
   const [advSaving, setAdvSaving] = useState(false);
   const [advError, setAdvError] = useState("");
@@ -890,6 +892,11 @@ export default function EmployeePortalPage() {
                 </div>
               </div>
             </div>
+
+            <button type="button" onClick={() => setShowChat(true)} className="card p-2 w-full flex items-center gap-2 hover:bg-slate-50 text-start">
+              <MessageSquare size={18} className="text-brand-600 flex-shrink-0" />
+              <span className="font-semibold text-slate-900">{isRTL ? "المحادثات" : "Messages"}</span>
+            </button>
 
             {orgEmployees.length > 0 && (
               <button type="button" onClick={() => setShowOrg(true)} className="card p-2 w-full flex items-center gap-2 hover:bg-slate-50 text-start">
@@ -1672,6 +1679,18 @@ export default function EmployeePortalPage() {
       </main>
 
       {/* Company structure modal */}
+      {showChat && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3 sm:p-6" onClick={(e) => { if (e.target === e.currentTarget) setShowChat(false); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden" dir={isRTL ? "rtl" : "ltr"}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+              <div className="flex items-center gap-2 font-bold text-slate-900"><MessageSquare size={18} className="text-brand-600" />{isRTL ? "المحادثات" : "Messages"}</div>
+              <button onClick={() => setShowChat(false)} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
+            </div>
+            <Chat />
+          </div>
+        </div>
+      )}
+
       {showOrg && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setShowOrg(false); }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden" dir={isRTL ? "rtl" : "ltr"}>
