@@ -334,6 +334,10 @@ export default function EmployeePortalPage() {
     try { const r = await api.get("/attendance/checkin"); setCheckin(r.data); } catch { setCheckin(null); }
   };
   const doCheck = async (action: "in" | "out") => {
+    const msg = action === "in"
+      ? (isRTL ? "هل أنت متأكد من تسجيل الدخول؟" : "Are you sure you want to check in?")
+      : (isRTL ? "هل أنت متأكد من تسجيل الخروج؟" : "Are you sure you want to check out?");
+    if (!window.confirm(msg)) return;
     setCheckinBusy(true);
     try { await api.post("/attendance/checkin", { action }); await loadCheckin(); }
     catch (err: any) { setError(err.message); }
