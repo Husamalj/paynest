@@ -17,7 +17,7 @@ export default function Chat() {
   const [text, setText] = useState("");
   const [q, setQ] = useState("");
   const [sending, setSending] = useState(false);
-  const [att, setAtt] = useState<{ data: string; name: string } | null>(null);
+  const [atts, setAtts] = useState<{ data: string; name: string }[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<string | null>(null);
   activeRef.current = active?.employee_id ?? null;
@@ -38,21 +38,50 @@ export default function Chat() {
   }, [active?.employee_id]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs.length]);
 
+  const MAX_FILES = 5;
+  const MAX_SIZE = 3 * 1024 * 1024; // 3MB per file — stays under Vercel's 4.5MB request-body limit after base64
+
   const pickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (f.size > 5 * 1024 * 1024) { alert(ar ? "الملف أكبر من 5MB" : "File exceeds 5MB"); return; }
-    const data = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(f); });
-    setAtt({ data, name: f.name });
+    const files = Array.from(e.target.files || []);
+    e.target.value = ""; // allow re-picking the same file later
+    if (!files.length) return;
+    const room = MAX_FILES - atts.length;
+    if (room <= 0) { alert(ar ? `الحد الأقصى ${MAX_FILES} ملفات` : `Up to ${MAX_FILES} files`); return; }
+    const picked = files.slice(0, room);
+    if (picked.some((f) => f.size > MAX_SIZE)) { alert(ar ? "كل ملف يجب أن يكون أقل من 3MB" : "Each file must be under 3MB"); return; }
+    const read = await Promise.all(
+      picked.map((f) => new Promise<{ data: string; name: string }>((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res({ data: r.result as string, name: f.name });
+        r.onerror = rej;
+        r.readAsDataURL(f);
+      }))
+    );
+    setAtts((prev) => [...prev, ...read].slice(0, MAX_FILES));
   };
 
   const send = async () => {
-    if (!active || (!text.trim() && !att)) return;
+    if (!active || (!text.trim() && atts.length === 0)) return;
     setSending(true);
     try {
-      const r = await api.post("/messages", { to: active.employee_id, body: text.trim(), attachment: att?.data || null, attachment_name: att?.name || null });
-      setMsgs((m) => [...m, r.data]);
-      setText(""); setAtt(null);
+      const created: Msg[] = [];
+      if (atts.length === 0) {
+        const r = await api.post("/messages", { to: active.employee_id, body: text.trim(), attachment: null, attachment_name: null });
+        created.push(r.data);
+      } else {
+        // One message per file; the text rides along with the first.
+        for (let i = 0; i < atts.length; i++) {
+          const r = await api.post("/messages", {
+            to: active.employee_id,
+            body: i === 0 ? text.trim() : "",
+            attachment: atts[i].data,
+            attachment_name: atts[i].name,
+          });
+          created.push(r.data);
+        }
+      }
+      setMsgs((m) => [...m, ...created]);
+      setText(""); setAtts([]);
       loadContacts();
     } catch (e: any) { alert(e.message); }
     finally { setSending(false); }
@@ -111,11 +140,30 @@ export default function Chat() {
               ))}
               <div ref={endRef} />
             </div>
-            <div className="p-3 border-t border-slate-100 flex items-center gap-2 flex-shrink-0">
-              <label className="cursor-pointer text-slate-400 hover:text-brand-600"><Paperclip size={18} /><input type="file" className="hidden" onChange={pickFile} /></label>
-              {att && <span className="text-xs text-slate-500 max-w-[120px] truncate">{att.name} <button onClick={() => setAtt(null)} className="text-rose-400">✕</button></span>}
-              <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={ar ? "اكتب رسالة..." : "Type a message..."} className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:bg-white focus:outline-none" />
-              <button onClick={send} disabled={sending || (!text.trim() && !att)} className="btn btn-primary disabled:opacity-50"><Send size={15} /></button>
+            <div className="border-t border-slate-100 flex-shrink-0">
+              {atts.length > 0 && (
+                <div className="flex flex-wrap gap-2 px-3 pt-3">
+                  {atts.map((a, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 max-w-[200px] bg-slate-100 border border-slate-200 rounded-full ps-2 pe-1 py-1 text-xs text-slate-600">
+                      <Paperclip size={11} className="flex-shrink-0" />
+                      <span className="truncate">{a.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAtts((p) => p.filter((_, idx) => idx !== i))}
+                        className="flex-shrink-0 ms-0.5 text-slate-400 hover:text-rose-500 rounded-full p-0.5"
+                        aria-label={ar ? "حذف الملف" : "Remove file"}
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="p-3 flex items-center gap-2">
+                <label className="cursor-pointer text-slate-400 hover:text-brand-600 flex-shrink-0"><Paperclip size={18} /><input type="file" multiple className="hidden" onChange={pickFile} /></label>
+                <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={ar ? "اكتب رسالة..." : "Type a message..."} className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:bg-white focus:outline-none" />
+                <button onClick={send} disabled={sending || (!text.trim() && atts.length === 0)} className="btn btn-primary disabled:opacity-50 flex-shrink-0"><Send size={15} /></button>
+              </div>
             </div>
           </>
         )}
