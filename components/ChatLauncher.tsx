@@ -44,12 +44,14 @@ export default function ChatLauncher({ className }: { className?: string }) {
       </button>
       {open && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3 sm:p-6" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden" dir={ar ? "rtl" : "ltr"}>
-            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] max-h-[680px] flex flex-col overflow-hidden" dir={ar ? "rtl" : "ltr"}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 flex-shrink-0">
               <div className="flex items-center gap-2 font-bold text-slate-900"><MessageSquare size={18} className="text-brand-600" />{ar ? "المحادثات" : "Messages"}</div>
               <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
             </div>
-            <Chat />
+            <div className="flex-1 min-h-0">
+              <Chat heightClass="h-full" bare />
+            </div>
           </div>
         </div>
       )}

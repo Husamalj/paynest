@@ -8,7 +8,7 @@ import api from "@/lib/api";
 type Contact = { employee_id: string; name: string; unread: number; last_body: string | null; last_at: string | null };
 type Msg = { id: number; sender_id: string; body: string | null; attachment_name: string | null; has_attachment: boolean; mine: boolean; created_at: string };
 
-export default function Chat() {
+export default function Chat({ heightClass = "h-[calc(100vh-9rem)]", bare = false }: { heightClass?: string; bare?: boolean } = {}) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -102,7 +102,7 @@ export default function Chat() {
   const filtered = contacts.filter((c) => (c.name || c.employee_id).toLowerCase().includes(q.toLowerCase()));
 
   return (
-    <div className="flex h-[calc(100vh-9rem)] min-h-[480px] rounded-2xl border border-slate-200 overflow-hidden bg-white" dir={ar ? "rtl" : "ltr"}>
+    <div className={`flex ${heightClass} ${bare ? "" : "min-h-[480px] rounded-2xl border border-slate-200"} overflow-hidden bg-white`} dir={ar ? "rtl" : "ltr"}>
       {/* Contacts */}
       <aside className={`w-full sm:w-72 border-e border-slate-200 flex flex-col ${active ? "hidden sm:flex" : "flex"}`}>
         <div className="p-3 border-b border-slate-100">
