@@ -13,6 +13,7 @@ import {
   ThumbsDown, ThumbsUp, User, UserCheck, Users, X, Plus, Wifi, Inbox, MessageSquare,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import ChatLauncher from "@/components/ChatLauncher";
 import { useRef } from "react";
 import api from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -770,7 +771,7 @@ export default function EmployeePortalPage() {
               </select>
             )}
 
-            <button onClick={() => setShowChat(true)} className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors" title={isRTL ? "المحادثات" : "Messages"}><MessageSquare size={18} /></button>
+            <ChatLauncher />
             <ThemeToggle />
             {/* Profile dropdown (same shape as HR Layout) */}
             <div className="relative" ref={profileRef}>
