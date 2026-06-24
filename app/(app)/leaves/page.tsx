@@ -13,7 +13,8 @@ function StatusBadge({ status, t }: any) {
 }
 
 export default function LeavesPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const ar = lang === "ar";
   const [activeTab, setActiveTab] = useState("requests");
   const [leaves, setLeaves] = useState<any[]>([]);
   const [balances, setBalances] = useState<any[]>([]);
@@ -75,6 +76,25 @@ export default function LeavesPage() {
   const handleReject = async (id: number) => {
     try { await api.put(`/leaves/${id}`, { status: "rejected" }); await loadAll(); }
     catch (err: any) { setError(err.message); }
+  };
+
+  const updBal = (empId: string, field: string, value: string) =>
+    setBalances((p) => p.map((b) => b.employee_id === empId ? { ...b, [field]: value } : b));
+
+  const [savingBal, setSavingBal] = useState<string | null>(null);
+  const saveBalance = async (b: any) => {
+    setSavingBal(b.employee_id);
+    try {
+      await api.put("/leaves/balances", {
+        employee_id: b.employee_id,
+        annual_total: Number(b.annual_total) || 0,
+        annual_used: Number(b.annual_used) || 0,
+        sick_total: Number(b.sick_total) || 0,
+        sick_used: Number(b.sick_used) || 0,
+      });
+      setSuccess(ar ? "تم حفظ الرصيد" : "Balance saved");
+    } catch (err: any) { setError(err.message); }
+    finally { setSavingBal(null); }
   };
 
 
@@ -187,20 +207,27 @@ export default function LeavesPage() {
       {activeTab === "balances" && (
         <div className="card">
           <div className="card-header"><div className="card-title">{t("leaveBalance")}</div></div>
+          <p className="text-xs text-slate-500 mb-3">{ar ? "للموظفين القدامى: عدّل الأيام المستهلكة سابقاً (قبل استخدام النظام) ثم احفظ. الإجازات الجديدة تُضاف فوقها تلقائياً." : "For existing employees: set the days already used before joining, then save. New leaves add on top automatically."}</p>
           {balances.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noData")}</div> : (
             <div className="table-wrapper">
               <table>
-                <thead><tr><th>{t("employee")}</th><th className="text-right">{t("annualLeave")} ({t("total")})</th><th className="text-right">{t("used")}</th><th className="text-right">{t("remaining")}</th><th className="text-right">{t("sickLeave")} ({t("remaining")})</th></tr></thead>
+                <thead><tr><th>{t("employee")}</th><th>{t("annualLeave")} ({t("total")})</th><th>{ar ? "سنوي مستهلك" : "Annual used"}</th><th>{t("sickLeave")} ({t("total")})</th><th>{ar ? "مرضي مستهلك" : "Sick used"}</th><th>{t("remaining")}</th><th className="text-right">{t("actions")}</th></tr></thead>
                 <tbody>
-                  {balances.map((b) => (
-                    <tr key={b.id}>
-                      <td className="font-medium">{b.employeeId}</td>
-                      <td className="text-right font-mono">{b.annualTotal ?? 14}</td>
-                      <td className="text-right font-mono">{b.annualUsed ?? 0}</td>
-                      <td className="text-right font-mono font-semibold text-emerald-600">{b.annualRemaining ?? 14}</td>
-                      <td className="text-right font-mono">{b.sickRemaining ?? 14}</td>
+                  {balances.map((b) => {
+                    const aRem = (Number(b.annual_total) || 0) - (Number(b.annual_used) || 0);
+                    const sRem = (Number(b.sick_total) || 0) - (Number(b.sick_used) || 0);
+                    return (
+                    <tr key={b.employee_id}>
+                      <td className="font-medium">{b.name || b.employee_id}</td>
+                      <td><input type="number" min="0" className="form-input w-16 py-1 text-sm" value={b.annual_total ?? 14} onChange={(e) => updBal(b.employee_id, "annual_total", e.target.value)} /></td>
+                      <td><input type="number" min="0" className="form-input w-16 py-1 text-sm" value={b.annual_used ?? 0} onChange={(e) => updBal(b.employee_id, "annual_used", e.target.value)} /></td>
+                      <td><input type="number" min="0" className="form-input w-16 py-1 text-sm" value={b.sick_total ?? 14} onChange={(e) => updBal(b.employee_id, "sick_total", e.target.value)} /></td>
+                      <td><input type="number" min="0" className="form-input w-16 py-1 text-sm" value={b.sick_used ?? 0} onChange={(e) => updBal(b.employee_id, "sick_used", e.target.value)} /></td>
+                      <td className="font-mono font-semibold text-emerald-600 whitespace-nowrap">{aRem} / {sRem}</td>
+                      <td className="text-right"><button className="btn btn-sm btn-primary" disabled={savingBal === b.employee_id} onClick={() => saveBalance(b)}>{savingBal === b.employee_id ? <span className="spinner" /> : t("save")}</button></td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

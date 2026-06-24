@@ -69,3 +69,33 @@ export async function GET(req: NextRequest) {
     return errorResponse(err);
   }
 }
+
+// PUT — HR/owner sets an employee's leave balance for a year (opening totals +
+// days already used before joining PayNest). Stored as absolute values; new
+// approved leaves still increment `used` on top of this.
+export async function PUT(req: NextRequest) {
+  try {
+    const session = await requireAuth(req);
+    requireRole(session, ["owner", "hr", "super_admin"]);
+    if (session.companyId == null) throw new HttpError(403, "No company scope");
+
+    const body = await req.json();
+    const employeeId = String(body.employee_id || "");
+    if (!employeeId) throw new HttpError(400, "employee_id is required");
+    const year = parseInt(body.year, 10) || new Date().getFullYear();
+    const num = (v: any, d: number) => { const n = parseInt(v, 10); return Number.isFinite(n) && n >= 0 ? n : d; };
+    const annualTotal = num(body.annual_total, 14);
+    const annualUsed = num(body.annual_used, 0);
+    const sickTotal = num(body.sick_total, 14);
+    const sickUsed = num(body.sick_used, 0);
+
+    const saved = await prisma.leaveBalance.upsert({
+      where: { employeeId_year: { employeeId, year } },
+      create: { companyId: session.companyId, employeeId, year, annualTotal, annualUsed, sickTotal, sickUsed },
+      update: { annualTotal, annualUsed, sickTotal, sickUsed },
+    });
+    return NextResponse.json({ success: true, balance: saved });
+  } catch (err) {
+    return errorResponse(err);
+  }
+}
