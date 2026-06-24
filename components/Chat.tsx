@@ -18,6 +18,8 @@ export default function Chat() {
   const [q, setQ] = useState("");
   const [sending, setSending] = useState(false);
   const [atts, setAtts] = useState<{ data: string; name: string }[]>([]);
+  const [profile, setProfile] = useState<any | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<string | null>(null);
   activeRef.current = active?.employee_id ?? null;
@@ -87,7 +89,16 @@ export default function Chat() {
     finally { setSending(false); }
   };
 
+  const openProfile = async () => {
+    if (!active) return;
+    setProfileLoading(true); setProfile(null);
+    try { const r = await api.get(`/employees/${active.employee_id}/card`); setProfile(r.data); }
+    catch { setProfile({ employee_id: active.employee_id, name: active.name }); }
+    finally { setProfileLoading(false); }
+  };
+
   const fmt = (d: string) => new Date(d).toLocaleString(ar ? "ar" : "en", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
+  const fmtDate = (d: any) => (d ? String(d).substring(0, 10) : "—");
   const filtered = contacts.filter((c) => (c.name || c.employee_id).toLowerCase().includes(q.toLowerCase()));
 
   return (
@@ -124,8 +135,10 @@ export default function Chat() {
           <>
             <div className="h-14 px-4 border-b border-slate-100 flex items-center gap-3 flex-shrink-0">
               <button className="sm:hidden text-slate-400" onClick={() => setActive(null)}><X size={18} /></button>
-              <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold">{(active.name || "?")[0]?.toUpperCase()}</div>
-              <div className="font-semibold text-slate-900">{active.name || active.employee_id}</div>
+              <button onClick={openProfile} className="flex items-center gap-3 text-start hover:opacity-80 transition-opacity" title={ar ? "عرض الملف الشخصي" : "View profile"}>
+                <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold">{(active.name || "?")[0]?.toUpperCase()}</div>
+                <div className="font-semibold text-slate-900">{active.name || active.employee_id}</div>
+              </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50/60">
               {msgs.length === 0 && <div className="text-center text-sm text-slate-400 py-10">{ar ? "لا رسائل بعد — قل مرحباً 👋" : "No messages yet — say hi 👋"}</div>}
@@ -168,6 +181,76 @@ export default function Chat() {
           </>
         )}
       </section>
+
+      {/* Profile modal */}
+      {(profileLoading || profile) && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setProfile(null); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto" dir={ar ? "rtl" : "ltr"}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+              <h3 className="font-bold text-slate-800">{ar ? "الملف الشخصي" : "Profile"}</h3>
+              <button onClick={() => setProfile(null)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
+            </div>
+            {profileLoading ? (
+              <div className="flex items-center justify-center py-12 text-slate-400 gap-2"><span className="spinner spinner-dark w-5 h-5" />{ar ? "جاري التحميل..." : "Loading..."}</div>
+            ) : profile ? (
+              <div className="p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  {profile.photo_url
+                    ? <img src={profile.photo_url} alt="" className="w-14 h-14 rounded-full object-cover" />
+                    : <div className="w-14 h-14 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xl font-bold">{(profile.name || "?")[0]?.toUpperCase()}</div>}
+                  <div className="min-w-0">
+                    <div className="font-bold text-slate-900 text-lg truncate">{profile.name || profile.employee_id}</div>
+                    <div className="text-xs text-slate-400 font-mono">{profile.employee_id}</div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-sm">
+                  <Field label={ar ? "المسمى الوظيفي" : "Job Title"} value={profile.job_title} />
+                  <Field label={ar ? "القسم" : "Department"} value={profile.department} />
+                  <Field label={ar ? "البريد الإلكتروني" : "Email"} value={profile.email} mono />
+                  <Field label={ar ? "الهاتف" : "Phone"} value={profile.phone} />
+
+                  {profile.can_see_sensitive && (
+                    <>
+                      <div className="border-t border-slate-100 pt-3 grid grid-cols-2 gap-3">
+                        <div>
+                          <div className="text-[11px] font-semibold text-slate-400 uppercase mb-0.5">{ar ? "الراتب الأساسي" : "Base Salary"}</div>
+                          <div className="font-mono font-semibold text-slate-900">{profile.base_salary != null ? Number(profile.base_salary).toFixed(2) : "—"}</div>
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-semibold text-slate-400 uppercase mb-0.5">{ar ? "الضمان الاجتماعي" : "Social Security"}</div>
+                          <div>{profile.social_security ? <span className="badge badge-purple">{ar ? "مفعّل" : "Enabled"}</span> : <span className="badge badge-gray">{ar ? "معطّل" : "Disabled"}</span>}</div>
+                        </div>
+                        <Field label={ar ? "تاريخ الانضمام" : "Join Date"} value={fmtDate(profile.join_date)} />
+                        <Field label={ar ? "انتهاء العقد" : "Contract End"} value={fmtDate(profile.contract_end_date)} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <div className="text-[11px] font-semibold text-slate-400 uppercase mb-0.5">{ar ? "إجازات سنوية متبقية" : "Annual Leave Left"}</div>
+                          <span className="badge badge-green">{profile.annual_remaining ?? "—"} {ar ? "يوم" : "days"}</span>
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-semibold text-slate-400 uppercase mb-0.5">{ar ? "إجازات مرضية متبقية" : "Sick Leave Left"}</div>
+                          <span className="badge badge-green">{profile.sick_remaining ?? "—"} {ar ? "يوم" : "days"}</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, value, mono = false }: { label: string; value: any; mono?: boolean }) {
+  return (
+    <div>
+      <div className="text-[11px] font-semibold text-slate-400 uppercase mb-0.5">{label}</div>
+      <div className={`text-slate-800 ${mono ? "font-mono break-all" : ""}`}>{value || "—"}</div>
     </div>
   );
 }
