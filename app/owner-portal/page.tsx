@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useMemo } from "react";
 import {
-  Users, Bell, CheckSquare, Calendar, LogOut, X,
+  Users, Bell, CheckSquare, Calendar, LogOut, X, MessageSquare,
   Plus, AlertTriangle, CheckCircle2, ChevronDown, ShieldCheck,
   Edit2, Trash2, Phone, Mail, Hash, FileText, CheckCircle,
   Upload, ChevronRight, Languages, Eye, EyeOff,
   LayoutDashboard, Wallet, DollarSign, TrendingDown, TrendingUp, Gift, Shield, Banknote, Briefcase, Clock,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import Chat from "@/components/Chat";
 import clsx from "clsx";
 import api, { apiPostForm } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -61,6 +62,7 @@ export default function OwnerPortalPage() {
 
   const [user] = useState(() => typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {});
   const [profileOpen, setProfileOpen] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const [tab, setTab] = useState<Tab>("overview");
 
   /* ─── data ─── */
@@ -414,6 +416,7 @@ export default function OwnerPortalPage() {
         </div>
 
         <div className="flex items-center gap-2">
+        <button onClick={() => setShowChat(true)} className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors" title={ar ? "المحادثات" : "Messages"}><MessageSquare size={18} /></button>
         <ThemeToggle />
         <div className="relative">
           <button onClick={() => setProfileOpen((o) => !o)} className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors">
@@ -964,6 +967,19 @@ export default function OwnerPortalPage() {
               </div>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ══ MESSAGES CHAT MODAL ══ */}
+      {showChat && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3 sm:p-6" onClick={(e) => { if (e.target === e.currentTarget) setShowChat(false); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden" dir={isRTL ? "rtl" : "ltr"}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+              <div className="flex items-center gap-2 font-bold text-slate-900"><MessageSquare size={18} className="text-brand-600" />{ar ? "المحادثات" : "Messages"}</div>
+              <button onClick={() => setShowChat(false)} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
+            </div>
+            <Chat />
+          </div>
         </div>
       )}
     </div>
