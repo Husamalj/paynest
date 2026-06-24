@@ -770,6 +770,7 @@ export default function EmployeePortalPage() {
               </select>
             )}
 
+            <button onClick={() => setShowChat(true)} className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors" title={isRTL ? "المحادثات" : "Messages"}><MessageSquare size={18} /></button>
             <ThemeToggle />
             {/* Profile dropdown (same shape as HR Layout) */}
             <div className="relative" ref={profileRef}>
