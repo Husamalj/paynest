@@ -99,6 +99,23 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
+    // If a previously-approved leave is no longer approved (rejected/un-approved),
+    // give the days back to the balance.
+    if (existing.status === "approved" && leave.status !== "approved" && leave.startDate && leave.daysCount) {
+      const leaveYear = new Date(leave.startDate).getFullYear();
+      if (leave.leaveType === "annual") {
+        await prisma.leaveBalance.updateMany({
+          where: { employeeId: leave.employeeId ?? "", year: leaveYear, companyId: session.companyId },
+          data: { annualUsed: { decrement: leave.daysCount } },
+        });
+      } else if (leave.leaveType === "sick") {
+        await prisma.leaveBalance.updateMany({
+          where: { employeeId: leave.employeeId ?? "", year: leaveYear, companyId: session.companyId },
+          data: { sickUsed: { decrement: leave.daysCount } },
+        });
+      }
+    }
+
     // Audit: log the decision (approve / reject / status update)
     const action = leave.status === "approved" ? "approve" : leave.status === "rejected" ? "reject" : "update";
     await logAudit(session, action, "leave", leave.id, {
