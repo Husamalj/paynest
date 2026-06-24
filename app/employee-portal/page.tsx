@@ -1975,9 +1975,11 @@ export default function EmployeePortalPage() {
       {detailModal && myPayroll && (() => {
         const att = parseFloat(myPayroll.adjustment) || 0;
         const attDed = Math.max(0, -att);
-        const manualDed = parseFloat(myPayroll.deductionTotal || myPayroll.deduction_total) || 0;
+        const totalManualDed = parseFloat(myPayroll.deductionTotal || myPayroll.deduction_total) || 0;
+        const advanceDed = parseFloat(myPayroll.advance_deduction) || 0;
+        const manualDed = Math.max(0, totalManualDed - advanceDed);
         const ss = parseFloat(myPayroll.socialSecurityDeduct || myPayroll.social_security_deduct) || 0;
-        const totalDed = attDed + manualDed + ss;
+        const totalDed = attDed + totalManualDed + ss;
         const worked = parseFloat(myPayroll.totalHours || myPayroll.total_hours) || 0;
         const diff = parseFloat(myPayroll.hourDiff || myPayroll.hour_diff) || 0;
         const required = worked - diff;
@@ -1993,7 +1995,8 @@ export default function EmployeePortalPage() {
               {detailModal === "deductions" ? (
                 <div>
                   <Row label={isRTL ? "خصم نقص ساعات الحضور" : "Attendance shortfall"} val={formatCurrency(attDed)} neg={attDed > 0} />
-                  <Row label={isRTL ? "خصومات يدوية (من الإدارة)" : "Manual deductions"} val={formatCurrency(manualDed)} neg={manualDed > 0} />
+                  {advanceDed > 0 && <Row label={isRTL ? "خصم سلفة" : "Advance deduction"} val={formatCurrency(advanceDed)} neg />}
+                  {manualDed > 0 && <Row label={isRTL ? "خصومات يدوية (من الإدارة)" : "Manual deductions"} val={formatCurrency(manualDed)} neg />}
                   <Row label={isRTL ? "الضمان الاجتماعي" : "Social security"} val={formatCurrency(ss)} neg={ss > 0} />
                   <div className="flex items-center justify-between pt-3 mt-1 border-t-2 border-slate-200 text-sm font-bold"><span>{isRTL ? "إجمالي الخصومات" : "Total deductions"}</span><span className="font-mono text-rose-700">{formatCurrency(totalDed)}</span></div>
                   <p className="text-[11px] text-slate-400 mt-3">{isRTL ? "خصم نقص الساعات يظهر عند عدم إكمال ساعات الدوام المطلوبة." : "Attendance shortfall appears when required work hours weren't completed."}</p>

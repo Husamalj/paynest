@@ -81,7 +81,7 @@ export default function TermsPage() {
               </section>
               <section>
                 <h2 className="text-lg font-bold text-slate-900 mb-3">٧. التواصل معنا</h2>
-                <p className="text-slate-600 leading-relaxed">للاستفسارات: <strong>Maen.hadayed@gmail.com</strong></p>
+                <p className="text-slate-600 leading-relaxed">للاستفسارات: <strong>maen.hadayed@gmail.com</strong></p>
               </section>
             </>
           ) : (
@@ -120,7 +120,7 @@ export default function TermsPage() {
               </section>
               <section>
                 <h2 className="text-lg font-bold text-slate-900 mb-3">7. Contact Us</h2>
-                <p className="text-slate-600 leading-relaxed">For any questions: <strong>Maen.hadayed@gmail.com</strong></p>
+                <p className="text-slate-600 leading-relaxed">For any questions: <strong>maen.hadayed@gmail.com</strong></p>
               </section>
             </>
           )}

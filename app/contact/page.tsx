@@ -48,7 +48,7 @@ export default function ContactPage() {
           </p>
 
           <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
-            <a href="mailto:Maen.hadayed@gmail.com" className="flex items-center gap-4 group">
+            <a href="mailto:maen.hadayed@gmail.com" className="flex items-center gap-4 group">
               <div className="w-11 h-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center group-hover:bg-brand-100 transition-colors">
                 <Mail size={20} />
               </div>
@@ -56,7 +56,7 @@ export default function ContactPage() {
                 <div className="text-sm font-semibold text-slate-700 group-hover:text-brand-700 transition-colors">
                   {ar ? "البريد الإلكتروني" : "Email"}
                 </div>
-                <div className="text-sm text-slate-500">Maen.hadayed@gmail.com</div>
+                <div className="text-sm text-slate-500">maen.hadayed@gmail.com</div>
               </div>
             </a>
             <div className="border-t border-slate-100" />

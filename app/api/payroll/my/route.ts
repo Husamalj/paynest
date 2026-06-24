@@ -26,6 +26,20 @@ export async function GET(req: NextRequest) {
       return true;
     });
 
+    // Split out advance-related deductions so the employee sees them as a
+    // separate "advance deduction" line instead of generic "manual deductions".
+    const ded = await prisma.bonusDeduction.findMany({
+      where: { companyId: session.companyId, employeeId, type: "deduction" },
+      select: { periodMonth: true, periodYear: true, amount: true, reason: true },
+    });
+    const advByPeriod: Record<string, number> = {};
+    for (const d of ded) {
+      if (/سلفة|advance/i.test(d.reason || "")) {
+        const k = `${d.periodMonth}-${d.periodYear}`;
+        advByPeriod[k] = (advByPeriod[k] || 0) + (Number(d.amount) || 0);
+      }
+    }
+
     return NextResponse.json(
       deduped.map((r) => ({
         period_month: r.periodMonth,
@@ -37,6 +51,7 @@ export async function GET(req: NextRequest) {
         adjustment: r.adjustment,
         bonus_total: r.bonusTotal,
         deduction_total: r.deductionTotal,
+        advance_deduction: advByPeriod[`${r.periodMonth}-${r.periodYear}`] || 0,
         social_security_deduct: r.socialSecurityDeduct,
       }))
     );
