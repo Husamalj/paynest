@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send, Paperclip, Search, MessageSquare, X } from "lucide-react";
+import { Send, Paperclip, Search, MessageSquare, X, Mic, Square, Trash2 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 
@@ -20,6 +20,12 @@ export default function Chat({ heightClass = "h-[calc(100vh-9rem)]", bare = fals
   const [atts, setAtts] = useState<{ data: string; name: string }[]>([]);
   const [profile, setProfile] = useState<any | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recSecs, setRecSecs] = useState(0);
+  const recRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const timerRef = useRef<any>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<string | null>(null);
   activeRef.current = active?.employee_id ?? null;
@@ -99,6 +105,60 @@ export default function Chat({ heightClass = "h-[calc(100vh-9rem)]", bare = fals
 
   const fmt = (d: string) => new Date(d).toLocaleString(ar ? "ar" : "en", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
   const fmtDate = (d: any) => (d ? String(d).substring(0, 10) : "—");
+
+  // ── Voice notes ───────────────────────────────────────────────────────────
+  const MAX_REC_SECS = 300; // 5 min cap keeps the note under the 3MB limit
+  const isAudio = (name?: string | null) =>
+    !!name && (/^voice-note/i.test(name) || /\.(webm|ogg|mp3|m4a|wav|aac)$/i.test(name));
+  const fmtDur = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const stopTracks = () => { streamRef.current?.getTracks().forEach((t) => t.stop()); streamRef.current = null; };
+
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); stopTracks(); }, []);
+
+  const startRecording = async () => {
+    if (recording) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const type = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"]
+        .find((t) => (window as any).MediaRecorder?.isTypeSupported?.(t)) || "";
+      const rec = type ? new MediaRecorder(stream, { mimeType: type }) : new MediaRecorder(stream);
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
+      rec.onstop = async () => {
+        stopTracks();
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" });
+        if (blob.size > 0 && !(rec as any)._cancelled) {
+          if (blob.size > MAX_SIZE) {
+            alert(ar ? "التسجيل كبير جداً" : "Recording is too large");
+          } else {
+            const ext = (rec.mimeType || "audio/webm").includes("mp4") ? "m4a" : "webm";
+            const data = await new Promise<string>((res, rej) => {
+              const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(blob);
+            });
+            setAtts((p) => [...p, { data, name: `voice-note-${Date.now()}.${ext}` }].slice(0, MAX_FILES));
+          }
+        }
+        setRecording(false); setRecSecs(0);
+      };
+      recRef.current = rec;
+      rec.start();
+      setRecording(true); setRecSecs(0);
+      timerRef.current = setInterval(() => setRecSecs((s) => {
+        const n = s + 1;
+        if (n >= MAX_REC_SECS) { try { rec.stop(); } catch {} }
+        return n;
+      }), 1000);
+    } catch {
+      alert(ar ? "تعذّر الوصول إلى الميكروفون" : "Could not access the microphone");
+    }
+  };
+
+  const stopRecording = () => { try { recRef.current?.stop(); } catch {} };
+  const cancelRecording = () => {
+    if (recRef.current) { (recRef.current as any)._cancelled = true; try { recRef.current.stop(); } catch {} }
+  };
   const filtered = contacts.filter((c) => (c.name || c.employee_id).toLowerCase().includes(q.toLowerCase()));
 
   return (
@@ -146,7 +206,10 @@ export default function Chat({ heightClass = "h-[calc(100vh-9rem)]", bare = fals
                 <div key={m.id} className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${m.mine ? "bg-brand-600 text-white" : "bg-white border border-slate-200 text-slate-800"}`}>
                     {m.body && <div className="whitespace-pre-wrap break-words">{m.body}</div>}
-                    {m.has_attachment && <a href={`/api/messages/${m.id}/attachment`} target="_blank" rel="noreferrer" className={`flex items-center gap-1.5 text-xs mt-1 underline ${m.mine ? "text-white/90" : "text-brand-600"}`}><Paperclip size={12} />{m.attachment_name}</a>}
+                    {m.has_attachment && (isAudio(m.attachment_name)
+                      ? <audio controls preload="none" src={`/api/messages/${m.id}/attachment`} className="mt-1 h-9 max-w-[230px]" />
+                      : <a href={`/api/messages/${m.id}/attachment`} target="_blank" rel="noreferrer" className={`flex items-center gap-1.5 text-xs mt-1 underline ${m.mine ? "text-white/90" : "text-brand-600"}`}><Paperclip size={12} />{m.attachment_name}</a>
+                    )}
                     <div className={`text-[10px] mt-1 ${m.mine ? "text-white/70" : "text-slate-400"}`}>{fmt(m.created_at)}</div>
                   </div>
                 </div>
@@ -157,25 +220,50 @@ export default function Chat({ heightClass = "h-[calc(100vh-9rem)]", bare = fals
               {atts.length > 0 && (
                 <div className="flex flex-wrap gap-2 px-3 pt-3">
                   {atts.map((a, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 max-w-[200px] bg-slate-100 border border-slate-200 rounded-full ps-2 pe-1 py-1 text-xs text-slate-600">
-                      <Paperclip size={11} className="flex-shrink-0" />
-                      <span className="truncate">{a.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => setAtts((p) => p.filter((_, idx) => idx !== i))}
-                        className="flex-shrink-0 ms-0.5 text-slate-400 hover:text-rose-500 rounded-full p-0.5"
-                        aria-label={ar ? "حذف الملف" : "Remove file"}
-                      >
-                        <X size={12} />
-                      </button>
-                    </span>
+                    isAudio(a.name) ? (
+                      <span key={i} className="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 rounded-full ps-2 pe-1 py-1">
+                        <Mic size={12} className="text-brand-600 flex-shrink-0" />
+                        <audio controls src={a.data} className="h-7 max-w-[180px]" />
+                        <button type="button" onClick={() => setAtts((p) => p.filter((_, idx) => idx !== i))} className="flex-shrink-0 text-slate-400 hover:text-rose-500 rounded-full p-0.5" aria-label={ar ? "حذف" : "Remove"}><X size={12} /></button>
+                      </span>
+                    ) : (
+                      <span key={i} className="inline-flex items-center gap-1 max-w-[200px] bg-slate-100 border border-slate-200 rounded-full ps-2 pe-1 py-1 text-xs text-slate-600">
+                        <Paperclip size={11} className="flex-shrink-0" />
+                        <span className="truncate">{a.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setAtts((p) => p.filter((_, idx) => idx !== i))}
+                          className="flex-shrink-0 ms-0.5 text-slate-400 hover:text-rose-500 rounded-full p-0.5"
+                          aria-label={ar ? "حذف الملف" : "Remove file"}
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    )
                   ))}
                 </div>
               )}
               <div className="p-3 flex items-center gap-2">
-                <label className="cursor-pointer text-slate-400 hover:text-brand-600 flex-shrink-0"><Paperclip size={18} /><input type="file" multiple className="hidden" onChange={pickFile} /></label>
-                <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={ar ? "اكتب رسالة..." : "Type a message..."} className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:bg-white focus:outline-none" />
-                <button onClick={send} disabled={sending || (!text.trim() && atts.length === 0)} className="btn btn-primary disabled:opacity-50 flex-shrink-0"><Send size={15} /></button>
+                {recording ? (
+                  <div className="flex-1 flex items-center gap-3">
+                    <span className="flex items-center gap-2 text-rose-600 text-sm font-semibold">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+                      {fmtDur(recSecs)}
+                    </span>
+                    <span className="text-xs text-slate-400">{ar ? "جاري التسجيل…" : "Recording…"}</span>
+                    <div className="ms-auto flex items-center gap-2">
+                      <button type="button" onClick={cancelRecording} className="text-slate-400 hover:text-rose-500 p-2" title={ar ? "إلغاء" : "Cancel"}><Trash2 size={18} /></button>
+                      <button type="button" onClick={stopRecording} className="btn btn-primary flex-shrink-0" title={ar ? "إيقاف" : "Stop"}><Square size={14} /></button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <label className="cursor-pointer text-slate-400 hover:text-brand-600 flex-shrink-0"><Paperclip size={18} /><input type="file" multiple className="hidden" onChange={pickFile} /></label>
+                    <button type="button" onClick={startRecording} className="text-slate-400 hover:text-brand-600 flex-shrink-0" title={ar ? "تسجيل صوتي" : "Voice note"}><Mic size={18} /></button>
+                    <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={ar ? "اكتب رسالة..." : "Type a message..."} className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:bg-white focus:outline-none" />
+                    <button onClick={send} disabled={sending || (!text.trim() && atts.length === 0)} className="btn btn-primary disabled:opacity-50 flex-shrink-0"><Send size={15} /></button>
+                  </>
+                )}
               </div>
             </div>
           </>
