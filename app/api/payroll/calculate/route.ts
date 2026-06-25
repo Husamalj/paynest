@@ -196,6 +196,30 @@ export async function POST(req: NextRequest) {
       payrollResults = calculateDailyPayroll(empPlain, attendanceMap, settingsPlain, bonusesMap, { month: periodMonth, year: periodYear }, leaveMap);
     }
 
+    // ── Deduction cap + carry-over ──────────────────────────────────────────
+    // If manual deductions exceed the pay available this month, only deduct what
+    // the salary can cover (net floored at 0) and defer the rest to next month.
+    const nextMonth = periodMonth === 12 ? 1 : periodMonth + 1;
+    const nextYear = periodMonth === 12 ? periodYear + 1 : periodYear;
+    const carryReason = `مرحّل من ${periodMonth}/${periodYear}`;
+    const carryovers: { employeeId: string; name: string; amount: number }[] = [];
+
+    for (const pr of payrollResults as any[]) {
+      const ded = Number(pr.deduction_total) || 0;
+      const net = Number(pr.net_salary) || 0;
+      if (ded > 0 && net < 0) {
+        const available = net + ded;                         // pay before manual deductions
+        const applied = Math.max(0, Math.min(ded, available));
+        const carry = parseFloat((ded - applied).toFixed(4));
+        if (carry > 0) {
+          pr.deduction_total = parseFloat(applied.toFixed(4));
+          pr.net_salary = parseFloat((available - applied).toFixed(4));
+          pr.deferred_deduction = carry;                     // surfaced to the client
+          if (pr.employee_id) carryovers.push({ employeeId: pr.employee_id, name: pr.name, amount: carry });
+        }
+      }
+    }
+
     // Delete existing records for this period then insert new ones
     await prisma.payrollRecord.deleteMany({
       where: {
@@ -230,6 +254,27 @@ export async function POST(req: NextRequest) {
         })
       )
     );
+
+    // Persist the deferred amounts as next-month deductions. Idempotent: clear
+    // the rows previously deferred from THIS month, then recreate them.
+    await prisma.bonusDeduction.deleteMany({
+      where: { companyId, periodMonth: nextMonth, periodYear: nextYear, systemMode: mode, type: "deduction", reason: carryReason },
+    });
+    if (carryovers.length > 0) {
+      await prisma.bonusDeduction.createMany({
+        data: carryovers.map((c) => ({
+          companyId,
+          employeeId: c.employeeId,
+          employeeName: c.name,
+          type: "deduction",
+          reason: carryReason,
+          amount: c.amount,
+          periodMonth: nextMonth,
+          periodYear: nextYear,
+          systemMode: mode,
+        })),
+      });
+    }
 
     // Fire payslip-ready emails (non-blocking)
     try {
