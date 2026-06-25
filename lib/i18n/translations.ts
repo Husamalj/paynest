@@ -465,7 +465,7 @@ export const translations = {
     staffPortal: "بوابة الموظفين",
     staffPortalSub: "دخول المدير وموارد بشرية",
     evaluations: "التقييمات",
-    jobOffer: "عرض تدريب",
+    jobOffer: "عرض وظيفي",
   },
 } as const;
 

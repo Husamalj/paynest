@@ -202,7 +202,7 @@ export default function JobOfferPage() {
         <div className="flex items-center justify-between pb-2 border-b border-slate-200 flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <FileText className="text-brand-600" size={22} />
-            <h2 className="text-xl font-bold text-slate-800">{ar ? "عروض التدريب" : "Training Offers"}</h2>
+            <h2 className="text-xl font-bold text-slate-800">{ar ? "العروض الوظيفية" : "Job Offers"}</h2>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button className="btn btn-primary gap-2" onClick={newForm}><Plus size={15} />{ar ? "عرض جديد (فورم)" : "New (form)"}</button>
