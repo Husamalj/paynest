@@ -92,7 +92,7 @@ function Hero({ ar }: { ar: boolean }) {
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.05] mb-6">
           {ar ? (
             <>
-              أدِر مشاريعك<br />
+              شغّل الرواتب<br />
               <span className="relative inline-block">
                 <span className="bg-gradient-to-r from-brand-500 to-brand-700 bg-clip-text text-transparent">
                   بشكل لم تختبره من قبل
@@ -122,7 +122,7 @@ function Hero({ ar }: { ar: boolean }) {
             </>
           ) : (
             <>
-              Manage projects<br />
+              Run payroll<br />
               <span className="relative inline-block">
                 <span className="bg-gradient-to-r from-brand-500 to-brand-700 bg-clip-text text-transparent">
                   like never before
@@ -156,8 +156,8 @@ function Hero({ ar }: { ar: boolean }) {
         {/* Subhead */}
         <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed mb-8">
           {ar
-            ? "PayNest يحوّل الفوضى إلى وضوح. خطّط وتابِع وأنجِز مشاريعك عبر واجهة سهلة الاستخدام مصمَّمة للفرق العصرية."
-            : "PayNest transforms chaos into clarity. Plan, track, and deliver your projects with an intuitive interface designed for modern teams."}
+            ? "PayNest يحوّل فوضى الرواتب إلى وضوح — الحضور والرواتب والموارد البشرية في منصّة واحدة سهلة مصمَّمة للفرق العصرية."
+            : "PayNest turns payroll chaos into clarity — attendance, salaries, and HR in one simple platform built for modern teams."}
         </p>
 
         {/* CTAs */}
