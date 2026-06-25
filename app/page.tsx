@@ -360,6 +360,82 @@ function Footer({ ar }: { ar: boolean }) {
 }
 
 /* ─── Page ─── */
+/* ─── Analytics showcase (text + product preview) ─── */
+function AnalyticsShowcase({ ar }: { ar: boolean }) {
+  const [ref, inView] = useInView<HTMLDivElement>(0.15);
+  const bullets = ar
+    ? ["مؤشرات لحظية للرواتب والموظفين", "تفصيل لكل قسم ولكل موظف", "رؤى للمكافآت والخصومات والحضور", "تصدير التقارير إلى Excel بضغطة"]
+    : ["Live payroll, headcount, and cost metrics", "Per-department and per-employee breakdowns", "Bonuses, deductions, and attendance insights", "One-click export to Excel"];
+  return (
+    <section className="py-16 sm:py-24 bg-gradient-to-b from-white to-brand-50/40">
+      <div ref={ref} className="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+        {/* Copy */}
+        <div dir={ar ? "rtl" : "ltr"} className={clsx("transition-all duration-700", inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3")}>
+          <div className="text-sm font-bold text-brand-600 mb-3">{ar ? "لوحة التحليلات" : "Analytics Dashboard"}</div>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight mb-4">
+            {ar ? "قرارات مبنية على بيانات لحظية" : "Decisions backed by real-time people data"}
+          </h2>
+          <p className="text-base sm:text-lg text-slate-500 leading-relaxed mb-6">
+            {ar
+              ? "تابِع أعداد الموظفين وإنفاق الرواتب والخصومات والحضور لكل فريق — وانتقل من الإجمالي على مستوى الشركة حتى موظف واحد بضغطتين."
+              : "Track headcount, payroll spend, deductions, and attendance across every team — and drill from a company-wide total down to a single employee in two clicks."}
+          </p>
+          <ul className="space-y-3">
+            {bullets.map((b, i) => (
+              <li key={i} className="flex items-center gap-2.5 text-slate-700">
+                <CheckCircle2 size={18} className="text-brand-600 flex-shrink-0" />
+                <span className="text-sm sm:text-base">{b}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Product preview (swap the <img> src for a real screenshot anytime) */}
+        <div className={clsx("relative transition-all duration-700 delay-150", inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")}>
+          <div className="absolute -inset-6 bg-gradient-to-tr from-brand-200/40 to-violet-200/30 blur-2xl rounded-[2rem]" />
+          <div className="relative rounded-2xl border border-slate-200 bg-white shadow-elevated overflow-hidden">
+            <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-slate-100 bg-slate-50">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-300" />
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-300" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-300" />
+            </div>
+            <svg viewBox="0 0 560 320" className="w-full block" xmlns="http://www.w3.org/2000/svg">
+              <rect width="560" height="320" fill="#fff" />
+              {/* KPI tiles */}
+              {[
+                { x: 24, label: "Employees", val: "42", c: "#0c8ce8" },
+                { x: 160, label: "Net pay", val: "16,872", c: "#10b981" },
+                { x: 296, label: "Deductions", val: "578", c: "#f43f5e" },
+                { x: 432, label: "Bonuses", val: "1,250", c: "#f59e0b" },
+              ].map((k, i) => (
+                <g key={i}>
+                  <rect x={k.x} y="24" width="104" height="64" rx="10" fill="#f8fafc" stroke="#eef2f7" />
+                  <circle cx={k.x + 18} cy="44" r="7" fill={k.c} opacity="0.18" />
+                  <circle cx={k.x + 18} cy="44" r="3.5" fill={k.c} />
+                  <text x={k.x + 16} y="68" fontSize="17" fontWeight="700" fill="#0f172a">{k.val}</text>
+                  <text x={k.x + 16} y="82" fontSize="8.5" fill="#94a3b8">{k.label}</text>
+                </g>
+              ))}
+              {/* Area chart */}
+              <rect x="24" y="108" width="512" height="188" rx="12" fill="#f8fafc" stroke="#eef2f7" />
+              <text x="44" y="134" fontSize="11" fontWeight="700" fill="#334155">Payroll spend</text>
+              <defs>
+                <linearGradient id="area-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#0c8ce8" stopOpacity="0.30" />
+                  <stop offset="100%" stopColor="#0c8ce8" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <path d="M44 250 L120 218 L196 232 L272 186 L348 200 L424 156 L512 170 L512 276 L44 276 Z" fill="url(#area-fill)" />
+              <polyline points="44,250 120,218 196,232 272,186 348,200 424,156 512,170" fill="none" stroke="#0c8ce8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              {[[120,218],[272,186],[424,156]].map(([cx, cy], i) => <circle key={i} cx={cx} cy={cy} r="4" fill="#0c8ce8" stroke="#fff" strokeWidth="2" />)}
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Page() {
   const { lang } = useLanguage();
   const ar = lang === "ar";
@@ -377,6 +453,7 @@ export default function Page() {
       <Hero ar={ar} />
       <TrustStrip ar={ar} />
       <Features ar={ar} />
+      <AnalyticsShowcase ar={ar} />
       <Footer ar={ar} />
     </div>
   );
