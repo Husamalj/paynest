@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send, Paperclip, Search, MessageSquare, X } from "lucide-react";
+import { Send, Paperclip, Search, MessageSquare, X, Mic, Square, Trash2 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 
 type Contact = { employee_id: string; name: string; unread: number; last_body: string | null; last_at: string | null };
 type Msg = { id: number; sender_id: string; body: string | null; attachment_name: string | null; has_attachment: boolean; mine: boolean; created_at: string };
 
-export default function Chat() {
+export default function Chat({ heightClass = "h-[calc(100vh-9rem)]", bare = false }: { heightClass?: string; bare?: boolean } = {}) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -17,7 +17,15 @@ export default function Chat() {
   const [text, setText] = useState("");
   const [q, setQ] = useState("");
   const [sending, setSending] = useState(false);
-  const [att, setAtt] = useState<{ data: string; name: string } | null>(null);
+  const [atts, setAtts] = useState<{ data: string; name: string }[]>([]);
+  const [profile, setProfile] = useState<any | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recSecs, setRecSecs] = useState(0);
+  const recRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const timerRef = useRef<any>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<string | null>(null);
   activeRef.current = active?.employee_id ?? null;
@@ -38,31 +46,123 @@ export default function Chat() {
   }, [active?.employee_id]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs.length]);
 
+  const MAX_FILES = 5;
+  const MAX_SIZE = 3 * 1024 * 1024; // 3MB per file — stays under Vercel's 4.5MB request-body limit after base64
+
   const pickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (f.size > 5 * 1024 * 1024) { alert(ar ? "الملف أكبر من 5MB" : "File exceeds 5MB"); return; }
-    const data = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(f); });
-    setAtt({ data, name: f.name });
+    const files = Array.from(e.target.files || []);
+    e.target.value = ""; // allow re-picking the same file later
+    if (!files.length) return;
+    const room = MAX_FILES - atts.length;
+    if (room <= 0) { alert(ar ? `الحد الأقصى ${MAX_FILES} ملفات` : `Up to ${MAX_FILES} files`); return; }
+    const picked = files.slice(0, room);
+    if (picked.some((f) => f.size > MAX_SIZE)) { alert(ar ? "كل ملف يجب أن يكون أقل من 3MB" : "Each file must be under 3MB"); return; }
+    const read = await Promise.all(
+      picked.map((f) => new Promise<{ data: string; name: string }>((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res({ data: r.result as string, name: f.name });
+        r.onerror = rej;
+        r.readAsDataURL(f);
+      }))
+    );
+    setAtts((prev) => [...prev, ...read].slice(0, MAX_FILES));
   };
 
   const send = async () => {
-    if (!active || (!text.trim() && !att)) return;
+    if (!active || (!text.trim() && atts.length === 0)) return;
     setSending(true);
     try {
-      const r = await api.post("/messages", { to: active.employee_id, body: text.trim(), attachment: att?.data || null, attachment_name: att?.name || null });
-      setMsgs((m) => [...m, r.data]);
-      setText(""); setAtt(null);
+      const created: Msg[] = [];
+      if (atts.length === 0) {
+        const r = await api.post("/messages", { to: active.employee_id, body: text.trim(), attachment: null, attachment_name: null });
+        created.push(r.data);
+      } else {
+        // One message per file; the text rides along with the first.
+        for (let i = 0; i < atts.length; i++) {
+          const r = await api.post("/messages", {
+            to: active.employee_id,
+            body: i === 0 ? text.trim() : "",
+            attachment: atts[i].data,
+            attachment_name: atts[i].name,
+          });
+          created.push(r.data);
+        }
+      }
+      setMsgs((m) => [...m, ...created]);
+      setText(""); setAtts([]);
       loadContacts();
     } catch (e: any) { alert(e.message); }
     finally { setSending(false); }
   };
 
+  const openProfile = async () => {
+    if (!active) return;
+    setProfileLoading(true); setProfile(null);
+    try { const r = await api.get(`/employees/${active.employee_id}/card`); setProfile(r.data); }
+    catch { setProfile({ employee_id: active.employee_id, name: active.name }); }
+    finally { setProfileLoading(false); }
+  };
+
   const fmt = (d: string) => new Date(d).toLocaleString(ar ? "ar" : "en", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
+  const fmtDate = (d: any) => (d ? String(d).substring(0, 10) : "—");
+
+  // ── Voice notes ───────────────────────────────────────────────────────────
+  const MAX_REC_SECS = 300; // 5 min cap keeps the note under the 3MB limit
+  const isAudio = (name?: string | null) =>
+    !!name && (/^voice-note/i.test(name) || /\.(webm|ogg|mp3|m4a|wav|aac)$/i.test(name));
+  const fmtDur = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const stopTracks = () => { streamRef.current?.getTracks().forEach((t) => t.stop()); streamRef.current = null; };
+
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); stopTracks(); }, []);
+
+  const startRecording = async () => {
+    if (recording) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const type = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"]
+        .find((t) => (window as any).MediaRecorder?.isTypeSupported?.(t)) || "";
+      const rec = type ? new MediaRecorder(stream, { mimeType: type }) : new MediaRecorder(stream);
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
+      rec.onstop = async () => {
+        stopTracks();
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" });
+        if (blob.size > 0 && !(rec as any)._cancelled) {
+          if (blob.size > MAX_SIZE) {
+            alert(ar ? "التسجيل كبير جداً" : "Recording is too large");
+          } else {
+            const ext = (rec.mimeType || "audio/webm").includes("mp4") ? "m4a" : "webm";
+            const data = await new Promise<string>((res, rej) => {
+              const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(blob);
+            });
+            setAtts((p) => [...p, { data, name: `voice-note-${Date.now()}.${ext}` }].slice(0, MAX_FILES));
+          }
+        }
+        setRecording(false); setRecSecs(0);
+      };
+      recRef.current = rec;
+      rec.start();
+      setRecording(true); setRecSecs(0);
+      timerRef.current = setInterval(() => setRecSecs((s) => {
+        const n = s + 1;
+        if (n >= MAX_REC_SECS) { try { rec.stop(); } catch {} }
+        return n;
+      }), 1000);
+    } catch {
+      alert(ar ? "تعذّر الوصول إلى الميكروفون" : "Could not access the microphone");
+    }
+  };
+
+  const stopRecording = () => { try { recRef.current?.stop(); } catch {} };
+  const cancelRecording = () => {
+    if (recRef.current) { (recRef.current as any)._cancelled = true; try { recRef.current.stop(); } catch {} }
+  };
   const filtered = contacts.filter((c) => (c.name || c.employee_id).toLowerCase().includes(q.toLowerCase()));
 
   return (
-    <div className="flex h-[calc(100vh-9rem)] min-h-[480px] rounded-2xl border border-slate-200 overflow-hidden bg-white" dir={ar ? "rtl" : "ltr"}>
+    <div className={`flex ${heightClass} ${bare ? "" : "min-h-[480px] rounded-2xl border border-slate-200"} overflow-hidden bg-white`} dir={ar ? "rtl" : "ltr"}>
       {/* Contacts */}
       <aside className={`w-full sm:w-72 border-e border-slate-200 flex flex-col ${active ? "hidden sm:flex" : "flex"}`}>
         <div className="p-3 border-b border-slate-100">
@@ -95,8 +195,10 @@ export default function Chat() {
           <>
             <div className="h-14 px-4 border-b border-slate-100 flex items-center gap-3 flex-shrink-0">
               <button className="sm:hidden text-slate-400" onClick={() => setActive(null)}><X size={18} /></button>
-              <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold">{(active.name || "?")[0]?.toUpperCase()}</div>
-              <div className="font-semibold text-slate-900">{active.name || active.employee_id}</div>
+              <button onClick={openProfile} className="flex items-center gap-3 text-start hover:opacity-80 transition-opacity" title={ar ? "عرض الملف الشخصي" : "View profile"}>
+                <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold">{(active.name || "?")[0]?.toUpperCase()}</div>
+                <div className="font-semibold text-slate-900">{active.name || active.employee_id}</div>
+              </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50/60">
               {msgs.length === 0 && <div className="text-center text-sm text-slate-400 py-10">{ar ? "لا رسائل بعد — قل مرحباً 👋" : "No messages yet — say hi 👋"}</div>}
@@ -104,22 +206,148 @@ export default function Chat() {
                 <div key={m.id} className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${m.mine ? "bg-brand-600 text-white" : "bg-white border border-slate-200 text-slate-800"}`}>
                     {m.body && <div className="whitespace-pre-wrap break-words">{m.body}</div>}
-                    {m.has_attachment && <a href={`/api/messages/${m.id}/attachment`} target="_blank" rel="noreferrer" className={`flex items-center gap-1.5 text-xs mt-1 underline ${m.mine ? "text-white/90" : "text-brand-600"}`}><Paperclip size={12} />{m.attachment_name}</a>}
+                    {m.has_attachment && (isAudio(m.attachment_name)
+                      ? <audio controls preload="none" src={`/api/messages/${m.id}/attachment`} className="mt-1 h-9 max-w-[230px]" />
+                      : <a href={`/api/messages/${m.id}/attachment`} target="_blank" rel="noreferrer" className={`flex items-center gap-1.5 text-xs mt-1 underline ${m.mine ? "text-white/90" : "text-brand-600"}`}><Paperclip size={12} />{m.attachment_name}</a>
+                    )}
                     <div className={`text-[10px] mt-1 ${m.mine ? "text-white/70" : "text-slate-400"}`}>{fmt(m.created_at)}</div>
                   </div>
                 </div>
               ))}
               <div ref={endRef} />
             </div>
-            <div className="p-3 border-t border-slate-100 flex items-center gap-2 flex-shrink-0">
-              <label className="cursor-pointer text-slate-400 hover:text-brand-600"><Paperclip size={18} /><input type="file" className="hidden" onChange={pickFile} /></label>
-              {att && <span className="text-xs text-slate-500 max-w-[120px] truncate">{att.name} <button onClick={() => setAtt(null)} className="text-rose-400">✕</button></span>}
-              <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={ar ? "اكتب رسالة..." : "Type a message..."} className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:bg-white focus:outline-none" />
-              <button onClick={send} disabled={sending || (!text.trim() && !att)} className="btn btn-primary disabled:opacity-50"><Send size={15} /></button>
+            <div className="border-t border-slate-100 flex-shrink-0">
+              {atts.length > 0 && (
+                <div className="flex flex-wrap gap-2 px-3 pt-3">
+                  {atts.map((a, i) => (
+                    isAudio(a.name) ? (
+                      <span key={i} className="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 rounded-full ps-2 pe-1 py-1">
+                        <Mic size={12} className="text-brand-600 flex-shrink-0" />
+                        <audio controls src={a.data} className="h-7 max-w-[180px]" />
+                        <button type="button" onClick={() => setAtts((p) => p.filter((_, idx) => idx !== i))} className="flex-shrink-0 text-slate-400 hover:text-rose-500 rounded-full p-0.5" aria-label={ar ? "حذف" : "Remove"}><X size={12} /></button>
+                      </span>
+                    ) : (
+                      <span key={i} className="inline-flex items-center gap-1 max-w-[200px] bg-slate-100 border border-slate-200 rounded-full ps-2 pe-1 py-1 text-xs text-slate-600">
+                        <Paperclip size={11} className="flex-shrink-0" />
+                        <span className="truncate">{a.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setAtts((p) => p.filter((_, idx) => idx !== i))}
+                          className="flex-shrink-0 ms-0.5 text-slate-400 hover:text-rose-500 rounded-full p-0.5"
+                          aria-label={ar ? "حذف الملف" : "Remove file"}
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    )
+                  ))}
+                </div>
+              )}
+              <div className="p-3 flex items-center gap-2">
+                {recording ? (
+                  <div className="flex-1 flex items-center gap-3">
+                    <span className="flex items-center gap-2 text-rose-600 text-sm font-semibold">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+                      {fmtDur(recSecs)}
+                    </span>
+                    <span className="text-xs text-slate-400">{ar ? "جاري التسجيل…" : "Recording…"}</span>
+                    <div className="ms-auto flex items-center gap-2">
+                      <button type="button" onClick={cancelRecording} className="text-slate-400 hover:text-rose-500 p-2" title={ar ? "إلغاء" : "Cancel"}><Trash2 size={18} /></button>
+                      <button type="button" onClick={stopRecording} className="btn btn-primary flex-shrink-0" title={ar ? "إيقاف" : "Stop"}><Square size={14} /></button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <label className="cursor-pointer text-slate-400 hover:text-brand-600 flex-shrink-0"><Paperclip size={18} /><input type="file" multiple className="hidden" onChange={pickFile} /></label>
+                    <button type="button" onClick={startRecording} className="text-slate-400 hover:text-brand-600 flex-shrink-0" title={ar ? "تسجيل صوتي" : "Voice note"}><Mic size={18} /></button>
+                    <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={ar ? "اكتب رسالة..." : "Type a message..."} className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:bg-white focus:outline-none" />
+                    <button onClick={send} disabled={sending || (!text.trim() && atts.length === 0)} className="btn btn-primary disabled:opacity-50 flex-shrink-0"><Send size={15} /></button>
+                  </>
+                )}
+              </div>
             </div>
           </>
         )}
       </section>
+
+      {/* Profile modal */}
+      {(profileLoading || profile) && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setProfile(null); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto" dir={ar ? "rtl" : "ltr"}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+              <h3 className="font-bold text-slate-800">{ar ? "الملف الشخصي" : "Profile"}</h3>
+              <button onClick={() => setProfile(null)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
+            </div>
+            {profileLoading ? (
+              <div className="flex items-center justify-center py-12 text-slate-400 gap-2"><span className="spinner spinner-dark w-5 h-5" />{ar ? "جاري التحميل..." : "Loading..."}</div>
+            ) : profile ? (
+              <div className="p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  {profile.photo_url
+                    ? <img src={profile.photo_url} alt="" className="w-14 h-14 rounded-full object-cover" />
+                    : <div className="w-14 h-14 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xl font-bold">{(profile.name || "?")[0]?.toUpperCase()}</div>}
+                  <div className="min-w-0">
+                    <div className="font-bold text-slate-900 text-lg truncate">{profile.name || profile.employee_id}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400 font-mono">{profile.employee_id}</span>
+                      {profile.role_label && <span className={`badge ${profile.role === "owner" || profile.role === "super_admin" ? "badge-purple" : profile.role === "hr" ? "badge-blue" : "badge-gray"}`}>{profile.role_label}</span>}
+                    </div>
+                  </div>
+                </div>
+
+                {profile.restricted ? (
+                  <div className="text-center py-6 text-sm text-slate-400">
+                    {ar ? "تفاصيل هذا الحساب خاصة." : "This person's details are private."}
+                  </div>
+                ) : (
+                <div className="space-y-3 text-sm">
+                  <Field label={ar ? "المسمى الوظيفي" : "Job Title"} value={profile.job_title} />
+                  <Field label={ar ? "القسم" : "Department"} value={profile.department} />
+                  <Field label={ar ? "البريد الإلكتروني" : "Email"} value={profile.email} mono />
+                  <Field label={ar ? "الهاتف" : "Phone"} value={profile.phone} />
+
+                  {profile.can_see_sensitive && (
+                    <>
+                      <div className="border-t border-slate-100 pt-3 grid grid-cols-2 gap-3">
+                        <div>
+                          <div className="text-[11px] font-semibold text-slate-400 uppercase mb-0.5">{ar ? "الراتب الأساسي" : "Base Salary"}</div>
+                          <div className="font-mono font-semibold text-slate-900">{profile.base_salary != null ? Number(profile.base_salary).toFixed(2) : "—"}</div>
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-semibold text-slate-400 uppercase mb-0.5">{ar ? "الضمان الاجتماعي" : "Social Security"}</div>
+                          <div>{profile.social_security ? <span className="badge badge-purple">{ar ? "مفعّل" : "Enabled"}</span> : <span className="badge badge-gray">{ar ? "معطّل" : "Disabled"}</span>}</div>
+                        </div>
+                        <Field label={ar ? "تاريخ الانضمام" : "Join Date"} value={fmtDate(profile.join_date)} />
+                        <Field label={ar ? "انتهاء العقد" : "Contract End"} value={fmtDate(profile.contract_end_date)} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <div className="text-[11px] font-semibold text-slate-400 uppercase mb-0.5">{ar ? "إجازات سنوية متبقية" : "Annual Leave Left"}</div>
+                          <span className="badge badge-green">{profile.annual_remaining ?? "—"} {ar ? "يوم" : "days"}</span>
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-semibold text-slate-400 uppercase mb-0.5">{ar ? "إجازات مرضية متبقية" : "Sick Leave Left"}</div>
+                          <span className="badge badge-green">{profile.sick_remaining ?? "—"} {ar ? "يوم" : "days"}</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, value, mono = false }: { label: string; value: any; mono?: boolean }) {
+  return (
+    <div>
+      <div className="text-[11px] font-semibold text-slate-400 uppercase mb-0.5">{label}</div>
+      <div className={`text-slate-800 ${mono ? "font-mono break-all" : ""}`}>{value || "—"}</div>
     </div>
   );
 }

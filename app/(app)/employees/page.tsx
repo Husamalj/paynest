@@ -254,12 +254,19 @@ export default function EmployeesPage() {
 
   const filteredEmployees = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return employees;
-    return employees.filter((e) =>
-      String(e.employee_id || "").toLowerCase().includes(q) ||
-      String(e.name || "").toLowerCase().includes(q) ||
-      String(e.email || "").toLowerCase().includes(q)
-    );
+    const list = !q
+      ? employees
+      : employees.filter((e) =>
+          String(e.employee_id || "").toLowerCase().includes(q) ||
+          String(e.name || "").toLowerCase().includes(q) ||
+          String(e.email || "").toLowerCase().includes(q)
+        );
+    // Order strictly by employee ID (numeric when possible, e.g. 240, 243, 247…)
+    return [...list].sort((a, b) => {
+      const na = Number(a.employee_id), nb = Number(b.employee_id);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return String(a.employee_id || "").localeCompare(String(b.employee_id || ""));
+    });
   }, [employees, search]);
 
   const selectedEmployee = employees.find((e) => e.employee_id === selectedId) || null;
