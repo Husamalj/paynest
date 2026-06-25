@@ -8,7 +8,7 @@ import {
 import api from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import {
-  fileToDataUri, extractPlaceholders, renderDocx, downloadBlob, renderDocxToElement,
+  fileToDataUri, extractPlaceholders, autoMarkTemplate, renderDocx, downloadBlob, renderDocxToElement,
 } from "@/lib/docx";
 
 // A detected placeholder: `key` is the exact {{text}}; `label` is the display name.
@@ -70,14 +70,23 @@ export default function JobOfferPage() {
     if (!f) return;
     if (!DOCX_EXT.test(f.name)) { setError(ar ? "ارفع ملف Word بصيغة .docx" : "Upload a .docx Word file"); return; }
     if (f.size > 8 * 1024 * 1024) { setError(ar ? "الملف أكبر من 8MB" : "File exceeds 8MB"); return; }
-    setError(""); setBusy(ar ? "جاري قراءة العلامات..." : "Reading placeholders...");
+    setError(""); setBusy(ar ? "جاري تحليل الملف..." : "Analyzing file...");
     try {
       const uri = await fileToDataUri(f);
+      // 1) Use manual {{...}} markers if the file already has them.
       const keys = await extractPlaceholders(uri);
-      setEFile(uri);
-      setEName(f.name);
-      setEFields(keys.map((k) => ({ key: k, label: k })));
-      if (keys.length === 0) setError(ar ? "ما لقيت أي علامة {{...}} داخل الملف. تأكد إنك حاطط العلامات." : "No {{...}} placeholders found in the file.");
+      if (keys.length > 0) {
+        setEFile(uri);
+        setEName(f.name);
+        setEFields(keys.map((k) => ({ key: k, label: k })));
+      } else {
+        // 2) Otherwise auto-detect empty table cells and mark them.
+        const { dataUri, fields } = await autoMarkTemplate(uri);
+        setEFile(dataUri);
+        setEName(f.name);
+        setEFields(fields);
+        if (fields.length === 0) setError(ar ? "ما قدرت ألاقي خانات فاضية للتعبئة. لو عقدك مش جدول، حُط علامات زي {{الاسم}} مكان البيانات." : "No fillable cells found. Add {{...}} markers where data goes.");
+      }
     } catch (err: any) {
       setError(ar ? "تعذّر قراءة الملف — تأكد إنه .docx صالح" : "Could not read the file");
     } finally { setBusy(""); }
@@ -269,7 +278,8 @@ export default function JobOfferPage() {
               <div className="text-sm font-semibold text-slate-700 mb-2">{ar ? "العلامات المكتشفة (تقدر تسمّيها باسم واضح للتعبئة):" : "Detected placeholders (rename for clearer labels):"}</div>
               {eFields.map((f, i) => (
                 <div key={f.key} className="flex items-center gap-3">
-                  <code className="text-xs bg-slate-100 text-brand-700 rounded px-2 py-1.5 flex-shrink-0 min-w-[120px] text-center" dir="ltr">{`{{${f.key}}}`}</code>
+                  {!/^f\d+$/.test(f.key) && <code className="text-xs bg-slate-100 text-brand-700 rounded px-2 py-1.5 flex-shrink-0 min-w-[120px] text-center" dir="ltr">{`{{${f.key}}}`}</code>}
+                  <span className="text-slate-400 text-xs flex-shrink-0">{ar ? `حقل ${i + 1}` : `Field ${i + 1}`}</span>
                   <span className="text-slate-300">→</span>
                   <input className="form-input flex-1" value={f.label} onChange={(e) => setEFields((p) => p.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} placeholder={ar ? "اسم الحقل" : "Field label"} />
                 </div>
