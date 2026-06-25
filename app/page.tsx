@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowRight, Wallet, Clock, UserCircle, BarChart3, ShieldCheck, TrendingUp,
+  ArrowRight, Wallet, Clock, BarChart3, ShieldCheck, Users, Calendar,
   Globe, LogIn, PlayCircle, CheckCircle2, Sparkles,
   Flower2, Sun, Sparkle, Diamond, Hexagon,
 } from "lucide-react";
@@ -228,49 +228,26 @@ function TrustStrip({ ar }: { ar: boolean }) {
 }
 
 /* ─── Feature card ─── */
-/* ─── Custom feature illustrations (on-brand SVG) ─── */
-const ART_PAYROLL = (
-  <svg viewBox="0 0 300 150" className="w-full block"><rect width="300" height="150" rx="14" fill="#e9f2fd" /><rect x="68" y="30" width="128" height="90" rx="10" fill="#fff" stroke="#cfe0f5" /><rect x="82" y="44" width="58" height="9" rx="4" fill="#0c8ce8" /><rect x="82" y="64" width="98" height="6" rx="3" fill="#dbe8f8" /><rect x="82" y="78" width="78" height="6" rx="3" fill="#dbe8f8" /><rect x="82" y="92" width="90" height="6" rx="3" fill="#dbe8f8" /><circle cx="206" cy="98" r="27" fill="#0c8ce8" /><circle cx="206" cy="98" r="27" fill="none" stroke="#fff" strokeWidth="2" strokeDasharray="3 4" /><text x="206" y="108" textAnchor="middle" fontSize="28" fontWeight="800" fill="#fff" fontFamily="Georgia,serif">$</text></svg>
-);
-const ART_ATTENDANCE = (
-  <svg viewBox="0 0 300 150" className="w-full block"><rect width="300" height="150" rx="14" fill="#e6f6ef" /><circle cx="146" cy="74" r="46" fill="#fff" stroke="#bfe6d4" strokeWidth="2" /><line x1="146" y1="34" x2="146" y2="40" stroke="#9fd9bf" strokeWidth="3" /><line x1="146" y1="108" x2="146" y2="114" stroke="#9fd9bf" strokeWidth="3" /><line x1="106" y1="74" x2="112" y2="74" stroke="#9fd9bf" strokeWidth="3" /><line x1="180" y1="74" x2="186" y2="74" stroke="#9fd9bf" strokeWidth="3" /><line x1="146" y1="74" x2="146" y2="48" stroke="#10b981" strokeWidth="4" strokeLinecap="round" /><line x1="146" y1="74" x2="168" y2="82" stroke="#10b981" strokeWidth="4" strokeLinecap="round" /><circle cx="146" cy="74" r="5" fill="#0f7a5c" /><circle cx="196" cy="106" r="17" fill="#10b981" /><path d="M188 106 l6 6 l10 -12" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-);
-const ART_EMPLOYEE = (
-  <svg viewBox="0 0 300 150" className="w-full block"><rect width="300" height="150" rx="14" fill="#f0eafb" /><rect x="76" y="34" width="148" height="84" rx="12" fill="#fff" stroke="#ddd0f4" /><circle cx="108" cy="68" r="17" fill="#7c3aed" /><circle cx="108" cy="63" r="6" fill="#fff" /><path d="M97 82 a11 9 0 0 1 22 0 z" fill="#fff" /><rect x="136" y="58" width="68" height="9" rx="4" fill="#7c3aed" /><rect x="136" y="74" width="52" height="6" rx="3" fill="#e3d8f7" /><rect x="92" y="98" width="116" height="6" rx="3" fill="#ede5fb" /></svg>
-);
-const ART_REPORTS = (
-  <svg viewBox="0 0 300 150" className="w-full block"><rect width="300" height="150" rx="14" fill="#fdf2dd" /><line x1="66" y1="114" x2="236" y2="114" stroke="#ead79f" strokeWidth="2" /><rect x="84" y="82" width="24" height="32" rx="4" fill="#f4b740" /><rect x="118" y="64" width="24" height="50" rx="4" fill="#f59e0b" /><rect x="152" y="48" width="24" height="66" rx="4" fill="#f4b740" /><rect x="186" y="32" width="24" height="82" rx="4" fill="#f59e0b" /><polyline points="96,76 130,58 164,42 198,28" fill="none" stroke="#b3700a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /><circle cx="198" cy="28" r="5" fill="#b3700a" /></svg>
-);
-const ART_SECURITY = (
-  <svg viewBox="0 0 300 150" className="w-full block"><rect width="300" height="150" rx="14" fill="#fdeef0" /><path d="M150 26 l38 15 v28 c0 29 -19 46 -38 56 c-19 -10 -38 -27 -38 -56 v-28 z" fill="#f43f5e" /><path d="M133 76 l12 13 l23 -28" fill="none" stroke="#fff" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-);
-const ART_GROWTH = (
-  <svg viewBox="0 0 300 150" className="w-full block"><rect width="300" height="150" rx="14" fill="#e6f4fc" /><polyline points="66,110 106,92 144,100 182,64 218,74 240,40" fill="none" stroke="#0ea5e9" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" /><path d="M230 40 l10 0 l0 10" fill="none" stroke="#0ea5e9" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" /><circle cx="106" cy="92" r="4.5" fill="#0284c7" /><circle cx="182" cy="64" r="4.5" fill="#0284c7" /><circle cx="240" cy="40" r="5.5" fill="#0284c7" /></svg>
-);
-
 function FeatureCard({
-  icon: Icon, title, desc, accent, art, delay = 0,
+  icon: Icon, title, desc, delay = 0,
 }: {
-  icon: any; title: string; desc: string; accent: string; art?: React.ReactNode; delay?: number;
+  icon: any; title: string; desc: string; delay?: number;
 }) {
   const [ref, inView] = useInView<HTMLDivElement>(0.15);
   return (
     <div
       ref={ref}
       className={clsx(
-        "group bg-white rounded-2xl p-3.5 border border-slate-200/70 hover:border-slate-300 hover:shadow-elevated transition-all duration-500 overflow-hidden",
+        "group bg-gradient-to-b from-white to-slate-50/60 rounded-2xl p-6 border border-slate-200/70 hover:border-slate-300 hover:shadow-elevated transition-all duration-500",
         inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
       )}
       style={{ transitionDelay: `${delay}ms` }}
     >
-      {art && <div className="w-full rounded-xl overflow-hidden mb-3">{art}</div>}
-      <div className="flex items-center gap-2 mb-1.5 px-1">
-        <div className={clsx("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0", accent)}>
-          <Icon size={16} strokeWidth={2.2} />
-        </div>
-        <h3 className="font-bold text-slate-900 text-base">{title}</h3>
+      <div className="w-11 h-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+        <Icon size={20} strokeWidth={2} />
       </div>
-      <p className="text-sm text-slate-500 leading-relaxed px-1">{desc}</p>
+      <h3 className="font-bold text-slate-900 text-lg mb-2">{title}</h3>
+      <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
     </div>
   );
 }
@@ -279,63 +256,62 @@ function FeatureCard({
 function Features({ ar }: { ar: boolean }) {
   const items = [
     {
-      icon: Wallet,
-      art: ART_PAYROLL,
-      accent: "bg-brand-50 text-brand-600",
-      title: ar ? "رواتب ذكية" : "Smart Payroll",
+      icon: Users,
+      title: ar ? "إدارة الموظفين" : "Employee Management",
       desc: ar
-        ? "احتساب دقيق للرواتب والخصومات والمكافآت والضرائب"
-        : "Accurate salary calculations, deductions, bonuses, and taxes",
+        ? "مركزية لسجلات الموظفين والعقود والوثائق، مع تعيين سريع وهيكل تنظيمي واضح."
+        : "Centralize employee records, contracts, and documents — with quick onboarding and a clear org structure.",
     },
     {
       icon: Clock,
-      art: ART_ATTENDANCE,
-      accent: "bg-emerald-50 text-emerald-600",
       title: ar ? "تتبع الحضور" : "Attendance Tracking",
       desc: ar
-        ? "تتبع ساعات العمل، التأخير، الغيابات، والساعات الإضافية"
-        : "Track work hours, late arrivals, absences, and overtime",
+        ? "تتبّع ساعات العمل والتأخير والغيابات والساعات الإضافية من ملفات الحضور."
+        : "Track work hours, late arrivals, absences, and overtime from your attendance imports.",
     },
     {
-      icon: UserCircle,
-      art: ART_EMPLOYEE,
-      accent: "bg-violet-50 text-violet-600",
-      title: ar ? "بوابة الموظف" : "Employee Portal",
+      icon: Wallet,
+      title: ar ? "أتمتة الرواتب" : "Payroll Automation",
       desc: ar
-        ? "تمكين موظفيك من عرض كشوف الرواتب وطلب الإجازات"
-        : "Empower your employees to view payslips, request leaves, and more",
+        ? "احسب الرواتب والخصومات والمكافآت والضمان في تشغيلة واحدة، مع كشف راتب لكل موظف."
+        : "Calculate salaries, deductions, bonuses, and social security in one run — with a payslip for every employee.",
+    },
+    {
+      icon: Calendar,
+      title: ar ? "إدارة الإجازات" : "Leave Management",
+      desc: ar
+        ? "أنواع إجازات مخصّصة، تسلسل موافقات، تقويم عطل، وتتبّع أرصدة تلقائي."
+        : "Custom leave types, approval chains, holiday calendars, and automatic balance tracking.",
     },
     {
       icon: BarChart3,
-      art: ART_REPORTS,
-      accent: "bg-amber-50 text-amber-600",
-      title: ar ? "تقارير وتحليلات" : "Reports & Analytics",
+      title: ar ? "التقارير والتحليلات" : "Reports & Analytics",
       desc: ar
-        ? "تقارير لحظية ورؤى لمساعدتك على اتخاذ قرارات أفضل"
-        : "Real-time reports and insights to help you make better decisions",
+        ? "تقارير لحظية للرواتب والتكاليف وأعداد الموظفين تساعدك على اتخاذ قرارات أفضل."
+        : "Real-time payroll, cost, and headcount reports to help you make better decisions.",
     },
     {
       icon: ShieldCheck,
-      art: ART_SECURITY,
-      accent: "bg-rose-50 text-rose-600",
-      title: ar ? "أمان وموثوقية" : "Secure & Reliable",
+      title: ar ? "الأمان والصلاحيات" : "Security & Access",
       desc: ar
-        ? "وصول قائم على الصلاحيات، حماية البيانات، ومنصة قوية"
-        : "Role-based access, data security, and a powerful platform",
-    },
-    {
-      icon: TrendingUp,
-      art: ART_GROWTH,
-      accent: "bg-sky-50 text-sky-600",
-      title: ar ? "صُمّم للنمو" : "Built for Growth",
-      desc: ar
-        ? "منصة قابلة للتوسع تنمو مع أعمالك"
-        : "Scalable platform that grows with your business",
+        ? "وصول قائم على الصلاحيات، عزل تام لبيانات كل شركة، وسجل تدقيق كامل."
+        : "Role-based access, fully isolated company data, and complete audit trails.",
     },
   ];
   return (
-    <section className="py-16 sm:py-20">
+    <section className="py-16 sm:py-24">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="text-center mb-12">
+          <div className="text-sm font-bold text-brand-600 mb-3">{ar ? "كل ما تحتاجه" : "Everything you need"}</div>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight mb-4">
+            {ar ? "منصّة واحدة لكل دورة حياة الموظف" : "One platform for the entire employee lifecycle"}
+          </h2>
+          <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto">
+            {ar
+              ? "من التعيين حتى نهاية الخدمة — استبدل ملفات الإكسل والأدوات المتفرّقة والعمل اليدوي."
+              : "From hire to retire — replace the spreadsheets, the disconnected tools, and the manual work."}
+          </p>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map((it, i) => <FeatureCard key={i} {...it} delay={i * 60} />)}
         </div>
