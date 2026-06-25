@@ -3,39 +3,41 @@
 import { useEffect, useRef, useState } from "react";
 import {
   FileText, Plus, Printer, Save, Trash2, ArrowRight, AlertTriangle, CheckCircle2,
-  Upload, Settings, MousePointer2, X,
+  Upload, Settings, FileDown, FileType2,
 } from "lucide-react";
 import api from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import {
+  fileToDataUri, extractPlaceholders, renderDocx, downloadBlob, renderDocxToElement,
+} from "@/lib/docx";
 
-// A field placed over the contract image. Positions are percentages of the image box.
-type Field = { id: string; label: string; x: number; y: number; w: number; size: number };
+// A detected placeholder: `key` is the exact {{text}}; `label` is the display name.
+type Field = { key: string; label: string };
 type Template = { id: number; image: string; fields: Field[] };
 
-const uid = () => Math.random().toString(36).slice(2, 9);
+const DOCX_EXT = /\.docx$/i;
 
 export default function JobOfferPage() {
   const { lang } = useLanguage();
   const ar = lang === "ar";
 
-  const [tpl, setTpl] = useState<Template | null | undefined>(undefined); // undefined = loading
+  const [tpl, setTpl] = useState<Template | null | undefined>(undefined);
   const [offers, setOffers] = useState<any[]>([]);
-  const [view, setView] = useState<"list" | "designer" | "fill">("list");
+  const [view, setView] = useState<"list" | "editor" | "fill">("list");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState("");
 
-  // Designer state
-  const [dImage, setDImage] = useState("");
-  const [dFields, setDFields] = useState<Field[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  // Editor state (uploading / reviewing the Word template)
+  const [eFile, setEFile] = useState("");      // data URI of uploaded .docx
+  const [eName, setEName] = useState("");       // original filename
+  const [eFields, setEFields] = useState<Field[]>([]);
 
   // Fill state
   const [values, setValues] = useState<Record<string, string>>({});
   const [editingId, setEditingId] = useState<number | null>(null);
-
-  const stageRef = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ id: string; dx: number; dy: number } | null>(null);
+  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { load(); }, []);
 
@@ -46,75 +48,46 @@ export default function JobOfferPage() {
         api.get("/job-offers/template"),
         api.get("/job-offers"),
       ]);
-      const data = t.data;
-      setTpl(data ? { ...data, fields: Array.isArray(data.fields) ? data.fields : [] } : null);
+      const d = t.data;
+      setTpl(d ? { ...d, fields: Array.isArray(d.fields) ? d.fields : [] } : null);
       setOffers(o.data || []);
     } catch (e: any) { setError(e.message); setTpl(null); }
   };
 
   const flash = (m: string) => { setSuccess(m); setTimeout(() => setSuccess(""), 2500); };
 
-  // ── Designer ──────────────────────────────────────────────────────────────
-  const openDesigner = () => {
-    setDImage(tpl?.image || "");
-    setDFields(tpl?.fields ? JSON.parse(JSON.stringify(tpl.fields)) : []);
-    setSelected(null);
+  // ── Editor (upload + detect placeholders) ───────────────────────────────────
+  const openEditor = () => {
+    setEFile(tpl?.image || "");
+    setEName(tpl ? (ar ? "القالب الحالي" : "Current template") : "");
+    setEFields(tpl?.fields ? [...tpl.fields] : []);
     setError("");
-    setView("designer");
+    setView("editor");
   };
 
-  const pickImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const pickDocx = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (!f.type.startsWith("image/")) { setError(ar ? "ارفع صورة (PNG/JPG)" : "Upload an image"); return; }
-    if (f.size > 5 * 1024 * 1024) { setError(ar ? "الصورة أكبر من 5MB" : "Image exceeds 5MB"); return; }
-    const data = await new Promise<string>((res, rej) => {
-      const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(f);
-    });
-    setDImage(data);
+    if (!DOCX_EXT.test(f.name)) { setError(ar ? "ارفع ملف Word بصيغة .docx" : "Upload a .docx Word file"); return; }
+    if (f.size > 8 * 1024 * 1024) { setError(ar ? "الملف أكبر من 8MB" : "File exceeds 8MB"); return; }
+    setError(""); setBusy(ar ? "جاري قراءة العلامات..." : "Reading placeholders...");
+    try {
+      const uri = await fileToDataUri(f);
+      const keys = await extractPlaceholders(uri);
+      setEFile(uri);
+      setEName(f.name);
+      setEFields(keys.map((k) => ({ key: k, label: k })));
+      if (keys.length === 0) setError(ar ? "ما لقيت أي علامة {{...}} داخل الملف. تأكد إنك حاطط العلامات." : "No {{...}} placeholders found in the file.");
+    } catch (err: any) {
+      setError(ar ? "تعذّر قراءة الملف — تأكد إنه .docx صالح" : "Could not read the file");
+    } finally { setBusy(""); }
   };
-
-  const addField = () => {
-    const f: Field = { id: uid(), label: ar ? "حقل جديد" : "New field", x: 38, y: 45, w: 28, size: 13 };
-    setDFields((p) => [...p, f]);
-    setSelected(f.id);
-  };
-  const updateField = (id: string, patch: Partial<Field>) =>
-    setDFields((p) => p.map((f) => (f.id === id ? { ...f, ...patch } : f)));
-  const removeField = (id: string) => {
-    setDFields((p) => p.filter((f) => f.id !== id));
-    if (selected === id) setSelected(null);
-  };
-
-  const onFieldPointerDown = (e: React.PointerEvent, f: Field) => {
-    e.preventDefault();
-    setSelected(f.id);
-    const rect = stageRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const px = ((e.clientX - rect.left) / rect.width) * 100;
-    const py = ((e.clientY - rect.top) / rect.height) * 100;
-    drag.current = { id: f.id, dx: px - f.x, dy: py - f.y };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  };
-  const onStagePointerMove = (e: React.PointerEvent) => {
-    if (!drag.current) return;
-    const rect = stageRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const px = ((e.clientX - rect.left) / rect.width) * 100;
-    const py = ((e.clientY - rect.top) / rect.height) * 100;
-    const d = drag.current;
-    updateField(d.id, {
-      x: Math.max(0, Math.min(98, px - d.dx)),
-      y: Math.max(0, Math.min(99, py - d.dy)),
-    });
-  };
-  const onStagePointerUp = () => { drag.current = null; };
 
   const saveTemplate = async () => {
-    if (!dImage) { setError(ar ? "ارفع صورة العقد أولاً" : "Upload the contract image first"); return; }
+    if (!eFile) { setError(ar ? "ارفع ملف العقد أولاً" : "Upload the contract file first"); return; }
     setSaving(true); setError("");
     try {
-      const r = await api.put("/job-offers/template", { image: dImage, fields: dFields });
+      const r = await api.put("/job-offers/template", { image: eFile, fields: eFields });
       setTpl({ ...r.data, fields: Array.isArray(r.data.fields) ? r.data.fields : [] });
       flash(ar ? "تم حفظ القالب" : "Template saved");
       setView("list");
@@ -128,7 +101,7 @@ export default function JobOfferPage() {
     catch (e: any) { setError(e.message); }
   };
 
-  // ── Fill ──────────────────────────────────────────────────────────────────
+  // ── Fill ────────────────────────────────────────────────────────────────────
   const newOffer = () => { setValues({}); setEditingId(null); setError(""); setView("fill"); };
   const openOffer = async (id: number) => {
     setError("");
@@ -143,7 +116,7 @@ export default function JobOfferPage() {
   const saveOffer = async () => {
     if (!tpl) return;
     setSaving(true); setError("");
-    const name = tpl.fields.map((f) => values[f.id]).find((v) => v && v.trim()) || "";
+    const name = tpl.fields.map((f) => values[f.key]).find((v) => v && v.trim()) || "";
     try {
       if (editingId) await api.put(`/job-offers/${editingId}`, { name, values });
       else { const r = await api.post("/job-offers", { name, values }); setEditingId(r.data?.id ?? null); }
@@ -159,14 +132,40 @@ export default function JobOfferPage() {
     catch (e: any) { setError(e.message); }
   };
 
-  const selField = dFields.find((f) => f.id === selected) || null;
+  const offerFileName = () => {
+    const nm = (tpl?.fields.map((f) => values[f.key]).find((v) => v && v.trim()) || "offer").replace(/[\\/:*?"<>|]/g, "").slice(0, 40);
+    return `عرض-تدريب-${nm}`;
+  };
+
+  // Download the filled Word document.
+  const downloadWord = async () => {
+    if (!tpl) return;
+    setBusy(ar ? "جاري توليد Word..." : "Generating Word...");
+    try {
+      const blob = await renderDocx(tpl.image, values);
+      downloadBlob(blob, `${offerFileName()}.docx`);
+    } catch (e: any) { setError(ar ? "تعذّر توليد الملف" : "Generation failed"); }
+    finally { setBusy(""); }
+  };
+
+  // Render to the print area, then open the browser print dialog (Save as PDF).
+  const exportPdf = async () => {
+    if (!tpl || !printRef.current) return;
+    setBusy(ar ? "جاري تجهيز PDF..." : "Preparing PDF...");
+    try {
+      const blob = await renderDocx(tpl.image, values);
+      await renderDocxToElement(blob, printRef.current);
+      setBusy("");
+      setTimeout(() => window.print(), 200);
+    } catch (e: any) { setError(ar ? "تعذّر تجهيز PDF" : "PDF failed"); setBusy(""); }
+  };
 
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (tpl === undefined) {
     return <div className="flex items-center justify-center py-20 gap-2 text-slate-400"><span className="spinner spinner-dark w-5 h-5" />{ar ? "جاري التحميل..." : "Loading..."}</div>;
   }
 
-  // ── No template yet → onboarding upload ─────────────────────────────────────
+  // ── No template yet → onboarding ────────────────────────────────────────────
   if (view === "list" && !tpl) {
     return (
       <div className="space-y-6" dir={ar ? "rtl" : "ltr"}>
@@ -178,10 +177,13 @@ export default function JobOfferPage() {
         <div className="card text-center py-14">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4"><Upload size={28} /></div>
           <h3 className="text-lg font-bold text-slate-800 mb-1">{ar ? "ابدأ بإعداد عقد شركتك" : "Set up your company contract"}</h3>
-          <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
-            {ar ? "ارفع صورة نموذج عقد/عرض التدريب الخاص بشركتك مرة واحدة، وحدّد أماكن الحقول اللي بتتعبّى، وبعدها كل عرض جديد بيفتح على عقدكم جاهز للتعبئة." : "Upload your company's training-offer document once, place the fillable fields, then every new offer opens on your own contract."}
+          <p className="text-sm text-slate-500 max-w-lg mx-auto mb-3">
+            {ar ? "ارفع ملف Word لعقد التدريب الخاص بشركتك. حُط داخله علامات بين قوسين مزدوجين مكان البيانات اللي بتتغيّر، مثلاً:" : "Upload your company's training-offer Word file with double-brace placeholders, e.g.:"}
           </p>
-          <button className="btn btn-primary gap-2 mx-auto" onClick={openDesigner}><Upload size={16} />{ar ? "رفع العقد" : "Upload contract"}</button>
+          <div className="inline-block text-sm font-mono bg-slate-100 text-slate-700 rounded-lg px-4 py-2 mb-6 dir-ltr" dir="ltr">{"الاسم: {{الاسم}}  ·  التاريخ: {{التاريخ}}  ·  الراتب: {{الراتب}}"}</div>
+          <div>
+            <button className="btn btn-primary gap-2 mx-auto" onClick={openEditor}><Upload size={16} />{ar ? "رفع ملف Word" : "Upload Word file"}</button>
+          </div>
         </div>
       </div>
     );
@@ -197,7 +199,7 @@ export default function JobOfferPage() {
             <h2 className="text-xl font-bold text-slate-800">{ar ? "عروض التدريب" : "Training Offers"}</h2>
           </div>
           <div className="flex items-center gap-2">
-            <button className="btn btn-secondary btn-sm gap-2" onClick={openDesigner}><Settings size={14} />{ar ? "تعديل القالب" : "Edit template"}</button>
+            <button className="btn btn-secondary btn-sm gap-2" onClick={openEditor}><Settings size={14} />{ar ? "تعديل القالب" : "Edit template"}</button>
             <button className="btn btn-primary gap-2" onClick={newOffer}><Plus size={15} />{ar ? "عرض جديد" : "New Offer"}</button>
           </div>
         </div>
@@ -233,86 +235,53 @@ export default function JobOfferPage() {
     );
   }
 
-  // ── Designer ──────────────────────────────────────────────────────────────
-  if (view === "designer") {
+  // ── Editor ──────────────────────────────────────────────────────────────────
+  if (view === "editor") {
     return (
       <div className="space-y-4" dir={ar ? "rtl" : "ltr"}>
-        <div className="no-print flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <button className="btn btn-secondary gap-2" onClick={() => setView("list")}>
             <ArrowRight size={15} className={ar ? "" : "rotate-180"} />{ar ? "رجوع" : "Back"}
           </button>
           <div className="flex items-center gap-2">
             {tpl && <button className="btn btn-danger btn-sm gap-2" onClick={deleteTemplate}><Trash2 size={14} />{ar ? "حذف القالب" : "Delete"}</button>}
-            <label className="btn btn-secondary gap-2 cursor-pointer"><Upload size={15} />{dImage ? (ar ? "تغيير الصورة" : "Change image") : (ar ? "رفع صورة" : "Upload image")}<input type="file" accept="image/*" className="hidden" onChange={pickImage} /></label>
-            <button className="btn btn-primary gap-2" onClick={saveTemplate} disabled={saving}>{saving ? <span className="spinner" /> : <Save size={15} />}{ar ? "حفظ القالب" : "Save template"}</button>
+            <label className="btn btn-secondary gap-2 cursor-pointer"><Upload size={15} />{eFile ? (ar ? "تغيير الملف" : "Change file") : (ar ? "رفع ملف Word" : "Upload Word")}<input type="file" accept=".docx" className="hidden" onChange={pickDocx} /></label>
+            <button className="btn btn-primary gap-2" onClick={saveTemplate} disabled={saving || !eFile}>{saving ? <span className="spinner" /> : <Save size={15} />}{ar ? "حفظ القالب" : "Save template"}</button>
           </div>
         </div>
 
-        {error && <div className="no-print alert alert-error"><AlertTriangle size={16} />{error}</div>}
+        {error && <div className="alert alert-error"><AlertTriangle size={16} />{error}</div>}
+        {busy && <div className="alert alert-info"><span className="spinner spinner-dark w-4 h-4" />{busy}</div>}
 
-        {!dImage ? (
-          <div className="card text-center py-16 text-slate-400">
-            <Upload size={32} className="mx-auto mb-3 opacity-40" />
-            {ar ? "ارفع صورة العقد لتبدأ بتحديد الحقول" : "Upload the contract image to start placing fields"}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
-            {/* Stage */}
-            <div className="card p-2 overflow-auto">
-              <div className="text-xs text-slate-500 mb-2 flex items-center gap-1.5 no-print"><MousePointer2 size={13} />{ar ? "اسحب الحقول لمكانها فوق العقد" : "Drag fields onto the contract"}</div>
-              <div
-                ref={stageRef}
-                className="relative w-full select-none"
-                onPointerMove={onStagePointerMove}
-                onPointerUp={onStagePointerUp}
-                onPointerLeave={onStagePointerUp}
-              >
-                <img src={dImage} alt="" className="w-full block pointer-events-none" />
-                {dFields.map((f) => (
-                  <div
-                    key={f.id}
-                    onPointerDown={(e) => onFieldPointerDown(e, f)}
-                    className={`absolute cursor-move rounded border-2 bg-brand-50/70 ${selected === f.id ? "border-brand-600" : "border-brand-300"} flex items-center px-1`}
-                    style={{ left: `${f.x}%`, top: `${f.y}%`, width: `${f.w}%`, height: `${f.size + 8}px` }}
-                    title={f.label}
-                  >
-                    <span className="truncate text-brand-700 font-medium" style={{ fontSize: f.size }}>{f.label}</span>
-                  </div>
-                ))}
-              </div>
+        <div className="card">
+          <div className="flex items-center gap-3 pb-3 border-b border-slate-100 mb-4">
+            <div className="w-10 h-10 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center"><FileType2 size={20} /></div>
+            <div className="min-w-0">
+              <div className="font-semibold text-slate-800 truncate">{eName || (ar ? "لم يتم رفع ملف" : "No file uploaded")}</div>
+              <div className="text-xs text-slate-400">{eFile ? (ar ? `${eFields.length} علامة تم اكتشافها` : `${eFields.length} placeholders detected`) : (ar ? "ارفع ملف Word فيه علامات {{...}}" : "Upload a .docx with {{...}} placeholders")}</div>
             </div>
+          </div>
 
-            {/* Side panel */}
-            <div className="card h-fit no-print">
-              <button className="btn btn-primary btn-sm w-full gap-2 mb-3" onClick={addField}><Plus size={14} />{ar ? "إضافة حقل" : "Add field"}</button>
-              {dFields.length === 0 ? (
-                <div className="text-center text-xs text-slate-400 py-6">{ar ? "لا حقول بعد" : "No fields yet"}</div>
-              ) : (
-                <div className="space-y-2">
-                  {dFields.map((f) => (
-                    <div key={f.id} className={`p-2 rounded-lg border ${selected === f.id ? "border-brand-400 bg-brand-50/50" : "border-slate-200"}`} onClick={() => setSelected(f.id)}>
-                      <div className="flex items-center gap-1">
-                        <input className="form-input text-sm flex-1" value={f.label} onChange={(e) => updateField(f.id, { label: e.target.value })} />
-                        <button className="text-slate-300 hover:text-rose-500 p-1" onClick={() => removeField(f.id)}><Trash2 size={14} /></button>
-                      </div>
-                      {selected === f.id && (
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                          <label className="text-[11px] text-slate-500">{ar ? "العرض %" : "Width %"}<input type="number" className="form-input text-sm" value={f.w} onChange={(e) => updateField(f.id, { w: Number(e.target.value) })} /></label>
-                          <label className="text-[11px] text-slate-500">{ar ? "حجم الخط" : "Font px"}<input type="number" className="form-input text-sm" value={f.size} onChange={(e) => updateField(f.id, { size: Number(e.target.value) })} /></label>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+          {eFields.length === 0 ? (
+            <div className="text-center text-sm text-slate-400 py-8">{ar ? "لا توجد علامات بعد" : "No placeholders yet"}</div>
+          ) : (
+            <div className="space-y-2">
+              <div className="text-sm font-semibold text-slate-700 mb-2">{ar ? "العلامات المكتشفة (تقدر تسمّيها باسم واضح للتعبئة):" : "Detected placeholders (rename for clearer labels):"}</div>
+              {eFields.map((f, i) => (
+                <div key={f.key} className="flex items-center gap-3">
+                  <code className="text-xs bg-slate-100 text-brand-700 rounded px-2 py-1.5 flex-shrink-0 min-w-[120px] text-center" dir="ltr">{`{{${f.key}}}`}</code>
+                  <span className="text-slate-300">→</span>
+                  <input className="form-input flex-1" value={f.label} onChange={(e) => setEFields((p) => p.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} placeholder={ar ? "اسم الحقل" : "Field label"} />
                 </div>
-              )}
+              ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   }
 
-  // ── Fill ──────────────────────────────────────────────────────────────────
+  // ── Fill ────────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4" dir={ar ? "rtl" : "ltr"}>
       <div className="no-print flex flex-wrap items-center justify-between gap-3">
@@ -320,29 +289,33 @@ export default function JobOfferPage() {
           <ArrowRight size={15} className={ar ? "" : "rotate-180"} />{ar ? "رجوع" : "Back"}
         </button>
         <div className="flex items-center gap-2">
-          <button className="btn btn-secondary gap-2" onClick={() => window.print()}><Printer size={15} />{ar ? "طباعة" : "Print"}</button>
+          <button className="btn btn-secondary gap-2" onClick={downloadWord} disabled={!!busy}><FileDown size={15} />{ar ? "تنزيل Word" : "Word"}</button>
+          <button className="btn btn-secondary gap-2" onClick={exportPdf} disabled={!!busy}><Printer size={15} />PDF</button>
           <button className="btn btn-primary gap-2" onClick={saveOffer} disabled={saving}>{saving ? <span className="spinner" /> : <Save size={15} />}{ar ? "حفظ" : "Save"}</button>
         </div>
       </div>
 
       {error && <div className="no-print alert alert-error"><AlertTriangle size={16} />{error}</div>}
       {success && <div className="no-print alert alert-success"><CheckCircle2 size={16} />{success}</div>}
+      {busy && <div className="no-print alert alert-info"><span className="spinner spinner-dark w-4 h-4" />{busy}</div>}
 
-      <div id="print-area" className="mx-auto max-w-[820px] bg-white">
-        <div className="relative w-full">
-          <img src={tpl?.image} alt="" className="w-full block" />
-          {tpl?.fields.map((f) => (
-            <input
-              key={f.id}
-              value={values[f.id] || ""}
-              onChange={(e) => setValues((p) => ({ ...p, [f.id]: e.target.value }))}
-              placeholder={f.label}
-              className="absolute bg-transparent outline-none border-b border-brand-300/60 focus:border-brand-600 text-slate-900 px-1 print:border-none print:placeholder-transparent"
-              style={{ left: `${f.x}%`, top: `${f.y}%`, width: `${f.w}%`, fontSize: f.size }}
-            />
-          ))}
-        </div>
+      <div className="no-print card">
+        {tpl?.fields.length === 0 ? (
+          <div className="text-center text-sm text-slate-400 py-8">{ar ? "القالب ما فيه علامات للتعبئة — عدّل القالب وأضف علامات {{...}}" : "Template has no placeholders"}</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {tpl?.fields.map((f) => (
+              <div key={f.key}>
+                <label className="form-label">{f.label}</label>
+                <input className="form-input" value={values[f.key] || ""} onChange={(e) => setValues((p) => ({ ...p, [f.key]: e.target.value }))} dir="auto" />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Print/preview target — populated on demand by exportPdf */}
+      <div id="print-area" ref={printRef} className="bg-white" />
     </div>
   );
 }

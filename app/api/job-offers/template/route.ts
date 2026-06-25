@@ -28,9 +28,10 @@ export async function PUT(req: NextRequest) {
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
     const body = await req.json();
+    // `image` column stores the uploaded Word (.docx) template as a data URI.
     const image = typeof body?.image === "string" ? body.image : "";
     const fields = Array.isArray(body?.fields) ? body.fields : [];
-    if (!image.startsWith("data:image/")) throw new HttpError(400, "Image required");
+    if (!image.startsWith("data:")) throw new HttpError(400, "Template file required");
 
     const tpl = await prisma.jobOfferTemplate.upsert({
       where: { companyId: session.companyId },
