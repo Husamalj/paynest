@@ -303,7 +303,15 @@ export default function JobOfferPage() {
         {busy && <div className="no-print alert alert-info"><span className="spinner spinner-dark w-4 h-4" />{busy}</div>}
         <div className="no-print card">
           {tpl?.fields.length === 0 ? (
-            <div className="text-center text-sm text-slate-400 py-8">{ar ? "القالب ما فيه حقول — عدّل القالب" : "Template has no fields"}</div>
+            <div className="text-center py-10">
+              <FileType2 size={28} className="mx-auto mb-3 text-slate-300" />
+              <div className="text-sm text-slate-500 mb-1 font-medium">{ar ? "قالب الـ Word هذا ما فيه أي خانات للتعبئة" : "This Word template has no fillable fields"}</div>
+              <div className="text-xs text-slate-400 mb-5 max-w-md mx-auto">{ar ? "إمّا تعدّل القالب وتضيف علامات {{...}} أو خانات فاضية بجدول، أو تستخدم الفورم الجاهز اللي بتكتب فيه على الصفحة مباشرة." : "Edit the template to add {{...}} markers, or use the built-in form."}</div>
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <button className="btn btn-primary gap-2" onClick={newForm}><Plus size={15} />{ar ? "استخدم الفورم الجاهز" : "Use the form"}</button>
+                <button className="btn btn-secondary gap-2" onClick={openWordEditor}><Settings size={15} />{ar ? "تعديل قالب Word" : "Edit template"}</button>
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {tpl?.fields.map((f) => (
