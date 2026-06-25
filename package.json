@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "node scripts/check-tenant-isolation.mjs && prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "check:isolation": "node scripts/check-tenant-isolation.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
