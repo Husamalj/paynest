@@ -440,6 +440,8 @@ model JobOffer {
   fullName            String?  @map("full_name")
   // Free-field offers (per-company uploaded template): values keyed by field id
   values              Json?
+  // "form" = built-in structured form (named columns); "word" = Word template (values)
+  kind                String   @default("form") @db.VarChar(20)
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
 

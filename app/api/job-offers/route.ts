@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     const offers = await prisma.jobOffer.findMany({
       where: { companyId: session.companyId },
       orderBy: { createdAt: "desc" },
-      select: { id: true, name: true, trainingTitle: true, offerDate: true, createdAt: true },
+      select: { id: true, name: true, trainingTitle: true, offerDate: true, createdAt: true, kind: true },
     });
     return NextResponse.json(offers);
   } catch (err) {
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
         createdBy: session.id,
         ...pickFields(body),
         values: body?.values ?? undefined,
+        kind: body?.kind === "word" ? "word" : "form",
       },
     });
     return NextResponse.json(offer);

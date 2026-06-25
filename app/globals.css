@@ -297,9 +297,6 @@
   }
 }
 
-/* The print target is hidden on screen; it is filled and shown only for printing. */
-@media screen { #print-area { display: none; } }
-
 /* Print: show only the document inside #print-area (used by the Job Offer page) */
 @page {
   size: A4 portrait;
