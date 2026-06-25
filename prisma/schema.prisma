@@ -93,6 +93,11 @@ model CompanySettings {
   extraRate     Decimal  @default(1.0) @map("extra_rate")
   workStartTime String   @default("09:00") @map("work_start_time") @db.VarChar(5)
   timezone      String   @default("Asia/Amman") @db.VarChar(60)
+  // White-label branding (used in emails + UI)
+  logo          String?  @db.Text
+  brandColor    String?  @map("brand_color") @db.VarChar(20)
+  emailFromName String?  @map("email_from_name") @db.VarChar(120)
+  replyTo       String?  @map("reply_to") @db.VarChar(160)
   createdAt     DateTime @default(now()) @map("created_at")
 
   company Company @relation(fields: [companyId], references: [id])

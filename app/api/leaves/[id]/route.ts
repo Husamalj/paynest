@@ -138,6 +138,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         });
         if (empUser?.email && leave.employeeName) {
           sendLeaveDecision(
+            session.companyId,
             empUser.email,
             leave.employeeName,
             leave.status as "approved" | "rejected",

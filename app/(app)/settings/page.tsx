@@ -36,6 +36,11 @@ const defaultForm = {
   extra_rate: 1.0,
   work_start_time: "09:00", // daily mode only
   timezone: "Asia/Amman",
+  // White-label branding
+  logo: "",
+  brand_color: "#2563eb",
+  email_from_name: "",
+  reply_to: "",
 };
 
 const TIMEZONES: { value: string; ar: string; en: string }[] = [
@@ -87,6 +92,10 @@ export default function SettingsPage() {
             extra_rate:      s.extra_rate      ?? 1.0,
             work_start_time: s.work_start_time || "09:00",
             timezone:        s.timezone        || "Asia/Amman",
+            logo:            s.logo            || "",
+            brand_color:     s.brand_color     || "#2563eb",
+            email_from_name: s.email_from_name || "",
+            reply_to:        s.reply_to        || "",
           });
         }
         setEmployees(eRes.data || []);
@@ -459,6 +468,60 @@ export default function SettingsPage() {
               </div>
             </div>
 
+          </div>
+        </div>
+
+        {/* ── Branding (white-label) ───────────────────────── */}
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title"><span className="text-lg">🎨</span>{ar ? "العلامة التجارية والإيميلات" : "Branding & Emails"}</div>
+          </div>
+          <p className="text-sm text-slate-500 mb-4">
+            {ar ? "تظهر هذه على الإيميلات اللي بتوصل موظفينك (بيانات الدخول، قرارات الإجازات، الرواتب)." : "Shown on emails sent to your employees (credentials, leave decisions, payslips)."}
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Logo */}
+            <div className="sm:col-span-2">
+              <label className="form-label">{ar ? "شعار الشركة" : "Company logo"}</label>
+              <div className="flex items-center gap-3">
+                {form.logo
+                  ? <img src={form.logo} alt="logo" className="h-12 max-w-[160px] object-contain rounded border border-slate-200 bg-white p-1" />
+                  : <div className="h-12 w-12 rounded bg-slate-100 flex items-center justify-center text-slate-400 text-xs">{ar ? "لا شعار" : "None"}</div>}
+                <label className="btn btn-secondary btn-sm cursor-pointer">
+                  {ar ? "رفع شعار" : "Upload"}
+                  <input type="file" accept="image/png,image/jpeg,image/svg+xml" className="hidden" onChange={async (e) => {
+                    const f = e.target.files?.[0]; if (!f) return;
+                    if (f.size > 1024 * 1024) { setError(ar ? "الشعار أكبر من 1MB" : "Logo exceeds 1MB"); return; }
+                    const data = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(f); });
+                    setForm((p) => ({ ...p, logo: data }));
+                  }} />
+                </label>
+                {form.logo && <button type="button" className="text-rose-500 text-sm" onClick={() => setForm((p) => ({ ...p, logo: "" }))}>{ar ? "إزالة" : "Remove"}</button>}
+              </div>
+            </div>
+
+            {/* Brand color */}
+            <div>
+              <label className="form-label">{ar ? "لون العلامة" : "Brand color"}</label>
+              <div className="flex items-center gap-2">
+                <input type="color" className="h-10 w-12 rounded border border-slate-200 cursor-pointer" value={form.brand_color || "#2563eb"} onChange={(e) => setForm((p) => ({ ...p, brand_color: e.target.value }))} />
+                <input className="form-input flex-1" dir="ltr" value={form.brand_color} onChange={(e) => setForm((p) => ({ ...p, brand_color: e.target.value }))} placeholder="#2563eb" />
+              </div>
+            </div>
+
+            {/* Sender name */}
+            <div>
+              <label className="form-label">{ar ? "اسم المُرسِل بالإيميل" : "Email sender name"}</label>
+              <input className="form-input" value={form.email_from_name} onChange={(e) => setForm((p) => ({ ...p, email_from_name: e.target.value }))} placeholder={form.company_name} />
+            </div>
+
+            {/* Reply-to */}
+            <div className="sm:col-span-2">
+              <label className="form-label">{ar ? "إيميل الرد (reply-to)" : "Reply-to email"}</label>
+              <input type="email" className="form-input" dir="ltr" value={form.reply_to} onChange={(e) => setForm((p) => ({ ...p, reply_to: e.target.value }))} placeholder="hr@company.com" />
+              <p className="text-xs text-slate-400 mt-1">{ar ? "لمّا الموظف يرد على الإيميل، بيروح لهذا العنوان." : "Employee replies go to this address."}</p>
+            </div>
           </div>
         </div>
 

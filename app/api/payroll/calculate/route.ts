@@ -239,7 +239,7 @@ export async function POST(req: NextRequest) {
       });
       for (const u of empUsers) {
         if (u.email) {
-          sendPayslipReady(u.email, u.name || "Employee", periodMonth, periodYear);
+          sendPayslipReady(session.companyId, u.email, u.name || "Employee", periodMonth, periodYear);
         }
       }
     } catch (e) {

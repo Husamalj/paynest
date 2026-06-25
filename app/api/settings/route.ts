@@ -48,6 +48,11 @@ export async function PUT(req: NextRequest) {
       extraRate: body.extra_rate != null ? Number(body.extra_rate) : body.extraRate != null ? Number(body.extraRate) : undefined,
       workStartTime: body.work_start_time ?? body.workStartTime,
       timezone: body.timezone,
+      // White-label branding
+      logo: body.logo,
+      brandColor: body.brand_color ?? body.brandColor,
+      emailFromName: body.email_from_name ?? body.emailFromName,
+      replyTo: body.reply_to ?? body.replyTo,
     };
     // Remove undefined keys
     const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
@@ -81,6 +86,10 @@ function toSnake(s: any) {
     work_start_time: s.workStartTime ?? "09:00",
     timezone: s.timezone ?? "Asia/Amman",
     calc_mode: (s as any).calcMode ?? s.systemMode ?? "daily",
+    logo: s.logo ?? null,
+    brand_color: s.brandColor ?? null,
+    email_from_name: s.emailFromName ?? null,
+    reply_to: s.replyTo ?? null,
     created_at: s.createdAt,
     // also camel for newer code
     companyId: s.companyId,
