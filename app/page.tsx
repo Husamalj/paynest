@@ -92,11 +92,10 @@ function Hero({ ar }: { ar: boolean }) {
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.05] mb-6">
           {ar ? (
             <>
-              فريقك.<br />
-              رواتبك.<br />
+              أدِر مشاريعك<br />
               <span className="relative inline-block">
                 <span className="bg-gradient-to-r from-brand-500 to-brand-700 bg-clip-text text-transparent">
-                  نظام واحد.
+                  بشكل لم تختبره من قبل
                 </span>
                 <svg
                   className="absolute -bottom-2 left-0 w-full"
@@ -123,11 +122,10 @@ function Hero({ ar }: { ar: boolean }) {
             </>
           ) : (
             <>
-              Your team.<br />
-              Your payroll.<br />
+              Manage projects<br />
               <span className="relative inline-block">
                 <span className="bg-gradient-to-r from-brand-500 to-brand-700 bg-clip-text text-transparent">
-                  One system.
+                  like never before
                 </span>
                 <svg
                   className="absolute -bottom-2 left-0 w-full"
@@ -158,8 +156,8 @@ function Hero({ ar }: { ar: boolean }) {
         {/* Subhead */}
         <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed mb-8">
           {ar
-            ? "PayNest يجمع الرواتب والحضور والموارد البشرية والتقارير في منصة قوية واحدة — حتى تركّز على نمو أعمالك."
-            : "PayNest brings payroll, attendance, HR, and reports together in one powerful platform — so you can focus on growing your business."}
+            ? "PayNest يحوّل الفوضى إلى وضوح. خطّط وتابِع وأنجِز مشاريعك عبر واجهة سهلة الاستخدام مصمَّمة للفرق العصرية."
+            : "PayNest transforms chaos into clarity. Plan, track, and deliver your projects with an intuitive interface designed for modern teams."}
         </p>
 
         {/* CTAs */}
