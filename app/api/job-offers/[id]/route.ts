@@ -49,7 +49,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const body = await req.json();
     const offer = await prisma.jobOffer.update({
       where: { id: Number(id) },
-      data: pickFields(body),
+      data: { ...pickFields(body), values: body?.values ?? undefined },
     });
     return NextResponse.json(offer);
   } catch (err) {

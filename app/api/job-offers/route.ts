@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
         companyId: session.companyId,
         createdBy: session.id,
         ...pickFields(body),
+        values: body?.values ?? undefined,
       },
     });
     return NextResponse.json(offer);

@@ -433,10 +433,24 @@ model JobOffer {
   // Applicant approval
   signatureDate       String?  @map("signature_date")
   fullName            String?  @map("full_name")
+  // Free-field offers (per-company uploaded template): values keyed by field id
+  values              Json?
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("job_offers")
+}
+
+// Per-company training-offer template: a contract image + overlay field defs.
+model JobOfferTemplate {
+  id        Int      @id @default(autoincrement())
+  companyId Int      @unique @map("company_id")
+  image     String   @db.Text
+  fields    Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("job_offer_templates")
 }
 
 model Announcement {
