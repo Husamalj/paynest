@@ -154,3 +154,24 @@ export async function sendPayslipReady(
     <p>Your payslip for <strong>${monthName} ${year}</strong> is now available in your portal.</p>
     ${button(`${APP_URL}/employee-login`, "View Payslip", b.color)}`), { fromName: b.name, replyTo: b.replyTo });
 }
+
+// ── Sales: a demo request submitted from the public landing page ─────────────
+export function sendDemoRequest(
+  to: string,
+  data: { firstName: string; lastName?: string; email: string; company?: string; teamSize?: string; message?: string }
+) {
+  const b = DEFAULT_BRAND;
+  const row = (k: string, v?: string) =>
+    v ? `<tr><td style="padding:8px;background:#f1f5f9;font-weight:bold;white-space:nowrap">${k}</td><td style="padding:8px">${v}</td></tr>` : "";
+  send(to, `New demo request — ${data.company || `${data.firstName} ${data.lastName ?? ""}`.trim()}`, wrap(b, `
+    <h3>New demo request 🚀</h3>
+    <table style="border-collapse:collapse;width:100%;margin:16px 0">
+      ${row("Name", `${data.firstName} ${data.lastName ?? ""}`.trim())}
+      ${row("Work email", data.email)}
+      ${row("Company", data.company)}
+      ${row("Team size", data.teamSize)}
+      ${row("Message", data.message)}
+    </table>
+    <p style="color:#64748b;font-size:13px">Reply directly to this email to reach the lead.</p>`),
+    { fromName: "PayNest Leads", replyTo: data.email });
+}

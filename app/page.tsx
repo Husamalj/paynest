@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -404,6 +404,99 @@ function AnalyticsShowcase({ ar }: { ar: boolean }) {
   );
 }
 
+/* ─── Contact / demo request ─── */
+function ContactSection({ ar }: { ar: boolean }) {
+  const empty = { firstName: "", lastName: "", email: "", company: "", teamSize: "1–25", message: "", website: "" };
+  const [form, setForm] = useState({ ...empty });
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [err, setErr] = useState("");
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("sending"); setErr("");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Failed"); }
+      setStatus("sent"); setForm({ ...empty });
+    } catch (e: any) { setStatus("error"); setErr(e.message || (ar ? "صار خطأ" : "Something went wrong")); }
+  };
+
+  const label = "block text-sm font-semibold text-slate-700 mb-1.5";
+  const field = "w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400 transition";
+
+  return (
+    <section className="py-16 sm:py-24" dir={ar ? "rtl" : "ltr"}>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-10 lg:gap-16 items-start">
+        {/* Left: copy + contact details */}
+        <div>
+          <div className="text-sm font-bold text-brand-600 mb-3">{ar ? "تواصل معنا" : "Get in touch"}</div>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight mb-4">
+            {ar ? "تحدّث مع فريقنا" : "Talk to our team"}
+          </h2>
+          <p className="text-base sm:text-lg text-slate-500 leading-relaxed mb-10 max-w-md">
+            {ar
+              ? "شوف PayNest على أرض الواقع. احكيلنا عن فريقك، وبيتواصل معك مختص يعرضلك عرضاً مخصّصاً خلال 24 ساعة."
+              : "See PayNest in action. Tell us about your team, and a specialist will walk you through a tailored demo within 24 hours."}
+          </p>
+          <div className="space-y-6">
+            <div>
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">{ar ? "المبيعات" : "Sales"}</div>
+              <a href="mailto:sales@paynest.app" className="font-semibold text-slate-900 hover:text-brand-600" dir="ltr">sales@paynest.app</a>
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">{ar ? "الدعم" : "Support"}</div>
+              <a href="mailto:support@paynest.app" className="font-semibold text-slate-900 hover:text-brand-600" dir="ltr">support@paynest.app</a>
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">{ar ? "المقر" : "Headquarters"}</div>
+              <div className="font-semibold text-slate-900">{ar ? "عمّان، الأردن · نخدم منطقة الشرق الأوسط" : "Amman, Jordan · Serving the MENA region"}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: form card */}
+        <div className="bg-white rounded-2xl shadow-elevated border border-slate-100 p-6 sm:p-8">
+          {status === "sent" ? (
+            <div className="text-center py-12">
+              <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4"><CheckCircle2 size={28} /></div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">{ar ? "وصلنا طلبك!" : "Request received!"}</h3>
+              <p className="text-sm text-slate-500">{ar ? "بنتواصل معك خلال 24 ساعة." : "We'll be in touch within 24 hours."}</p>
+            </div>
+          ) : (
+            <form onSubmit={submit} className="space-y-4">
+              <input type="text" name="website" value={form.website} onChange={set("website")} className="hidden" tabIndex={-1} autoComplete="off" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div><label className={label}>{ar ? "الاسم الأول" : "First name"}</label><input className={field} value={form.firstName} onChange={set("firstName")} required /></div>
+                <div><label className={label}>{ar ? "اسم العائلة" : "Last name"}</label><input className={field} value={form.lastName} onChange={set("lastName")} /></div>
+              </div>
+              <div><label className={label}>{ar ? "البريد الإلكتروني للعمل" : "Work email"}</label><input type="email" dir="ltr" className={field} value={form.email} onChange={set("email")} required /></div>
+              <div><label className={label}>{ar ? "الشركة" : "Company"}</label><input className={field} value={form.company} onChange={set("company")} /></div>
+              <div>
+                <label className={label}>{ar ? "حجم الفريق" : "Team size"}</label>
+                <select className={field} value={form.teamSize} onChange={set("teamSize")}>
+                  {["1–25", "26–100", "101–500", "500+"].map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div><label className={label}>{ar ? "كيف نقدر نساعدك؟" : "How can we help?"}</label><textarea rows={4} className={field} value={form.message} onChange={set("message")} /></div>
+              {status === "error" && <div className="text-sm text-rose-600">{err}</div>}
+              <button type="submit" disabled={status === "sending"} className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-br from-brand-500 to-brand-700 hover:from-brand-600 hover:to-brand-800 disabled:opacity-60 text-white font-semibold px-6 py-3 rounded-xl shadow-elevated transition-all">
+                {status === "sending" ? (ar ? "جاري الإرسال..." : "Sending...") : (ar ? "اطلب عرضاً توضيحياً" : "Request a demo")}
+                {status !== "sending" && <ArrowRight size={17} className={ar ? "rotate-180" : ""} />}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Page() {
   const { lang } = useLanguage();
   const ar = lang === "ar";
@@ -422,6 +515,7 @@ export default function Page() {
       <TrustStrip ar={ar} />
       <Features ar={ar} />
       <AnalyticsShowcase ar={ar} />
+      <ContactSection ar={ar} />
       <Footer ar={ar} />
     </div>
   );
