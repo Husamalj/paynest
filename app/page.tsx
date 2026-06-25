@@ -393,43 +393,11 @@ function AnalyticsShowcase({ ar }: { ar: boolean }) {
         {/* Product preview (swap the <img> src for a real screenshot anytime) */}
         <div className={clsx("relative transition-all duration-700 delay-150", inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4")}>
           <div className="absolute -inset-6 bg-gradient-to-tr from-brand-200/40 to-violet-200/30 blur-2xl rounded-[2rem]" />
-          <div className="relative rounded-2xl border border-slate-200 bg-white shadow-elevated overflow-hidden">
-            <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-slate-100 bg-slate-50">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-300" />
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-300" />
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-300" />
-            </div>
-            <svg viewBox="0 0 560 320" className="w-full block" xmlns="http://www.w3.org/2000/svg">
-              <rect width="560" height="320" fill="#fff" />
-              {/* KPI tiles */}
-              {[
-                { x: 24, label: "Employees", val: "42", c: "#0c8ce8" },
-                { x: 160, label: "Net pay", val: "16,872", c: "#10b981" },
-                { x: 296, label: "Deductions", val: "578", c: "#f43f5e" },
-                { x: 432, label: "Bonuses", val: "1,250", c: "#f59e0b" },
-              ].map((k, i) => (
-                <g key={i}>
-                  <rect x={k.x} y="24" width="104" height="64" rx="10" fill="#f8fafc" stroke="#eef2f7" />
-                  <circle cx={k.x + 18} cy="44" r="7" fill={k.c} opacity="0.18" />
-                  <circle cx={k.x + 18} cy="44" r="3.5" fill={k.c} />
-                  <text x={k.x + 16} y="68" fontSize="17" fontWeight="700" fill="#0f172a">{k.val}</text>
-                  <text x={k.x + 16} y="82" fontSize="8.5" fill="#94a3b8">{k.label}</text>
-                </g>
-              ))}
-              {/* Area chart */}
-              <rect x="24" y="108" width="512" height="188" rx="12" fill="#f8fafc" stroke="#eef2f7" />
-              <text x="44" y="134" fontSize="11" fontWeight="700" fill="#334155">Payroll spend</text>
-              <defs>
-                <linearGradient id="area-fill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#0c8ce8" stopOpacity="0.30" />
-                  <stop offset="100%" stopColor="#0c8ce8" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <path d="M44 250 L120 218 L196 232 L272 186 L348 200 L424 156 L512 170 L512 276 L44 276 Z" fill="url(#area-fill)" />
-              <polyline points="44,250 120,218 196,232 272,186 348,200 424,156 512,170" fill="none" stroke="#0c8ce8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              {[[120,218],[272,186],[424,156]].map(([cx, cy], i) => <circle key={i} cx={cx} cy={cy} r="4" fill="#0c8ce8" stroke="#fff" strokeWidth="2" />)}
-            </svg>
-          </div>
+          <img
+            src="/analytics-preview.png"
+            alt={ar ? "لوحة تحكم PayNest" : "PayNest dashboard"}
+            className="relative w-full rounded-2xl shadow-elevated"
+          />
         </div>
       </div>
     </section>
