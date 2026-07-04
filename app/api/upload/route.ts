@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
@@ -34,9 +35,8 @@ export async function GET(req: NextRequest) {
         fileData: false,
       },
     });
-    const withFlag = await prisma.$queryRawUnsafe<{ id: number; has: boolean }[]>(
-      `SELECT id, (file_data IS NOT NULL) AS has FROM uploaded_files WHERE company_id = $1 AND system_mode = $2`,
-      companyId, mode,
+    const withFlag = await prisma.$queryRaw<{ id: number; has: boolean }[]>(
+      Prisma.sql`SELECT id, (file_data IS NOT NULL) AS has FROM uploaded_files WHERE company_id = ${companyId} AND system_mode = ${mode}`,
     );
     const hasMap = new Map(withFlag.map((r) => [r.id, r.has]));
     return NextResponse.json(files.map((f) => ({ ...f, hasFile: hasMap.get(f.id) ?? false })));

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 
@@ -30,12 +31,17 @@ export async function GET(req: NextRequest) {
       leaves = await prisma.leaveRequest.findMany({ where, orderBy: { createdAt: "desc" } });
     } catch {
       // Fallback: new columns may not exist yet in DB — use raw query with only original columns
-      const cond = session.role === "employee"
-        ? `AND employee_id = '${where.employeeId}'`
-        : employee_id ? `AND employee_id = '${employee_id}'` : "";
-      const statusCond = status ? `AND status = '${status}'` : "";
-      leaves = await prisma.$queryRawUnsafe(
-        `SELECT id, company_id, employee_id, employee_name, leave_type, start_date, end_date, days_count, reason, status, admin_note, created_at, updated_at FROM leave_requests WHERE company_id = ${session.companyId} ${cond} ${statusCond} ORDER BY created_at DESC`
+      const employeeFilter = where.employeeId ? Prisma.sql`AND employee_id = ${where.employeeId}` : Prisma.empty;
+      const statusFilter = status ? Prisma.sql`AND status = ${status}` : Prisma.empty;
+      leaves = await prisma.$queryRaw(
+        Prisma.sql`
+          SELECT id, company_id, employee_id, employee_name, leave_type, start_date, end_date, days_count, reason, status, admin_note, created_at, updated_at
+          FROM leave_requests
+          WHERE company_id = ${session.companyId}
+          ${employeeFilter}
+          ${statusFilter}
+          ORDER BY created_at DESC
+        `,
       ) as any[];
     }
     return NextResponse.json(leaves);
