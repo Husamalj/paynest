@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ScrollText, AlertTriangle, ChevronDown, ChevronRight, User, Clock as ClockIcon } from "lucide-react";
 import api from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -42,7 +42,7 @@ export default function AuditLogPage() {
   const [to, setTo]           = useState("");
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
       const params: any = {};
@@ -54,12 +54,17 @@ export default function AuditLogPage() {
       setLogs(res.data || []);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
-  };
+  }, [action, entity, from, to]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [entity, action, from, to]);
+  useEffect(() => { load(); }, [load]);
 
   const toggle = (id: number) => {
-    setExpanded((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setExpanded((p) => {
+      const n = new Set(p);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   };
 
   return (

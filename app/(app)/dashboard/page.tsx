@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Users, Wallet, DollarSign, TrendingDown, Gift, Shield, AlertTriangle, MapPin, Bell, Calendar, CheckSquare, ChevronLeft, ChevronRight, ChevronDown, Scale, X } from "lucide-react";
+import { Users, Wallet, DollarSign, TrendingDown, Gift, Shield, AlertTriangle, MapPin, Bell, Calendar, ChevronLeft, ChevronRight, ChevronDown, Scale, X } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import StatCard from "@/components/StatCard";
 import api from "@/lib/api";
@@ -148,17 +148,7 @@ function formatCurrency(val: unknown) {
   return (parseFloat(String(val)) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function getStatusBadge(status: string, t: (k: any) => string) {
-  const map: Record<string, { cls: string; label: string }> = {
-    "Full Attendance": { cls: "badge-green", label: t("fullAttendance") },
-    "Has Deductions": { cls: "badge-red", label: t("hasDeductions") },
-    "Has Extras": { cls: "badge-blue", label: t("hasExtras") },
-    Absent: { cls: "badge-gray", label: t("absent") },
-  };
-  const info = map[status] || { cls: "badge-gray", label: status };
-  return <span className={`badge ${info.cls}`}>{info.label}</span>;
-}
-
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function buildCopilotInsights(payroll: any[], isRTL: boolean) {
   const label = (ar: string, en: string) => (isRTL ? ar : en);
   const rows = payroll.map((r) => ({ ...r, net_salary: parseFloat(r.net_salary) || 0, hour_diff: parseFloat(r.hour_diff) || 0, adjustment: parseFloat(r.adjustment) || 0, deduction_total: parseFloat(r.deduction_total) || 0, social_security_deduct: parseFloat(r.social_security_deduct) || 0 }));
@@ -192,10 +182,8 @@ export default function DashboardPage() {
   const [remoteAssignments, setRemoteAssignments] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [leaves, setLeaves] = useState<any[]>([]);
-  const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [settings, setSettings] = useState<any>(null);
   const [onDuty, setOnDuty] = useState<any[]>([]);
   const [onLeaveToday, setOnLeaveToday] = useState<any[]>([]);
   const [onlineToday, setOnlineToday] = useState<any[]>([]);
@@ -203,7 +191,6 @@ export default function DashboardPage() {
   const [qDuty, setQDuty] = useState("");
   const [qLeave, setQLeave] = useState("");
   const [qOnline, setQOnline] = useState("");
-  const [payrollPeriod, setPayrollPeriod] = useState<{ month: number | null; year: number | null }>({ month: null, year: null });
 
   useEffect(() => {
     Promise.all([
@@ -211,20 +198,15 @@ export default function DashboardPage() {
       api.get("/employees"),
       api.get("/remote-assignments"),
       api.get("/leaves"),
-      api.get("/tasks"),
       api.get("/announcements"),
-      api.get("/settings"),
       api.get("/dashboard/on-duty").catch(() => ({ data: { on_duty: [] } })),
     ])
-      .then(([prRes, empRes, raRes, leavesRes, tasksRes, annRes, setRes, dutyRes]) => {
+      .then(([prRes, empRes, raRes, leavesRes, annRes, dutyRes]) => {
         setPayroll(prRes.data.results || []);
-        setPayrollPeriod({ month: prRes.data.period_month ?? null, year: prRes.data.period_year ?? null });
         setEmployees(empRes.data || []);
         setRemoteAssignments(raRes.data || []);
         setLeaves(leavesRes.data || []);
-        setTasks(tasksRes.data || []);
         setAnnouncements(annRes.data || []);
-        setSettings(setRes.data);
         setOnDuty(dutyRes.data?.on_duty || []);
         setOnLeaveToday(dutyRes.data?.on_leave || []);
         setOnlineToday(dutyRes.data?.on_online || []);
@@ -242,7 +224,6 @@ export default function DashboardPage() {
   }), [payroll]);
 
   const pendingLeaves = leaves.filter((l) => l.status === "pending").length;
-  const openTasks = tasks.filter((t) => t.status !== "completed").length;
 
   // Employees whose contract ends within the next 30 days (soonest first).
   const expiringContracts = useMemo(() => {

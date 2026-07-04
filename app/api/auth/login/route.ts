@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signJwt, errorResponse, HttpError } from "@/lib/auth";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { hiddenPageAliases } from "@/lib/responseShape";
 
 export const runtime = "nodejs";
 
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
         company_name: user.company?.name ?? null,
         company_slug: user.company?.slug ?? null,
         is_active: user.company?.isActive ?? null,
+        ...hiddenPageAliases(user.company),
       },
     });
 

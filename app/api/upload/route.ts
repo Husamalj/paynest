@@ -213,8 +213,6 @@ export async function POST(req: NextRequest) {
         }
 
         if (emps.length > 0) {
-          const empIds = emps.map((e) => e.employee_id);
-
           // 1. Quota enforcement
           const company = await prisma.company.findUnique({
             where: { id: companyId },

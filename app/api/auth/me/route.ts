@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, errorResponse } from "@/lib/auth";
+import { hiddenPageAliases } from "@/lib/responseShape";
 
 export const runtime = "nodejs";
 
@@ -40,6 +41,7 @@ export async function GET(req: NextRequest) {
         company_name: user.company?.name ?? null,
         company_slug: user.company?.slug ?? null,
         is_active: user.company?.isActive ?? null,
+        ...hiddenPageAliases(user.company),
       },
     });
   } catch (err) {

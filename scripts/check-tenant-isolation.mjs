@@ -22,6 +22,7 @@ const ALLOW_PREFIXES = [
   "companies/",   // super-admin company management + per-company self status
   "health",       // liveness probe, no tenant data
   "cron/",        // scheduled jobs run across all companies (no user session)
+  "contact",      // platform-level demo requests (public POST, super-admin reads)
 ];
 
 function walk(dir) {

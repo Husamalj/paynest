@@ -76,9 +76,6 @@ export default function UploadPage() {
     try { const r = await api.get(`/attendance/missing?month=${m}&year=${y}`); setMissing(r.data || []); } catch { setMissing([]); }
   };
 
-  useEffect(() => { loadUploadedFiles(); api.get("/employees").then((r) => setEmployees(r.data || [])).catch(() => {}); }, []);
-  useEffect(() => { loadMissing(periodMonth, periodYear); }, [periodMonth, periodYear]);
-
   const submitManual = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualForm.employee_id || !manualForm.work_date || (!manualForm.clock_in && !manualForm.clock_out)) {
@@ -108,6 +105,9 @@ export default function UploadPage() {
       return files;
     } catch { return []; }
   };
+
+  useEffect(() => { loadUploadedFiles(); api.get("/employees").then((r) => setEmployees(r.data || [])).catch(() => {}); }, []);
+  useEffect(() => { loadMissing(periodMonth, periodYear); }, [periodMonth, periodYear]);
 
   const maybeAutoCalculate = async (prevFiles: any[], nextFiles: any[]) => {
     const hadBoth = prevFiles.some((f) => f.fileType === "attendance") && prevFiles.some((f) => f.fileType === "salary");

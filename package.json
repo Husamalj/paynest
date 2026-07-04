@@ -6,8 +6,24 @@
     "dev": "next dev",
     "build": "node scripts/check-tenant-isolation.mjs && prisma generate && next build",
     "start": "next start",
-    "lint": "next lint",
-    "check:isolation": "node scripts/check-tenant-isolation.mjs"
+    "lint": "eslint .",
+    "check:isolation": "node scripts/check-tenant-isolation.mjs",
+    "test": "npm run test:e2e",
+    "test:unit": "vitest run tests/unit",
+    "test:unit:watch": "vitest tests/unit",
+    "test:e2e": "playwright test",
+    "test:seed": "tsx scripts/test-seed.ts",
+    "test:seed:users": "tsx scripts/seed-test-users.ts",
+    "test:reset": "tsx scripts/test-reset.ts",
+    "test:install": "playwright install --with-deps chromium",
+    "k6:smoke": "k6 run k6/homepage-smoke.js",
+    "k6:normal": "k6 run k6/normal-day-load.js",
+    "k6:employee": "k6 run k6/authenticated-employee-load.js",
+    "k6:clockin": "k6 run k6/morning-clockin-spike.js",
+    "k6:payroll": "k6 run k6/payroll-day.js",
+    "k6:stress": "k6 run k6/stress.js",
+    "k6:soak": "k6 run k6/soak.js",
+    "zap:baseline": "node scripts/zap-baseline.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -32,6 +48,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^20",
@@ -44,7 +61,8 @@
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.15"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

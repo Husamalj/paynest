@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Bell, Plus, Trash2, AlertTriangle, CheckCircle2, X, Pencil } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
+import ConfirmButton from "@/components/ConfirmButton";
+import ModalShell from "@/components/ModalShell";
 
 export default function AnnouncementsPage() {
   const { t } = useLanguage();
@@ -34,7 +36,6 @@ export default function AnnouncementsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm(t("deleteConfirm"))) return;
     try { await api.delete(`/announcements/${id}`); await load(); }
     catch (err: any) { setError(err.message); }
   };
@@ -74,7 +75,7 @@ export default function AnnouncementsPage() {
                   <button className="btn btn-sm btn-secondary" onClick={() => togglePublish(ann)}>
                     <Pencil size={13} />{ann.published ? t("disabled") : t("enabled")}
                   </button>
-                  <button className="btn btn-sm btn-danger" onClick={() => handleDelete(ann.id)}><Trash2 size={13} /></button>
+                  <ConfirmButton className="btn btn-sm btn-danger" message={t("deleteConfirm")} onConfirm={() => handleDelete(ann.id)}><Trash2 size={13} /></ConfirmButton>
                 </div>
               </div>
             </div>
@@ -83,9 +84,7 @@ export default function AnnouncementsPage() {
       )}
 
       {showAdd && (
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAdd(false); }}>
-          <div className="modal">
-            <div className="modal-header"><h3 className="modal-title">{t("add")} {t("announcements")}</h3><button className="modal-close" onClick={() => setShowAdd(false)}><X size={18} /></button></div>
+        <ModalShell title={<>{t("add")} {t("announcements")}</>} onClose={() => setShowAdd(false)}>
             <form onSubmit={handleAdd} className="space-y-4">
               <div><label className="form-label">Title / العنوان *</label><input className="form-input" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} required /></div>
               <div><label className="form-label">Message / الرسالة *</label><textarea className="form-input" rows={4} value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} required /></div>
@@ -95,8 +94,7 @@ export default function AnnouncementsPage() {
               </div>
               <div className="flex justify-end gap-2"><button type="button" className="btn btn-secondary" onClick={() => setShowAdd(false)}>{t("cancel")}</button><button type="submit" className="btn btn-primary">{t("save")}</button></div>
             </form>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );

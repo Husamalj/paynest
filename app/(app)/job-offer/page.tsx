@@ -67,8 +67,6 @@ export default function JobOfferPage() {
 
   const printRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { load(); }, []);
-
   const load = async () => {
     setError("");
     try {
@@ -78,6 +76,8 @@ export default function JobOfferPage() {
       setOffers(o.data || []);
     } catch (e: any) { setError(e.message); setTpl(null); }
   };
+  useEffect(() => { load(); }, []);
+
   const flash = (m: string) => { setSuccess(m); setTimeout(() => setSuccess(""), 2500); };
   const refreshOffers = async () => { const o = await api.get("/job-offers"); setOffers(o.data || []); };
 

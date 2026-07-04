@@ -19,8 +19,6 @@ export async function GET(req: NextRequest) {
     requireRole(session, ["owner", "hr", "super_admin"]);
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
-    const mode = await getSystemMode(session.companyId);
-
     // Exclude employee records that belong to owner/hr/super_admin accounts.
     // Show all employees EXCEPT those whose employeeId matches a non-employee user.
     const adminUsers = await prisma.user.findMany({

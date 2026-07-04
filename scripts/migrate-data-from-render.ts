@@ -30,10 +30,11 @@ async function migrate() {
   const companies = await source.company.findMany();
   console.log(`Migrating ${companies.length} companies…`);
   for (const c of companies) {
+    const data = { ...c, hiddenPages: Array.isArray(c.hiddenPages) ? c.hiddenPages : [] };
     await target.company.upsert({
       where: { id: c.id },
-      create: c,
-      update: c,
+      create: data,
+      update: data,
     });
   }
 
@@ -85,7 +86,7 @@ async function migrate() {
   const payroll = await source.payrollRecord.findMany();
   console.log(`Migrating ${payroll.length} payroll records…`);
   for (const p of payroll) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await target.payrollRecord.upsert({ where: { id: p.id }, create: p as any, update: p as any });
   }
 

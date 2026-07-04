@@ -15,9 +15,6 @@ export async function GET(req: NextRequest) {
     requireRole(session, ["owner", "hr", "super_admin", "employee"]);
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
-    const settings = await prisma.companySettings.findFirst({ where: { companyId: session.companyId } });
-    const mode = settings?.systemMode ?? "daily";
-
     // Map every staff account's employeeNumber -> role (owner / hr / super_admin)
     const staff = await prisma.user.findMany({
       where: { companyId: session.companyId, role: { in: ["owner", "hr", "super_admin"] } },

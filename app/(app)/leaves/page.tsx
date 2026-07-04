@@ -5,6 +5,8 @@ import { Plus, Palmtree, Trash2, CheckCircle2, XCircle, AlertTriangle, X, Calend
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 import clsx from "clsx";
+import ConfirmButton from "@/components/ConfirmButton";
+import ModalShell from "@/components/ModalShell";
 
 function StatusBadge({ status, t }: any) {
   const map: Record<string, { cls: string; label: string }> = { pending: { cls: "badge-yellow", label: t("pending") }, approved: { cls: "badge-green", label: t("approved") }, rejected: { cls: "badge-red", label: t("rejected") } };
@@ -112,7 +114,6 @@ export default function LeavesPage() {
 
 
   const handleDeleteHoliday = async (id: number) => {
-    if (!window.confirm(t("deleteConfirm"))) return;
     try { await api.delete(`/leaves/holidays/${id}`); setHolidays((p) => p.filter((h) => h.id !== id)); }
     catch (err: any) { setError(err.message); }
   };
@@ -260,7 +261,7 @@ export default function LeavesPage() {
                     <tr key={h.id}>
                       <td className="font-medium">{h.name}</td>
                       <td>{new Date(h.holidayDate || h.holiday_date).toLocaleDateString()}</td>
-                      <td className="text-right"><button className="btn btn-sm btn-danger" onClick={() => handleDeleteHoliday(h.id)}><Trash2 size={13} /></button></td>
+                      <td className="text-right"><ConfirmButton className="btn btn-sm btn-danger" message={t("deleteConfirm")} onConfirm={() => handleDeleteHoliday(h.id)}><Trash2 size={13} /></ConfirmButton></td>
                     </tr>
                   ))}
                 </tbody>
@@ -271,9 +272,7 @@ export default function LeavesPage() {
       )}
 
       {showAddLeave && (
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAddLeave(false); }}>
-          <div className="modal">
-            <div className="modal-header"><h3 className="modal-title">{t("addLeave")}</h3><button className="modal-close" onClick={() => setShowAddLeave(false)}><X size={18} /></button></div>
+        <ModalShell title={t("addLeave")} onClose={() => setShowAddLeave(false)}>
             <form onSubmit={handleAddLeave} className="space-y-4">
               <div><label className="form-label">{t("employee")} *</label><select className="form-input" value={leaveForm.employee_id} onChange={handleEmpChange}><option value="">{t("selectEmployee")}</option>{employees.map((e) => <option key={e.employee_id} value={e.employee_id}>{e.name}</option>)}</select></div>
               <div><label className="form-label">{t("leaveType")}</label><select className="form-input" value={leaveForm.leave_type} onChange={(e) => setLeaveForm((f) => ({ ...f, leave_type: e.target.value }))}><option value="annual">{t("annualLeave")}</option><option value="sick">{t("sickLeave")}</option><option value="unpaid">{t("unpaidLeave")}</option></select></div>
@@ -285,14 +284,11 @@ export default function LeavesPage() {
               <div><label className="form-label">{t("reason")}</label><input className="form-input" value={leaveForm.reason} onChange={(e) => setLeaveForm((f) => ({ ...f, reason: e.target.value }))} /></div>
               <div className="flex justify-end gap-2"><button type="button" className="btn btn-secondary" onClick={() => setShowAddLeave(false)}>{t("cancel")}</button><button type="submit" className="btn btn-primary">{t("save")}</button></div>
             </form>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {showAddHoliday && (
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAddHoliday(false); }}>
-          <div className="modal">
-            <div className="modal-header"><h3 className="modal-title">{t("addHoliday")}</h3><button className="modal-close" onClick={() => setShowAddHoliday(false)}><X size={18} /></button></div>
+        <ModalShell title={t("addHoliday")} onClose={() => setShowAddHoliday(false)}>
             <form onSubmit={handleAddHoliday} className="space-y-4">
               <div><label className="form-label">{t("holidayName")} *</label><input className="form-input" value={holidayForm.name} onChange={(e) => setHolidayForm((f) => ({ ...f, name: e.target.value }))} required /></div>
               <div className="grid grid-cols-2 gap-3">
@@ -301,8 +297,7 @@ export default function LeavesPage() {
               </div>
               <div className="flex justify-end gap-2"><button type="button" className="btn btn-secondary" onClick={() => setShowAddHoliday(false)}>{t("cancel")}</button><button type="submit" className="btn btn-primary">{t("save")}</button></div>
             </form>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );

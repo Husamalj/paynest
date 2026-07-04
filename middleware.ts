@@ -15,6 +15,7 @@ const PUBLIC_API_PREFIXES = [
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (!pathname.startsWith("/api/")) return NextResponse.next();
+  if (req.method === "POST" && pathname === "/api/contact") return NextResponse.next();
   if (PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p))) return NextResponse.next();
 
   const auth = req.headers.get("authorization") || "";

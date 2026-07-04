@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { sendDemoRequest } from "@/lib/email";
+import { requireAuth, requireRole, errorResponse } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -15,17 +17,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Name and a valid work email are required." }, { status: 400 });
     }
 
+    const data = {
+      firstName,
+      lastName: String(body?.lastName ?? "").trim() || null,
+      email,
+      company: String(body?.company ?? "").trim() || null,
+      teamSize: String(body?.teamSize ?? "").trim() || null,
+      message: String(body?.message ?? "").trim().slice(0, 2000) || null,
+    };
+
+    // Persist so it shows up in the super-admin inbox.
+    await prisma.contactRequest.create({ data });
+
+    // Also notify by email (best-effort).
     const to = process.env.CONTACT_EMAIL || process.env.FROM_EMAIL || "info@paynest.app";
     sendDemoRequest(to, {
-      firstName,
-      lastName: String(body?.lastName ?? "").trim(),
-      email,
-      company: String(body?.company ?? "").trim(),
-      teamSize: String(body?.teamSize ?? "").trim(),
-      message: String(body?.message ?? "").trim().slice(0, 2000),
+      firstName, lastName: data.lastName ?? undefined, email,
+      company: data.company ?? undefined, teamSize: data.teamSize ?? undefined, message: data.message ?? undefined,
     });
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Something went wrong. Please email us directly." }, { status: 500 });
+  }
+}
+
+// GET /api/contact — super-admin inbox of demo requests.
+export async function GET(req: NextRequest) {
+  try {
+    const session = await requireAuth(req);
+    requireRole(session, ["super_admin"]);
+    const rows = await prisma.contactRequest.findMany({ orderBy: { createdAt: "desc" }, take: 200 });
+    const unread = rows.filter((r) => !r.read).length;
+    return NextResponse.json({ requests: rows, unread });
+  } catch (err) {
+    return errorResponse(err);
   }
 }

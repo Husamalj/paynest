@@ -28,7 +28,7 @@ export default function Chat({ heightClass = "h-[calc(100vh-9rem)]", bare = fals
   const timerRef = useRef<any>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<string | null>(null);
-  activeRef.current = active?.employee_id ?? null;
+  const activeEmployeeId = active?.employee_id ?? null;
 
   const loadContacts = async () => {
     try { const r = await api.get("/messages/contacts"); setContacts(r.data || []); } catch {}
@@ -38,12 +38,13 @@ export default function Chat({ heightClass = "h-[calc(100vh-9rem)]", bare = fals
   };
 
   useEffect(() => { loadContacts(); const t = setInterval(loadContacts, 8000); return () => clearInterval(t); }, []);
+  useEffect(() => { activeRef.current = activeEmployeeId; }, [activeEmployeeId]);
   useEffect(() => {
-    if (!active) return;
-    loadThread(active.employee_id);
+    if (!activeEmployeeId) return;
+    loadThread(activeEmployeeId);
     const t = setInterval(() => { if (activeRef.current) loadThread(activeRef.current); }, 4000);
     return () => clearInterval(t);
-  }, [active?.employee_id]);
+  }, [activeEmployeeId]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs.length]);
 
   const MAX_FILES = 5;

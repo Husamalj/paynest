@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse } from "@/lib/auth";
+import { hiddenPageAliases } from "@/lib/responseShape";
 
 export const runtime = "nodejs";
 
@@ -18,10 +19,10 @@ export async function GET(req: NextRequest) {
 
     // For each company: count employees excluding only owner/super_admin (HR counts)
     const results = await Promise.all(
-      companies.map(async (c) => {
+      companies.map(async (c: any) => {
         const adminEmpNums = c.users
-          .filter((u) => u.role === "owner" || u.role === "super_admin")
-          .map((u) => u.employeeNumber)
+          .filter((u: any) => u.role === "owner" || u.role === "super_admin")
+          .map((u: any) => u.employeeNumber)
           .filter(Boolean) as string[];
 
         const employee_count = await prisma.employee.count({
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
           },
         });
 
-        const owner_email = c.users.find((u) => u.role === "owner")?.email ?? null;
+        const owner_email = c.users.find((u: any) => u.role === "owner")?.email ?? null;
 
         return {
           id: c.id,
@@ -45,6 +46,7 @@ export async function GET(req: NextRequest) {
           employee_count,
           max_employees: c.maxEmployees,
           maxEmployees: c.maxEmployees,
+          ...hiddenPageAliases(c),
           owner_email,
         };
       })

@@ -51,3 +51,23 @@ CREATE TABLE IF NOT EXISTS job_offers (
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS join_date DATE;
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS contract_end_date DATE;
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS department VARCHAR(50);
+
+-- 5) Platform-level contact/demo requests
+CREATE TABLE IF NOT EXISTS contact_requests (
+  id          SERIAL PRIMARY KEY,
+  first_name  VARCHAR(120) NOT NULL,
+  last_name   VARCHAR(120),
+  email       VARCHAR(160) NOT NULL,
+  company     VARCHAR(200),
+  team_size   VARCHAR(40),
+  message     TEXT,
+  read        BOOLEAN NOT NULL DEFAULT false,
+  created_at  TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS contact_requests_read_created_at_idx
+  ON contact_requests (read, created_at);
+
+-- 6) Per-company hidden pages/modules controlled by super admin
+ALTER TABLE companies
+  ADD COLUMN IF NOT EXISTS hidden_pages JSONB NOT NULL DEFAULT '[]'::jsonb;

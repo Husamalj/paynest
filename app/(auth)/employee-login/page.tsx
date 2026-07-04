@@ -101,6 +101,7 @@ export default function EmployeeLoginPage() {
         <div className="w-full max-w-md">
           <form
             onSubmit={handleLogin}
+            data-testid="employee-login-form"
             className="bg-white rounded-2xl shadow-elevated border border-slate-200/70 p-8"
           >
             {/* Icon + title */}
@@ -119,6 +120,7 @@ export default function EmployeeLoginPage() {
               {ar ? "البريد الإلكتروني" : "Email Address"}
             </label>
             <input
+              data-testid="employee-login-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -134,6 +136,7 @@ export default function EmployeeLoginPage() {
             </label>
             <div className="relative mb-4">
               <input
+                data-testid="employee-login-password"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -168,6 +171,7 @@ export default function EmployeeLoginPage() {
             )}
 
             <button
+              data-testid="employee-login-submit"
               disabled={loading}
               className="w-full py-3 rounded-xl text-white font-bold disabled:opacity-60 mb-4 bg-slate-700 hover:bg-slate-800 transition-colors shadow-sm text-sm"
             >

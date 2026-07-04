@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { hiddenPageAliases } from "@/lib/responseShape";
 
 export const runtime = "nodejs";
 
@@ -41,6 +42,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         data: { maxEmployees: parsed },
       });
       return NextResponse.json(updated);
+    }
+
+    // Update hidden pages/modules for this company.
+    if (body.hiddenPages !== undefined || body.hidden_pages !== undefined) {
+      const raw = body.hiddenPages ?? body.hidden_pages;
+      if (!Array.isArray(raw) || raw.some((v) => typeof v !== "string")) {
+        throw new HttpError(400, "hiddenPages must be an array of page keys");
+      }
+      const unique = Array.from(new Set(raw.map((v) => v.trim()).filter(Boolean)));
+      const updated = await prisma.company.update({
+        where: { id: Number(id) },
+        data: { hiddenPages: unique },
+      });
+      return NextResponse.json({
+        ...updated,
+        ...hiddenPageAliases({ hiddenPages: unique }),
+      });
     }
 
     throw new HttpError(400, "Invalid request body");

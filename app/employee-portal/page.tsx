@@ -20,6 +20,7 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 import Chat from "@/components/Chat";
 import OrgChart, { type OrgEmp } from "@/components/OrgChart";
 import clsx from "clsx";
+import { readHiddenPages } from "@/lib/responseShape";
 
 const EVAL_CRITERIA = [
   { key: "score_accuracy",          en: "Accuracy at Work",                              ar: "الدقة في العمل" },
@@ -88,11 +89,11 @@ function PriorityBadge({ priority, isRTL }: { priority?: string; isRTL: boolean 
 /** Inline measurable-target progress bar with editable current value. */
 function TargetProgress({ task, isRTL, onSave }: { task: any; isRTL: boolean; onSave: (v: number) => void }) {
   const tgt = Number(task.targetValue ?? task.target_value);
-  if (!tgt || tgt <= 0) return null;
   const cur = Number(task.currentValue ?? task.current_value ?? 0);
-  const pct = Math.min(100, Math.round((cur / tgt) * 100));
+  const pct = tgt > 0 ? Math.min(100, Math.round((cur / tgt) * 100)) : 0;
   const [val, setVal] = useState(String(cur));
   useEffect(() => { setVal(String(cur)); }, [cur]);
+  if (!tgt || tgt <= 0) return null;
   const unit = task.unit ? ` ${task.unit}` : "";
   return (
     <div className="mt-2 w-full">
@@ -154,6 +155,8 @@ export default function EmployeePortalPage() {
   const { lang, toggleLanguage } = useLanguage();
   const isRTL = lang === "ar";
   const savedUser = JSON.parse(typeof window !== "undefined" ? localStorage.getItem("user") || "{}" : "{}");
+  const hiddenPages = readHiddenPages(savedUser);
+  const onlineWorkEnabled = !hiddenPages.includes("remoteMenu");
 
   // Profile dropdown + change password modal
   const [profileOpen, setProfileOpen] = useState(false);
@@ -334,6 +337,7 @@ export default function EmployeePortalPage() {
   };
 
   const loadCheckin = async () => {
+    if (!onlineWorkEnabled) return;
     try { const r = await api.get("/attendance/checkin"); setCheckin(r.data); } catch { setCheckin(null); }
   };
   const doCheck = async (action: "in" | "out") => {
@@ -349,6 +353,7 @@ export default function EmployeePortalPage() {
 
   const submitOnline = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!onlineWorkEnabled) return;
     if (!employee || !onlineForm.start) return;
     setCheckinBusy(true);
     try {
@@ -434,8 +439,6 @@ export default function EmployeePortalPage() {
     selectFirst: isRTL ? "اختر اسمك للدخول إلى بوابة الموظف" : "Choose your name to enter the portal",
   };
 
-  useEffect(() => { loadData(); }, []);
-
   // Mark which employees the current user has already evaluated for the selected period
   useEffect(() => {
     api.get("/evaluations", { params: { month: evalPeriodMonth, year: evalPeriodYear } })
@@ -505,6 +508,8 @@ export default function EmployeePortalPage() {
     } catch (err: any) { setError(err.message); }
     finally { setLoading(false); }
   };
+
+  useEffect(() => { loadData(); }, []);
 
   // Load this employee's full payroll history (each month)
   useEffect(() => {
@@ -866,10 +871,12 @@ export default function EmployeePortalPage() {
                     <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-base">💵</div>
                     <div className="text-sm font-medium text-slate-900">{isRTL ? "طلب سلفة" : "Request Advance"}</div>
                   </button>
+                  {onlineWorkEnabled && (
                   <button type="button" onClick={() => { setShowOnlineModal(true); setReqOpen(false); loadCheckin(); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
                     <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center flex-shrink-0"><Wifi size={16} /></div>
                     <div className="text-sm font-medium text-slate-900">{isRTL ? "طلب عمل أونلاين" : "Online Work"}</div>
                   </button>
+                  )}
                   {customTypes.map((ct) => (
                     <button key={ct.id} type="button" onClick={() => openCustom(ct)} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-start">
                       <div className="w-8 h-8 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0"><Inbox size={16} /></div>
@@ -1425,7 +1432,7 @@ export default function EmployeePortalPage() {
             )}
 
             {/* ── Request Advance modal ── */}
-            {showOnlineModal && (
+            {onlineWorkEnabled && showOnlineModal && (
             <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowOnlineModal(false); }}>
               <div className="card w-full max-w-md" dir={isRTL ? "rtl" : "ltr"}>
                 <div className="card-header"><div className="card-title"><Wifi size={16} className="text-sky-600" />{isRTL ? "طلب عمل أونلاين" : "Online Work Request"}</div><button type="button" onClick={() => setShowOnlineModal(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button></div>

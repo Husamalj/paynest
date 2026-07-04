@@ -5,6 +5,8 @@ import { Plus, Gift, TrendingDown, Trash2, CheckCircle2, AlertTriangle, X } from
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api from "@/lib/api";
 import clsx from "clsx";
+import ConfirmButton from "@/components/ConfirmButton";
+import ModalShell from "@/components/ModalShell";
 
 function formatCurrency(val: unknown) {
   return (parseFloat(String(val)) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -52,7 +54,6 @@ export default function BonusesPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm(t("deleteConfirm"))) return;
     try { await api.delete(`/bonuses/${id}`); setList((p) => p.filter((item) => item.id !== id)); }
     catch (err: any) { setError(err.message); }
   };
@@ -95,7 +96,7 @@ export default function BonusesPage() {
                     <td className="text-sm text-slate-600">{item.reason || "-"}</td>
                     <td className="text-right font-mono font-semibold">{formatCurrency(item.amount)}</td>
                     <td className="text-sm text-slate-500">{(item.periodMonth || item.period_month)}/{(item.periodYear || item.period_year)}</td>
-                    <td className="text-right"><button className="btn btn-sm btn-danger" onClick={() => handleDelete(item.id)}><Trash2 size={13} />{t("delete")}</button></td>
+                    <td className="text-right"><ConfirmButton className="btn btn-sm btn-danger" message={t("deleteConfirm")} onConfirm={() => handleDelete(item.id)}><Trash2 size={13} />{t("delete")}</ConfirmButton></td>
                   </tr>
                 ))}
               </tbody>
@@ -105,9 +106,7 @@ export default function BonusesPage() {
       </div>
 
       {showModal && (
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
-          <div className="modal">
-            <div className="modal-header"><h3 className="modal-title">{t("addBonus")}</h3><button className="modal-close" onClick={() => setShowModal(false)}><X size={18} /></button></div>
+        <ModalShell title={t("addBonus")} onClose={() => setShowModal(false)}>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div><label className="form-label">{t("employee")} *</label><select className="form-input" value={form.employee_id} onChange={handleEmployeeChange}><option value="">{t("selectEmployee")}</option>{employees.map((e) => <option key={e.employee_id} value={e.employee_id}>{e.name}</option>)}</select></div>
               <div><label className="form-label">{t("type")}</label><select className="form-input" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}><option value="bonus">{t("bonus")}</option><option value="deduction">{t("deduction")}</option></select></div>
@@ -120,8 +119,7 @@ export default function BonusesPage() {
               <p className="text-[11px] text-amber-600">{lang === "ar" ? "ملاحظة: يظهر هذا البند في راتب هذا الشهر فقط — وأعد احتساب الرواتب بعد الحفظ." : "Note: this item shows only in this month's payroll — recalculate payroll after saving."}</p>
               <div className="flex justify-end gap-2"><button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>{t("cancel")}</button><button type="submit" className="btn btn-primary">{t("save")}</button></div>
             </form>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );

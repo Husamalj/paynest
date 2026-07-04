@@ -87,9 +87,6 @@ export default function EvaluationsPage() {
   const [tiersSaving, setTiersSaving] = useState(false);
   const [tiersMsg, setTiersMsg]       = useState("");
 
-  useEffect(() => { load(); }, [month, year]);
-  useEffect(() => { loadEmployees(); loadTiers(); }, []);
-
   const loadTiers = async () => {
     try {
       const res = await api.get("/bonus-tiers");
@@ -170,6 +167,9 @@ export default function EvaluationsPage() {
       setEmployees(res.data?.employees || []);
     } catch { /* ignore */ }
   };
+
+  useEffect(() => { load(); }, [month, year]);
+  useEffect(() => { loadEmployees(); loadTiers(); }, []);
 
   const openModal = (empId = "") => {
     setModalEmpId(empId);

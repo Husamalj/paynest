@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Upload as UploadIcon,
   Wallet,
   Gift,
-  Palmtree,
   BarChart3,
   Bell,
   Users,
@@ -23,17 +22,14 @@ import {
   LogOut,
   ShieldCheck,
   Network,
-  GitBranch,
   ScrollText,
   FileText,
   Mail,
-  Banknote,
   Inbox,
   KeyRound,
   X,
   AlertTriangle,
   CheckCircle2,
-  UserCircle,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -41,6 +37,8 @@ import ChatLauncher from "@/components/ChatLauncher";
 import clsx from "clsx";
 import api from "@/lib/api";
 import { TranslationKey } from "@/lib/i18n/translations";
+import { HIDDEN_PAGE_PATHS } from "@/lib/pageRegistry";
+import { readHiddenPages } from "@/lib/responseShape";
 
 interface NavChild {
   key: TranslationKey;
@@ -91,6 +89,11 @@ const NAV_ITEMS: NavItem[] = [
   { key: "settings", path: "/settings", icon: SettingsIcon },
 ];
 
+function matchesPath(pathname: string, path: string) {
+  if (path === "/employees") return pathname === path;
+  return path === "/dashboard" ? pathname === path : pathname === path || pathname.startsWith(`${path}/`);
+}
+
 interface LayoutProps {
   children: React.ReactNode;
   settings?: { company_name?: string } | null;
@@ -100,6 +103,7 @@ interface LayoutProps {
 export default function Layout({ children, settings, NotificationBell }: LayoutProps) {
   const { t, lang, toggleLanguage, isRTL } = useLanguage();
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({ employees: true });
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -112,7 +116,10 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
   const profileRef = useRef<HTMLDivElement>(null);
 
   const role = typeof window !== "undefined" ? localStorage.getItem("role") || "guest" : "guest";
-  const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {};
+  const storedUserJson = typeof window !== "undefined" ? localStorage.getItem("user") || "{}" : "{}";
+  const user = useMemo(() => JSON.parse(storedUserJson), [storedUserJson]);
+  const hiddenPages: string[] = useMemo(() => readHiddenPages(user), [user]);
+  const hiddenSet = useMemo(() => new Set(hiddenPages), [hiddenPages]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -166,10 +173,29 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
             ? { ...item, children: item.children.filter((c) => c.key !== "companyStructure") }
             : item
         );
+  const visibleNavItems = navItems
+    .filter((item) => !hiddenSet.has(item.key))
+    .map((item) =>
+      item.children
+        ? { ...item, children: item.children.filter((c) => !hiddenSet.has(c.key)) }
+        : item
+    )
+    .filter((item) => !item.children || item.children.length > 0);
   const companyName = settings?.company_name || user.company_name || "PayNest";
 
-  const currentNav = navItems.find((i) =>
-    i.path === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(i.path)
+  useEffect(() => {
+    const hiddenPath = hiddenPages.some((key) => (HIDDEN_PAGE_PATHS[key] || []).some((path) => matchesPath(pathname, path)));
+    if (!hiddenPath) return;
+    const firstVisible =
+      visibleNavItems.find((item) => item.key !== "settings")?.children?.[0]?.path ||
+      visibleNavItems.find((item) => item.key !== "settings")?.path ||
+      visibleNavItems.find((item) => item.key === "settings")?.path ||
+      "/dashboard";
+    router.replace(firstVisible);
+  }, [hiddenPages, pathname, router, visibleNavItems]);
+
+  const currentNav = visibleNavItems.find((i) =>
+    matchesPath(pathname, i.path) || i.children?.some((ch) => matchesPath(pathname, ch.path))
   );
   const CurrentIcon = (currentNav?.icon || LayoutDashboard) as React.ElementType;
 
@@ -223,7 +249,7 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
         <nav className="flex-1 px-3 py-4 overflow-x-hidden overflow-y-auto">
           <div className="text-[11px] font-semibold uppercase text-slate-400 tracking-wider px-3 mb-2 lg:hidden lg:group-hover:block">{t("overview")}</div>
           <div className="space-y-0.5">
-            {navItems.filter((i) => i.key !== "settings").map((item) => {
+            {visibleNavItems.filter((i) => i.key !== "settings").map((item) => {
               const Icon = item.icon as React.ElementType;
               if (item.children) {
                 const isActive = pathname.startsWith(item.path);
@@ -286,7 +312,7 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
 
         {/* Pinned bottom: Settings + Contact us */}
         <div className="px-3 py-3 border-t border-slate-100 space-y-0.5 overflow-x-hidden">
-          {navItems.some((i) => i.key === "settings") && (
+          {visibleNavItems.some((i) => i.key === "settings") && (
             <Link
               href="/settings"
               onClick={() => setSidebarOpen(false)}
