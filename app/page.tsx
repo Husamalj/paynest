@@ -122,10 +122,10 @@ function Hero({ ar }: { ar: boolean }) {
             </>
           ) : (
             <>
-              All-in-one<br />
+              Payroll. Employees.<br />
               <span className="relative inline-block">
                 <span className="bg-gradient-to-r from-brand-500 to-brand-700 bg-clip-text text-transparent">
-                  Payroll &amp; HR Platform
+                  One System.
                 </span>
                 <svg
                   className="absolute -bottom-2 left-0 w-full"
