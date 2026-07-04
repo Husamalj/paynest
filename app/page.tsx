@@ -122,11 +122,10 @@ function Hero({ ar }: { ar: boolean }) {
             </>
           ) : (
             <>
-              Payroll.<br />
-              Employees.<br />
+              Smart HR &amp;<br />
               <span className="relative inline-block">
                 <span className="bg-gradient-to-r from-brand-500 to-brand-700 bg-clip-text text-transparent">
-                  One System.
+                  Payroll Management
                 </span>
                 <svg
                   className="absolute -bottom-2 left-0 w-full"
@@ -149,7 +148,8 @@ function Hero({ ar }: { ar: boolean }) {
                     </linearGradient>
                   </defs>
                 </svg>
-              </span>
+              </span><br />
+              System
             </>
           )}
         </h1>
