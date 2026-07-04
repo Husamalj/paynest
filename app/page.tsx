@@ -122,7 +122,8 @@ function Hero({ ar }: { ar: boolean }) {
             </>
           ) : (
             <>
-              Payroll. Employees.<br />
+              Payroll.<br />
+              Employees.<br />
               <span className="relative inline-block">
                 <span className="bg-gradient-to-r from-brand-500 to-brand-700 bg-clip-text text-transparent">
                   One System.
