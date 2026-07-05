@@ -43,9 +43,14 @@ Use only seeded test data or staging data. Never run destructive, stress, soak, 
 - Review `zap-report.html`.
 - Triage authentication, session, CSP, mixed-content, insecure cookie, and injection findings.
 
+## Security Headers
+
+- `npm run test:e2e:smoke` checks the baseline security headers on public pages.
+- Production responses should include CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, COOP, CORP, and `Permissions-Policy`.
+- API responses should send `Cache-Control: no-store`.
+
 ## Load Testing
 
 - `k6:smoke` can run locally.
 - `k6:normal`, `k6:employee`, `k6:clockin`, `k6:payroll`, `k6:stress`, and `k6:soak` must target staging/non-production.
 - Stress and soak tests require monitoring for database pool saturation, API latency, and error rates.
-
