@@ -5,6 +5,7 @@ PayNest is a multi-tenant HR and payroll SaaS built with Next.js, Prisma, Postgr
 ## Stack
 
 - Next.js App Router
+- API routes in `app/api`
 - React
 - Prisma ORM
 - PostgreSQL
