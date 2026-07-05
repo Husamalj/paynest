@@ -4,6 +4,8 @@ Use this checklist before deploying PayNest or changing production settings.
 
 ## Required Environment Variables
 
+Use `.env.production.example` as the checklist for Vercel. Add the real values in Vercel Project Settings > Environment Variables, not in git.
+
 - `DATABASE_URL`: production PostgreSQL pooled connection string.
 - `DIRECT_URL`: direct PostgreSQL connection string for Prisma operations.
 - `JWT_SECRET`: long random secret, different from test/dev.
@@ -24,6 +26,7 @@ Use this checklist before deploying PayNest or changing production settings.
 
 ```bash
 npm run lint
+npm run check:env
 npm run check:isolation
 npm run test:unit
 npm run build
@@ -50,4 +53,3 @@ npm run zap:baseline
 - Confirm contact form delivery.
 - Confirm login/logout cookies work over HTTPS.
 - Check server logs for Prisma, auth, or email errors.
-

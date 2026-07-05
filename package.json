@@ -7,6 +7,7 @@
     "build": "node scripts/check-tenant-isolation.mjs && prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
+    "check:env": "node scripts/check-production-env.mjs",
     "check:isolation": "node scripts/check-tenant-isolation.mjs",
     "test": "npm run test:e2e",
     "test:unit": "vitest run tests/unit",

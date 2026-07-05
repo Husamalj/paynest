@@ -80,12 +80,14 @@ Production deploys should use managed PostgreSQL and production-only secrets. Be
 
 ```bash
 npm run lint
+npm run check:env
 npm run check:isolation
 npm run test:unit
 npm run build
 ```
 
 Use [docs/production-checklist.md](docs/production-checklist.md) before changing production environment variables or database settings.
+Use [.env.production.example](.env.production.example) as the Vercel variable checklist without committing real values.
 
 ## Security Notes
 
@@ -93,4 +95,3 @@ Use [docs/production-checklist.md](docs/production-checklist.md) before changing
 - Never run seed/reset scripts against production.
 - Never run k6 stress, soak, payroll-day, or clock-in spike tests against production.
 - Keep tenant-scoped API routes covered by `npm run check:isolation`.
-
