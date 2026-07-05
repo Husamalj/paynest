@@ -5,7 +5,10 @@ dist/
 .env.local
 .env.production
 *.env
+.env.test.txt
 uploads/
+playwright-report/
+test-results/
 frontend/node_modules/
 backend/node_modules/
 .vercel
