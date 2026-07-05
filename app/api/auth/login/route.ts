@@ -18,7 +18,18 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findFirst({
       where: { email },
-      include: { company: true },
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            status: true,
+            isActive: true,
+            hiddenPages: true,
+          },
+        },
+      },
     });
     if (!user) throw new HttpError(401, "Invalid credentials");
 

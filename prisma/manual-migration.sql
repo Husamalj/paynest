@@ -71,3 +71,7 @@ CREATE INDEX IF NOT EXISTS contact_requests_read_created_at_idx
 -- 6) Per-company hidden pages/modules controlled by super admin
 ALTER TABLE companies
   ADD COLUMN IF NOT EXISTS hidden_pages JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+-- 7) Owner onboarding completion flag
+ALTER TABLE companies
+  ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN NOT NULL DEFAULT false;

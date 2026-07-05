@@ -74,6 +74,9 @@ export function errorResponse(err: unknown) {
   if (err instanceof HttpError) {
     return NextResponse.json({ error: err.message }, { status: err.status });
   }
+  if (err instanceof Error && err.message === "JWT_SECRET is not set") {
+    return NextResponse.json({ error: "Server auth configuration is missing JWT_SECRET" }, { status: 500 });
+  }
   console.error("Unhandled API error:", err);
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
 }

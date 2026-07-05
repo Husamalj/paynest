@@ -10,7 +10,17 @@ export async function GET(req: NextRequest) {
     const session = await requireAuth(req);
     const user = await prisma.user.findUnique({
       where: { id: session.id },
-      include: { company: true },
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            isActive: true,
+            hiddenPages: true,
+          },
+        },
+      },
     });
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 401 });
 
