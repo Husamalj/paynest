@@ -72,7 +72,7 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [employees, setEmployees] = useState<any[]>([]);
-  const [savingEmp, setSavingEmp] = useState<Record<string, boolean>>({});
+  const [savingEmp] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     Promise.all([api.get("/settings"), api.get("/employees")])

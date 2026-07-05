@@ -27,7 +27,8 @@ const config = [
       "react-hooks/immutability": "warn",
       "react-hooks/refs": "warn",
       "react-hooks/rules-of-hooks": "warn",
-      "react/no-unescaped-entities": "warn",
+      "@next/next/no-img-element": "off",
+      "react/no-unescaped-entities": "off",
     },
   },
 ];

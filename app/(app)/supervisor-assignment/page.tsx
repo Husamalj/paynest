@@ -20,7 +20,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
-  Network, Save, RotateCcw, Search, AlertTriangle, CheckCircle2, GripVertical, User, X,
+  Network, Save, RotateCcw, Search, AlertTriangle, CheckCircle2, GripVertical, X,
 } from "lucide-react";
 import api from "@/lib/api";
 import { useLanguage } from "@/lib/i18n/LanguageContext";

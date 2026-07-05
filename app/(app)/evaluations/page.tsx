@@ -168,6 +168,7 @@ export default function EvaluationsPage() {
     } catch { /* ignore */ }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [month, year]);
   useEffect(() => { loadEmployees(); loadTiers(); }, []);
 

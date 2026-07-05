@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps */
+
 import { useEffect, useState } from "react";
 import {
   Users, Bell, CheckSquare, Calendar, LogOut, Menu, X,

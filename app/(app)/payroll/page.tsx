@@ -7,7 +7,7 @@ const DownloadPayslipButton = dynamic(
   () => import("@/components/PayslipPDF").then((m) => m.DownloadPayslipButton),
   { ssr: false }
 );
-import { Zap, Download, ChevronRight, ChevronDown, CheckCircle2, AlertTriangle, X, Calendar, Clock, Calculator } from "lucide-react";
+import { Zap, ChevronRight, ChevronDown, CheckCircle2, AlertTriangle, X, Calendar, Calculator } from "lucide-react";
 
 const MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -115,7 +115,12 @@ export default function PayrollPage() {
   };
 
   const toggleExpand = (id: number) => {
-    setExpanded((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setExpanded((p) => {
+      const n = new Set(p);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   };
 
   const totalNet = payroll.reduce((s, r) => s + (parseFloat(r.netSalary || r.net_salary) || 0), 0);

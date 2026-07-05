@@ -20,8 +20,7 @@ function safeErr(e: any) {
   return String(e);
 }
 
-const TABS = ["pending", "active", "suspended", "all"] as const;
-type Tab = typeof TABS[number];
+type Tab = "pending" | "active" | "suspended" | "all";
 
 export default function SuperAdminPage() {
   const [companies, setCompanies] = useState<any[]>([]);

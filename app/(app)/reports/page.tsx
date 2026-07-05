@@ -48,7 +48,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     if (history.length > 0 && !selected) handleSelect(history[0]);
-  }, [history]);
+  }, [history, selected]);
 
   if (loading) return <div className="flex items-center justify-center py-20 gap-3 text-slate-500"><span className="spinner spinner-dark w-5 h-5" />{t("loadingData")}</div>;
 

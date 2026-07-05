@@ -509,6 +509,7 @@ export default function EmployeePortalPage() {
     finally { setLoading(false); }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadData(); }, []);
 
   // Load this employee's full payroll history (each month)

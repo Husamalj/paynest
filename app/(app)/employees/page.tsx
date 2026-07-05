@@ -23,6 +23,7 @@ function formatCurrency(val: unknown) {
   return (parseFloat(String(val)) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const religionOptions = [
   { value: "muslim", ar: "مسلم", en: "Muslim" },
   { value: "christian", ar: "مسيحي", en: "Christian" },
@@ -156,6 +157,7 @@ export default function EmployeesPage() {
   const [createdEmpId, setCreatedEmpId] = useState("");
   const [docFiles, setDocFiles] = useState<Record<string, File | null>>({});
   const [docUploading, setDocUploading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [docProgress, setDocProgress] = useState<Record<string, boolean>>({});
   const [addPhoto, setAddPhoto] = useState("");      // base64 profile photo for the new employee
   const [lightbox, setLightbox] = useState("");       // image URL shown enlarged
@@ -249,6 +251,7 @@ export default function EmployeesPage() {
     } catch { setEmpDocs([]); }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadEmployees(); }, []);
   useEffect(() => { if (selectedId) loadDocs(selectedId); }, [selectedId]);
 

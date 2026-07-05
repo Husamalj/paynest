@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowRight, Wallet, Clock, BarChart3, ShieldCheck, Users, Calendar,
-  Globe, LogIn, PlayCircle, CheckCircle2, Sparkles,
+  Globe, LogIn, CheckCircle2, Sparkles,
   Flower2, Sun, Sparkle, Diamond, Hexagon,
 } from "lucide-react";
 import clsx from "clsx";
@@ -202,12 +202,12 @@ function Hero({ ar }: { ar: boolean }) {
 /* ─── Trust strip ─── */
 function TrustStrip({ ar }: { ar: boolean }) {
   const logos = [
-    { name: "TechNova",     icon: Hexagon  },
-    { name: "Bright Future",icon: Flower2  },
-    { name: "SmartPlus",    icon: Sparkle  },
-    { name: "Golden Gate",  icon: Sun      },
-    { name: "PrimeVision",  icon: Diamond  },
-    { name: "NextWave",     icon: Sparkles },
+    { name: "TechNova", icon: Hexagon },
+    { name: "Bright Future", icon: Flower2 },
+    { name: "SmartPlus", icon: Sparkle },
+    { name: "Golden Gate", icon: Sun },
+    { name: "PrimeVision", icon: Diamond },
+    { name: "NextWave", icon: Sparkles },
   ];
   return (
     <section className="py-10 border-y border-brand-100/70 bg-white/40">

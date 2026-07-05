@@ -75,6 +75,7 @@ export default function HRTeamPage() {
     finally { setLoading(false); }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, []);
 
   const selected = hrs.find((h) => h.id === selectedId) ?? null;

@@ -462,7 +462,7 @@ export default function UploadPage() {
                 {quotaError}
               </div>
               <p className="text-sm text-slate-500">
-                Contact the system administrator (Super Admin) to raise your company's employee cap.
+                Contact the system administrator (Super Admin) to raise your company&apos;s employee cap.
               </p>
               <div className="flex justify-end">
                 <button className="btn btn-secondary" onClick={() => setQuotaError("")}>OK</button>
