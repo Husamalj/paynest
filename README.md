@@ -90,6 +90,11 @@ npm run build
 Use [docs/production-checklist.md](docs/production-checklist.md) before changing production environment variables or database settings.
 Use [.env.production.example](.env.production.example) as the Vercel variable checklist without committing real values.
 Use [docs/database-backup.md](docs/database-backup.md) for backup and restore procedures.
+Use [docs/observability.md](docs/observability.md) for logs, request IDs, and health checks.
+Use [docs/prisma-migrations.md](docs/prisma-migrations.md) for production schema change rules.
+Use [docs/storage-review.md](docs/storage-review.md) before expanding upload/document features.
+
+The legacy `frontend/` and `backend/` folders were removed after migration. The Next.js app at the repository root is the single source of truth.
 
 ## Security Notes
 

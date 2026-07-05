@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, errorResponse, HttpError } from "@/lib/auth";
+import { passwordPolicyMessage } from "@/lib/passwordPolicy";
 
 export const runtime = "nodejs";
 
@@ -9,8 +10,8 @@ export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth(req);
     const { currentPassword, newPassword } = await req.json();
-    if (!newPassword || newPassword.length < 6)
-      throw new HttpError(400, "New password must be at least 6 characters");
+    const passwordError = passwordPolicyMessage(newPassword);
+    if (passwordError) throw new HttpError(400, passwordError);
 
     const user = await prisma.user.findUnique({ where: { id: session.id } });
     if (!user) throw new HttpError(404, "User not found");

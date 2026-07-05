@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
+import { passwordPolicyMessage } from "@/lib/passwordPolicy";
 
 export const runtime = "nodejs";
+
+function generateTemporaryPassword() {
+  return `PayNest-${crypto.randomBytes(6).toString("base64url")}1!`;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,7 +24,10 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.user.findFirst({ where: { email } });
     if (existing) throw new HttpError(409, "Email already exists");
 
-    const temporaryPassword = password || "123456";
+    const generatedPassword = !password;
+    const temporaryPassword = password || generateTemporaryPassword();
+    const passwordError = passwordPolicyMessage(temporaryPassword);
+    if (passwordError) throw new HttpError(400, passwordError);
     const hash = await bcrypt.hash(temporaryPassword, 10);
 
     const settings = await prisma.companySettings.findFirst({ where: { companyId: session.companyId } });
@@ -62,7 +71,10 @@ export async function POST(req: NextRequest) {
       data: { employeeNumber: employeeId },
     });
 
-    return NextResponse.json({ user: { ...user, employee_number: employeeId } }, { status: 201 });
+    return NextResponse.json({
+      user: { ...user, employee_number: employeeId },
+      ...(generatedPassword ? { temporaryPassword } : {}),
+    }, { status: 201 });
   } catch (err) {
     return errorResponse(err);
   }

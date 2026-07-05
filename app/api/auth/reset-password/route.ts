@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { errorResponse } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { passwordPolicyMessage } from "@/lib/passwordPolicy";
 
 export async function POST(req: Request) {
   try {
@@ -9,8 +10,9 @@ export async function POST(req: Request) {
     if (!token || !password) {
       return NextResponse.json({ error: "Token and password required" }, { status: 400 });
     }
-    if (password.length < 8) {
-      return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
+    const passwordError = passwordPolicyMessage(password);
+    if (passwordError) {
+      return NextResponse.json({ error: passwordError }, { status: 400 });
     }
 
     const resetToken = await prisma.passwordResetToken.findUnique({

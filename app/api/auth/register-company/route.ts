@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { errorResponse, HttpError } from "@/lib/auth";
 import { sendEmailVerification } from "@/lib/email";
 import { assertDeliverableEmail, assertValidPhone } from "@/lib/validate";
+import { passwordPolicyMessage } from "@/lib/passwordPolicy";
 
 export const runtime = "nodejs";
 
@@ -42,7 +43,8 @@ export async function POST(req: NextRequest) {
         ? null
         : Math.max(0, parseInt(String(maxEmployees), 10) || 0);
     if (!SLUG_RE.test(slug)) throw new HttpError(400, "Slug must be lowercase letters, digits, and dashes");
-    if (password.length < 6) throw new HttpError(400, "Password must be at least 6 characters");
+    const passwordError = passwordPolicyMessage(password);
+    if (passwordError) throw new HttpError(400, passwordError);
 
     const existingSlug = await prisma.company.findUnique({ where: { slug } });
     if (existingSlug) throw new HttpError(409, "Company slug already exists");
@@ -64,7 +66,7 @@ export async function POST(req: NextRequest) {
         role: "owner",
         companyId: company.id,
         isActive: true,
-        mustChangePassword: password === "123456",
+        mustChangePassword: false,
       },
     });
 
@@ -106,7 +108,7 @@ export async function POST(req: NextRequest) {
           role: "owner",
           companyId: company.id,
           isActive: true,
-          mustChangePassword: password === "123456",
+          mustChangePassword: false,
         },
       });
       const oEmpId = `OWNER-${oUser.id}`;

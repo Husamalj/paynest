@@ -19,6 +19,7 @@ Use `.env.production.example` as the checklist for Vercel. Add the real values i
 
 - Confirm production database is backed up before schema changes.
 - Run migrations or Prisma schema changes on staging first.
+- Use `npx prisma migrate deploy` for production migrations.
 - Do not set `PAYNEST_ALLOW_TEST_DB=true` in production.
 - Do not run `npm run test:prepare`, `npm run test:seed`, `npm run test:seed:users`, or `npm run test:reset` against production.
 
