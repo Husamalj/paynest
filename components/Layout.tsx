@@ -94,6 +94,15 @@ function matchesPath(pathname: string, path: string) {
   return path === "/dashboard" ? pathname === path : pathname === path || pathname.startsWith(`${path}/`);
 }
 
+function getStoredUser() {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem("user") || "{}");
+  } catch {
+    return {};
+  }
+}
+
 interface LayoutProps {
   children: React.ReactNode;
   settings?: { company_name?: string } | null;
@@ -116,10 +125,41 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
   const profileRef = useRef<HTMLDivElement>(null);
 
   const role = typeof window !== "undefined" ? localStorage.getItem("role") || "guest" : "guest";
-  const storedUserJson = typeof window !== "undefined" ? localStorage.getItem("user") || "{}" : "{}";
-  const user = useMemo(() => JSON.parse(storedUserJson), [storedUserJson]);
+  const [user, setUser] = useState<any>(() => getStoredUser());
   const hiddenPages: string[] = useMemo(() => readHiddenPages(user), [user]);
   const hiddenSet = useMemo(() => new Set(hiddenPages), [hiddenPages]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || role === "guest") return;
+
+    let cancelled = false;
+    const refreshUser = async () => {
+      try {
+        const res = await api.get("/auth/me");
+        const freshUser = res.data?.user;
+        if (!freshUser || cancelled) return;
+        localStorage.setItem("role", freshUser.role);
+        localStorage.setItem("user", JSON.stringify(freshUser));
+        setUser(freshUser);
+      } catch {}
+    };
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refreshUser();
+    };
+
+    refreshUser();
+    window.addEventListener("focus", refreshUser);
+    document.addEventListener("visibilitychange", onVisible);
+    const interval = window.setInterval(refreshUser, 60000);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", refreshUser);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(interval);
+    };
+  }, [role]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
