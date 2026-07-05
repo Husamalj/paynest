@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
  */
 type Hit = { count: number; resetAt: number };
 const buckets = new Map<string, Hit>();
+const failedLogins = new Map<string, Hit>();
 
 export function getClientIp(req: Request): string {
   const xff = req.headers.get("x-forwarded-for");
@@ -45,8 +46,35 @@ export function rateLimit(
   return null;
 }
 
+export function loginLockout(key: string): NextResponse | null {
+  const now = Date.now();
+  const hit = failedLogins.get(key);
+  if (!hit || hit.resetAt <= now || hit.count < 5) return null;
+
+  const retryAfter = Math.ceil((hit.resetAt - now) / 1000);
+  return NextResponse.json(
+    { error: "Too many failed login attempts. Please try again later." },
+    { status: 429, headers: { "Retry-After": String(retryAfter) } },
+  );
+}
+
+export function recordFailedLogin(key: string, lockMs = 15 * 60_000) {
+  const now = Date.now();
+  const hit = failedLogins.get(key);
+  if (!hit || hit.resetAt <= now) {
+    failedLogins.set(key, { count: 1, resetAt: now + lockMs });
+    return;
+  }
+  hit.count += 1;
+}
+
+export function clearFailedLogin(key: string) {
+  failedLogins.delete(key);
+}
+
 // Opportunistically drop expired buckets so the map can't grow unbounded.
 setInterval(() => {
   const now = Date.now();
   for (const [k, v] of buckets) if (v.resetAt <= now) buckets.delete(k);
+  for (const [k, v] of failedLogins) if (v.resetAt <= now) failedLogins.delete(k);
 }, 60_000).unref?.();

@@ -44,6 +44,33 @@ export async function logAudit(
       },
     });
   } catch {
+    // swallow - auditing must never block the user flow
+  }
+}
+
+export async function logAuditForCompany(
+  session: SessionUser | null | undefined,
+  companyId: number | null | undefined,
+  action: AuditAction,
+  entity: AuditEntity,
+  entityId?: string | number | null,
+  changes?: Record<string, unknown> | null,
+): Promise<void> {
+  try {
+    if (!session || !companyId) return;
+    await prisma.auditLog.create({
+      data: {
+        companyId,
+        userId: session.id,
+        userName: session.name ?? null,
+        userRole: session.role ?? null,
+        action,
+        entity,
+        entityId: entityId == null ? null : String(entityId),
+        changes: (changes ?? undefined) as any,
+      },
+    });
+  } catch {
     // swallow — auditing must never block the user flow
   }
 }

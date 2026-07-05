@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signJwt, errorResponse, HttpError } from "@/lib/auth";
-import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { clearFailedLogin, getClientIp, loginLockout, rateLimit, recordFailedLogin } from "@/lib/rateLimit";
 import { hiddenPageAliases } from "@/lib/responseShape";
 
 export const runtime = "nodejs";
@@ -12,12 +12,18 @@ export async function POST(req: NextRequest) {
     const { email, password } = (await req.json()) as { email?: string; password?: string };
     if (!email || !password) throw new HttpError(400, "Email and password required");
 
-    // Throttle brute-force: max 5 attempts per IP+email / 15 min.
-    const limited = rateLimit(`login:${getClientIp(req)}:${email.toLowerCase().trim()}`, 5, 15 * 60_000);
+    const normalizedEmail = email.toLowerCase().trim();
+    const clientIp = getClientIp(req);
+    const attemptKey = `login:${clientIp}:${normalizedEmail}`;
+    const failureKey = `login-fail:${normalizedEmail}`;
+
+    // Throttle brute-force by source and account. Failed attempts also lock the
+    // account key briefly, so rotating IPs does not get unlimited guesses.
+    const limited = rateLimit(attemptKey, 8, 15 * 60_000) || loginLockout(failureKey);
     if (limited) return limited;
 
     const user = await prisma.user.findFirst({
-      where: { email },
+      where: { email: { equals: normalizedEmail, mode: "insensitive" } },
       include: {
         company: {
           select: {
@@ -31,10 +37,17 @@ export async function POST(req: NextRequest) {
         },
       },
     });
-    if (!user) throw new HttpError(401, "Invalid credentials");
+    if (!user) {
+      recordFailedLogin(failureKey);
+      throw new HttpError(401, "Invalid credentials");
+    }
 
     const ok = await bcrypt.compare(password, user.password);
-    if (!ok) throw new HttpError(401, "Invalid credentials");
+    if (!ok) {
+      recordFailedLogin(failureKey);
+      throw new HttpError(401, "Invalid credentials");
+    }
+    clearFailedLogin(failureKey);
 
     if (
       user.role !== "super_admin" &&

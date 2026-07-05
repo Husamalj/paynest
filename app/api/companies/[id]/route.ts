@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 import { hiddenPageAliases } from "@/lib/responseShape";
 import { HIDDEN_PAGE_KEYS, normalizeHiddenPages } from "@/lib/pageRegistry";
+import { logAuditForCompany } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
@@ -21,19 +22,31 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         where: { id: Number(id) },
         data: { isActive: !current.isActive, status: !current.isActive ? "active" : "suspended" },
       });
+      await logAuditForCompany(session, updated.id, "update", "company", updated.id, {
+        isActive: { from: current.isActive, to: updated.isActive },
+        status: { from: current.status, to: updated.status },
+      });
       return NextResponse.json(updated);
     }
 
     if (typeof body.isActive === "boolean") {
+      const current = await prisma.company.findUnique({ where: { id: Number(id) } });
+      if (!current) throw new HttpError(404, "Company not found");
       const updated = await prisma.company.update({
         where: { id: Number(id) },
         data: { isActive: body.isActive, status: body.isActive ? "active" : "suspended" },
+      });
+      await logAuditForCompany(session, updated.id, "update", "company", updated.id, {
+        isActive: { from: current.isActive, to: updated.isActive },
+        status: { from: current.status, to: updated.status },
       });
       return NextResponse.json({ company: updated });
     }
 
     // Update maxEmployees (subscription cap)
     if (body.maxEmployees !== undefined) {
+      const current = await prisma.company.findUnique({ where: { id: Number(id) } });
+      if (!current) throw new HttpError(404, "Company not found");
       const parsed =
         body.maxEmployees === null || body.maxEmployees === ""
           ? null
@@ -41,6 +54,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       const updated = await prisma.company.update({
         where: { id: Number(id) },
         data: { maxEmployees: parsed },
+      });
+      await logAuditForCompany(session, updated.id, "update", "company", updated.id, {
+        maxEmployees: { from: current.maxEmployees, to: updated.maxEmployees },
       });
       return NextResponse.json(updated);
     }
@@ -58,9 +74,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
 
       const unique = normalizeHiddenPages(requested);
+      const current = await prisma.company.findUnique({ where: { id: Number(id) } });
+      if (!current) throw new HttpError(404, "Company not found");
       const updated = await prisma.company.update({
         where: { id: Number(id) },
         data: { hiddenPages: unique },
+      });
+      await logAuditForCompany(session, updated.id, "update", "company", updated.id, {
+        hiddenPages: { from: normalizeHiddenPages(current.hiddenPages), to: unique },
       });
       return NextResponse.json({
         ...updated,
