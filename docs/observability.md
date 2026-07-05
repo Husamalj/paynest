@@ -39,3 +39,7 @@ for strict monitoring. It returns `503` when database or critical configuration 
 - Alert on repeated `api.unhandled_error` events.
 - Alert if `/api/health?strict=1` returns non-200.
 - Include `requestId` when debugging customer reports.
+
+## Sentry Option
+
+If you enable Sentry later, keep the existing `requestId` in error responses. It gives support a stable ID even when an external monitoring provider is unavailable.

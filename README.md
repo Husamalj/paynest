@@ -93,8 +93,11 @@ Use [docs/database-backup.md](docs/database-backup.md) for backup and restore pr
 Use [docs/observability.md](docs/observability.md) for logs, request IDs, and health checks.
 Use [docs/prisma-migrations.md](docs/prisma-migrations.md) for production schema change rules.
 Use [docs/storage-review.md](docs/storage-review.md) before expanding upload/document features.
+Use [docs/vercel-env.md](docs/vercel-env.md) when editing Vercel environment variables.
 
 The legacy `frontend/` and `backend/` folders were removed after migration. The Next.js app at the repository root is the single source of truth.
+
+Presentation and pricing deck assets live under `docs/assets/presentations/`; their generation scripts live under `scripts/presentations/`.
 
 ## Security Notes
 
