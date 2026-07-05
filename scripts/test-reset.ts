@@ -1,13 +1,21 @@
 import { PrismaClient } from "@prisma/client";
 import { assertTestDatabase } from "./test-db-guard";
+import { TEST_ACCOUNTS } from "../tests/fixtures/accounts";
 
 const prisma = new PrismaClient();
+
+const TEST_ACCOUNT_EMAILS = Object.values(TEST_ACCOUNTS).map((account) => account.email);
 
 export async function resetTestData() {
   assertTestDatabase();
 
   const companies = await prisma.company.findMany({
-    where: { slug: { startsWith: "test-" } },
+    where: {
+      OR: [
+        { slug: { startsWith: "test-" } },
+        { slug: "paynest-test-company" },
+      ],
+    },
     select: { id: true },
   });
   const companyIds = companies.map((company) => company.id);
@@ -43,7 +51,14 @@ export async function resetTestData() {
     ]);
   }
 
-  await prisma.user.deleteMany({ where: { email: { endsWith: "@example.test" } } });
+  await prisma.user.deleteMany({
+    where: {
+      OR: [
+        { email: { in: TEST_ACCOUNT_EMAILS } },
+        { email: { endsWith: "@example.test" } },
+      ],
+    },
+  });
   await prisma.contactRequest.deleteMany({ where: { email: { endsWith: "@example.test" } } });
 }
 
@@ -55,4 +70,3 @@ if (require.main === module) {
       process.exit(1);
     });
 }
-

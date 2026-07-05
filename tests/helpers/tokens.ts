@@ -1,15 +1,24 @@
 import jwt from "jsonwebtoken";
+import { TEST_ACCOUNTS } from "../fixtures/accounts";
 
 type TestRole = "super_admin" | "owner" | "hr" | "employee";
 
 export function authHeaderFor(role: TestRole, overrides: Record<string, unknown> = {}) {
+  const accountByRole = {
+    super_admin: TEST_ACCOUNTS.superAdmin,
+    owner: TEST_ACCOUNTS.alphaOwner,
+    hr: TEST_ACCOUNTS.alphaHr,
+    employee: TEST_ACCOUNTS.alphaEmployee,
+  } as const;
+  const account = accountByRole[role];
+
   const payload = {
     id: role === "super_admin" ? 1 : role === "owner" ? 2 : role === "hr" ? 3 : 4,
     name: `Test ${role}`,
-    email: `${role.replace("_", "")}@test.com`,
+    email: account.email,
     role,
     companyId: role === "super_admin" ? null : 1,
-    employeeNumber: role === "employee" ? "TEST-EMP-001" : null,
+    employeeNumber: "employeeNumber" in account ? account.employeeNumber : null,
     ...overrides,
   };
 

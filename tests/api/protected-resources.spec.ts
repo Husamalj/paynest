@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { authHeaderFor, skipUntilTestDatabaseReady } from "../helpers/tokens";
+import { authHeaderForSeededRole } from "../helpers/seededData";
 
 const protectedGetEndpoints = [
   "/api/auth/me",
@@ -32,7 +33,7 @@ test.describe("protected API skeleton", () => {
     test.skip(skipUntilTestDatabaseReady(), "Requires seeded local PostgreSQL test database");
 
     const response = await request.get("/api/employees", {
-      headers: authHeaderFor("owner"),
+      headers: await authHeaderForSeededRole("owner"),
     });
 
     expect(response.status()).toBe(200);
@@ -43,19 +44,19 @@ test.describe("protected API skeleton", () => {
     test.skip(skipUntilTestDatabaseReady(), "Requires seeded local PostgreSQL test database");
 
     const response = await request.get("/api/attendance?employee_id=SOMEONE-ELSE&month=6&year=2026", {
-      headers: authHeaderFor("employee"),
+      headers: await authHeaderForSeededRole("employee"),
     });
 
     expect(response.status()).toBe(200);
     const rows = await response.json();
-    expect(rows.every((row: { employee_id: string }) => row.employee_id === "TEST-EMP-001")).toBe(true);
+    expect(rows.every((row: { employee_id: string }) => row.employee_id === "A001")).toBe(true);
   });
 
   test("owner can read audit logs", async ({ request }) => {
     test.skip(skipUntilTestDatabaseReady(), "Requires seeded local PostgreSQL test database");
 
     const response = await request.get("/api/audit-log", {
-      headers: authHeaderFor("owner"),
+      headers: await authHeaderForSeededRole("owner"),
     });
 
     expect(response.status()).toBe(200);

@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { TEST_ACCOUNTS } from "../fixtures/accounts";
 
 type Role = "employee" | "hr" | "owner" | "superAdmin";
 
@@ -16,9 +17,14 @@ const ENV_KEYS: Record<Role, { email: string; password: string }> = {
 
 export function credentialsFor(role: Role): Credentials | null {
   const keys = ENV_KEYS[role];
-  const email = process.env[keys.email];
-  const password = process.env[keys.password];
-  if (!email || !password) return null;
+  const defaults: Record<Role, Credentials> = {
+    employee: TEST_ACCOUNTS.alphaEmployee,
+    hr: TEST_ACCOUNTS.alphaHr,
+    owner: TEST_ACCOUNTS.alphaOwner,
+    superAdmin: TEST_ACCOUNTS.superAdmin,
+  };
+  const email = process.env[keys.email] || defaults[role].email;
+  const password = process.env[keys.password] || defaults[role].password;
   return { email, password };
 }
 
