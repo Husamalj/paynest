@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizeHiddenPages, type HiddenPageKey } from "@/lib/pageRegistry";
+import { createRequestId, logError } from "@/lib/logger";
 
 const SECRET = process.env.JWT_SECRET!;
 
@@ -71,12 +72,24 @@ export class HttpError extends Error {
 }
 
 export function errorResponse(err: unknown) {
+  const requestId = createRequestId();
+
   if (err instanceof HttpError) {
-    return NextResponse.json({ error: err.message }, { status: err.status });
+    return NextResponse.json({ error: err.message, requestId }, {
+      status: err.status,
+      headers: { "x-request-id": requestId },
+    });
   }
   if (err instanceof Error && err.message === "JWT_SECRET is not set") {
-    return NextResponse.json({ error: "Server auth configuration is missing JWT_SECRET" }, { status: 500 });
+    logError("api.auth_configuration_error", err, { requestId });
+    return NextResponse.json(
+      { error: "Server auth configuration is missing JWT_SECRET", requestId },
+      { status: 500, headers: { "x-request-id": requestId } }
+    );
   }
-  console.error("Unhandled API error:", err);
-  return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  logError("api.unhandled_error", err, { requestId });
+  return NextResponse.json(
+    { error: "Internal server error", requestId },
+    { status: 500, headers: { "x-request-id": requestId } }
+  );
 }

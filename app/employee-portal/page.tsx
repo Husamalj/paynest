@@ -21,6 +21,7 @@ import Chat from "@/components/Chat";
 import OrgChart, { type OrgEmp } from "@/components/OrgChart";
 import clsx from "clsx";
 import { readHiddenPages } from "@/lib/responseShape";
+import { calcDays, formatCurrency, formatDate } from "./helpers";
 
 const EVAL_CRITERIA = [
   { key: "score_accuracy",          en: "Accuracy at Work",                              ar: "الدقة في العمل" },
@@ -47,20 +48,6 @@ const evalBonusForGrade = (grade: number, tiers: { minGrade: number; maxGrade: n
   const t = tiers.find((x) => grade >= x.minGrade && grade <= x.maxGrade);
   return t ? t.amount : 0;
 };
-
-function formatCurrency(value: unknown) {
-  return (parseFloat(String(value)) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function formatDate(value: unknown) {
-  if (!value) return "-";
-  return new Date(String(value)).toLocaleDateString();
-}
-
-function calcDays(start: string, end: string) {
-  if (!start || !end) return 0;
-  return Math.max(0, (new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24) + 1);
-}
 
 function StatusBadge({ status, isRTL }: { status: string; isRTL: boolean }) {
   const labels: Record<string, string> = {

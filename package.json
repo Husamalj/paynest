@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "check:env": "node scripts/check-production-env.mjs",
     "check:isolation": "node scripts/check-tenant-isolation.mjs",
+    "db:backup": "node scripts/backup-database.mjs",
+    "db:restore": "node scripts/restore-database.mjs",
     "test": "npm run test:e2e",
     "test:unit": "vitest run tests/unit",
     "test:unit:watch": "vitest tests/unit",

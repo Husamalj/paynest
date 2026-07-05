@@ -89,6 +89,7 @@ npm run build
 
 Use [docs/production-checklist.md](docs/production-checklist.md) before changing production environment variables or database settings.
 Use [.env.production.example](.env.production.example) as the Vercel variable checklist without committing real values.
+Use [docs/database-backup.md](docs/database-backup.md) for backup and restore procedures.
 
 ## Security Notes
 

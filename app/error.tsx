@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
+import { logError } from "@/lib/logger";
 import { useRouter } from "next/navigation";
 import { Home, RefreshCw, AlertTriangle } from "lucide-react";
 
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    console.error(error);
+    logError("app.render_error", error);
   }, [error]);
 
   const router = useRouter();
