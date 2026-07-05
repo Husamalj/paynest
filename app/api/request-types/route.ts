@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -10,6 +10,7 @@ const FIELD_TYPES = ["text", "textarea", "number", "date", "file"];
 export async function GET(req: NextRequest) {
   try {
     const s = await requireAuth(req);
+    await requirePageAccess(s, "customRequests");
     if (s.companyId == null) throw new HttpError(403, "No company scope");
     const where: any = { companyId: s.companyId };
     if (s.role === "employee") where.active = true;
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
   try {
     const s = await requireAuth(req);
     requireRole(s, ["owner", "hr", "super_admin"]);
+    await requirePageAccess(s, "customRequests");
     if (s.companyId == null) throw new HttpError(403, "No company scope");
     const { name, fields } = await req.json();
     if (!name || !String(name).trim()) throw new HttpError(400, "Name is required");

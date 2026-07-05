@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth(req);
     requireRole(session, ["owner"]);
+    await requirePageAccess(session, "hrTeam");
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
     const { name, email, password, employee_number, phone, base_salary } = await req.json();

@@ -1,7 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { sendNewEmployeeCredentials } from "@/lib/email";
 import { assertDeliverableEmail, assertValidPhone } from "@/lib/validate";
@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await requireAuth(req);
     requireRole(session, ["owner", "hr", "super_admin"]);
+    await requirePageAccess(session, "employeeManagement");
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
     // Exclude employee records that belong to owner/hr/super_admin accounts.
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth(req);
     requireRole(session, ["owner", "hr", "super_admin"]);
+    await requirePageAccess(session, "employeeManagement");
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
     const mode = await getSystemMode(session.companyId);

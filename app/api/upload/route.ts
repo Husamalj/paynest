@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
 import { parseAttendanceFile, parseSalaryFile, detectFileKind } from "@/lib/excelParser";
 import { logAudit } from "@/lib/audit";
 
@@ -17,6 +17,7 @@ async function getSystemMode(companyId: number) {
 export async function GET(req: NextRequest) {
   try {
     const session = await requireAuth(req);
+    await requirePageAccess(session, "upload");
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
     const companyId = session.companyId;
@@ -48,6 +49,7 @@ export async function GET(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const session = await requireAuth(req);
+    await requirePageAccess(session, "upload");
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
     const url = new URL(req.url);
@@ -79,6 +81,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth(req);
     requireRole(session, ["owner", "hr", "super_admin"]);
+    await requirePageAccess(session, "upload");
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
     const companyId = session.companyId;

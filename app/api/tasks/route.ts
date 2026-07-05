@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await requireAuth(req);
     requireRole(session, ["owner", "hr", "super_admin", "employee"]);
+    await requirePageAccess(session, "tasks");
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
     const where: any = { companyId: session.companyId };
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth(req);
     requireRole(session, ["owner", "hr", "super_admin", "employee"]);
+    await requirePageAccess(session, "tasks");
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
     const { task_name, employee_id, start_date, deadline, status, target_value, unit, attachment, attachment_name, priority } = await req.json();

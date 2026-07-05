@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { NextResponse, type NextRequest } from "next/server";
-import { jwtVerify } from "jose";
+import { prisma } from "@/lib/prisma";
+import { normalizeHiddenPages, type HiddenPageKey } from "@/lib/pageRegistry";
 
 const SECRET = process.env.JWT_SECRET!;
 
@@ -47,6 +48,19 @@ export function requireRole(user: SessionUser, roles: SessionUser["role"][]) {
   if (!roles.includes(user.role)) throw new HttpError(403, "Forbidden");
 }
 
+export async function requirePageAccess(user: SessionUser, pageKey: HiddenPageKey) {
+  if (user.role === "super_admin" || user.companyId == null) return;
+
+  const company = await prisma.company.findUnique({
+    where: { id: user.companyId },
+    select: { hiddenPages: true },
+  });
+  const hiddenPages = normalizeHiddenPages(company?.hiddenPages);
+  if (hiddenPages.includes(pageKey)) {
+    throw new HttpError(403, "This page is hidden for your company");
+  }
+}
+
 export class HttpError extends Error {
   constructor(
     public status: number,
@@ -62,11 +76,4 @@ export function errorResponse(err: unknown) {
   }
   console.error("Unhandled API error:", err);
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-}
-
-const encodedSecret = () => new TextEncoder().encode(process.env.JWT_SECRET!);
-
-export async function verifyJwtEdge(token: string): Promise<SessionUser> {
-  const { payload } = await jwtVerify(token, encodedSecret());
-  return payload as unknown as SessionUser;
 }

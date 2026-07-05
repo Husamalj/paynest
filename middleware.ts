@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { verifyJwtEdge } from "@/lib/auth";
+import { verifyJwtEdge } from "@/lib/edgeAuth";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 

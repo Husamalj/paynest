@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, errorResponse, HttpError } from "@/lib/auth";
+import { requireAuth, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -8,6 +8,7 @@ export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
   try {
     const s = await requireAuth(req);
+    await requirePageAccess(s, "messages");
     if (s.companyId == null) throw new HttpError(403, "No company scope");
     const me = s.employeeNumber ?? "";
 
