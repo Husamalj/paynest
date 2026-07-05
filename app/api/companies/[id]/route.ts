@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 import { hiddenPageAliases } from "@/lib/responseShape";
+import { HIDDEN_PAGE_KEYS, normalizeHiddenPages } from "@/lib/pageRegistry";
 
 export const runtime = "nodejs";
 
@@ -50,7 +51,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (!Array.isArray(raw) || raw.some((v) => typeof v !== "string")) {
         throw new HttpError(400, "hiddenPages must be an array of page keys");
       }
-      const unique = Array.from(new Set(raw.map((v) => v.trim()).filter(Boolean)));
+      const requested = Array.from(new Set(raw.map((v) => v.trim()).filter(Boolean)));
+      const invalid = requested.filter((key) => !HIDDEN_PAGE_KEYS.has(key));
+      if (invalid.length > 0) {
+        throw new HttpError(400, `Invalid hidden page keys: ${invalid.join(", ")}`);
+      }
+
+      const unique = normalizeHiddenPages(requested);
       const updated = await prisma.company.update({
         where: { id: Number(id) },
         data: { hiddenPages: unique },

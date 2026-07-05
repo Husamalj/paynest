@@ -23,6 +23,21 @@ export const HIDDEN_PAGE_OPTIONS = [
 
 export type HiddenPageKey = typeof HIDDEN_PAGE_OPTIONS[number]["key"];
 
+export const HIDDEN_PAGE_KEYS = new Set<string>(
+  HIDDEN_PAGE_OPTIONS.map((page) => page.key)
+);
+
 export const HIDDEN_PAGE_PATHS: Record<string, string[]> = Object.fromEntries(
   HIDDEN_PAGE_OPTIONS.map((page) => [page.key, [...page.paths]])
 );
+
+export function normalizeHiddenPages(value: unknown): HiddenPageKey[] {
+  if (!Array.isArray(value)) return [];
+
+  const keys = value
+    .filter((page): page is string => typeof page === "string")
+    .map((page) => page.trim())
+    .filter((page) => HIDDEN_PAGE_KEYS.has(page));
+
+  return Array.from(new Set(keys)) as HiddenPageKey[];
+}

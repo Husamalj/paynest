@@ -1,3 +1,5 @@
+import { normalizeHiddenPages } from "@/lib/pageRegistry";
+
 export function readHiddenPages(source: any): string[] {
   const value = Array.isArray(source?.hiddenPages)
     ? source.hiddenPages
@@ -5,7 +7,7 @@ export function readHiddenPages(source: any): string[] {
       ? source.hidden_pages
       : [];
 
-  return value.filter((page: unknown): page is string => typeof page === "string");
+  return normalizeHiddenPages(value);
 }
 
 export function hiddenPageAliases(source: any) {
@@ -15,4 +17,3 @@ export function hiddenPageAliases(source: any) {
     hidden_pages: hiddenPages,
   };
 }
-
