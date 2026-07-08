@@ -91,6 +91,14 @@ async function main() {
     ],
   });
 
+  await prisma.payrollRecord.createMany({
+    data: [
+      { companyId: alpha.id, employeeId: "A001", periodMonth: 6, periodYear: 2026, baseSalary: 2600, totalHours: 15, requiredHours: 16, hourDiff: -1, adjustment: -100, bonusTotal: 100, deductionTotal: 0, netSalary: 2600, status: "calculated", systemMode: "daily" },
+      { companyId: alpha.id, employeeId: "A002", periodMonth: 6, periodYear: 2026, baseSalary: 2200, totalHours: 16, requiredHours: 16, hourDiff: 0, adjustment: 0, bonusTotal: 0, deductionTotal: 0, netSalary: 2200, status: "calculated", systemMode: "daily" },
+      { companyId: beta.id, employeeId: "B001", periodMonth: 6, periodYear: 2026, baseSalary: 2400, totalHours: 16, requiredHours: 16, hourDiff: 0, adjustment: 0, bonusTotal: 0, deductionTotal: 0, netSalary: 2400, status: "calculated", systemMode: "daily" },
+    ],
+  });
+
   await prisma.bonusDeduction.create({
     data: { companyId: alpha.id, employeeId: "A001", employeeName: "Alpha Employee", type: "bonus", reason: "Test bonus", amount: 100, periodMonth: 6, periodYear: 2026, systemMode: "daily" },
   });

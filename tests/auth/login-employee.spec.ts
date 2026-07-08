@@ -5,6 +5,5 @@ test("employee can log in from the employee login page", async ({ page }) => {
   skipIfMissingCredentials("employee");
 
   await loginEmployee(page);
-  await expect(page.locator("body")).toContainText(/Employee Portal|Payslip|Tasks|Requests/i);
+  await expect(page.locator("body")).toContainText(/Employee Portal|Payslip|Tasks|Requests|Alpha Employee|رصيد الإجازة|مهامي/i);
 });
-

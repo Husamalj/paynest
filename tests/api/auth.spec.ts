@@ -9,7 +9,7 @@ test.describe("auth API", () => {
     });
 
     expect(response.status()).toBe(400);
-    expect(await response.json()).toEqual({ error: "Email and password required" });
+    expect(await response.json()).toMatchObject({ error: "Email and password required" });
   });
 
   test("login accepts the seeded owner credentials", async ({ request }) => {

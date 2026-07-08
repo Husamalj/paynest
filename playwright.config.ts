@@ -4,6 +4,7 @@ import { loadEnvFile } from "./tests/fixtures/env";
 loadEnvFile();
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3000";
+const databaseBackedTests = process.env.PAYNEST_TEST_DB_READY === "true";
 
 export default defineConfig({
   testDir: "./tests",
@@ -18,7 +19,7 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI || databaseBackedTests ? 1 : undefined,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : [["list"], ["html", { open: "never" }]],
   use: {
     baseURL,
@@ -37,7 +38,7 @@ export default defineConfig({
     : {
         command: "npm run dev",
         url: baseURL,
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: !process.env.CI && !databaseBackedTests,
         timeout: 120_000,
         env: {
           NODE_ENV: process.env.NODE_ENV || "test",

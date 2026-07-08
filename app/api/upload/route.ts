@@ -4,10 +4,15 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
 import { parseAttendanceFile, parseSalaryFile, detectFileKind } from "@/lib/excelParser";
-import { logAudit } from "@/lib/audit";
+import { logAudit, withAuditMeta } from "@/lib/audit";
+import { getClientIp, rateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+
+const MAX_UPLOAD_FILES = 5;
+const MAX_SPREADSHEET_BYTES = 5 * 1024 * 1024;
+const ALLOWED_SPREADSHEET_EXTENSIONS = new Set([".csv", ".xlsx"]);
 
 async function getSystemMode(companyId: number) {
   const s = await prisma.companySettings.findFirst({ where: { companyId } });
@@ -77,12 +82,27 @@ const toTimeISO = (t: string | null | undefined): Date | null => {
   return new Date(Date.UTC(1970, 0, 1, parseInt(m[1], 10), parseInt(m[2], 10), 0));
 };
 
+function assertSafeSpreadsheetFile(file: File) {
+  const name = file.name || "";
+  const extension = name.includes(".") ? name.slice(name.lastIndexOf(".")).toLowerCase() : "";
+
+  if (!ALLOWED_SPREADSHEET_EXTENSIONS.has(extension)) {
+    throw new HttpError(400, "Only .xlsx and .csv files are allowed.");
+  }
+
+  if (file.size > MAX_SPREADSHEET_BYTES) {
+    throw new HttpError(400, "Spreadsheet file is too large. Maximum size is 5MB.");
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth(req);
     requireRole(session, ["owner", "hr", "super_admin"]);
     await requirePageAccess(session, "upload");
     if (session.companyId == null) throw new HttpError(403, "No company scope");
+    const limited = rateLimit(`upload:${session.companyId}:${getClientIp(req)}`, 20, 60 * 60_000);
+    if (limited) return limited;
 
     const companyId = session.companyId;
     const url = new URL(req.url);
@@ -96,23 +116,25 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const files = formData.getAll("files") as File[];
     if (!files || files.length === 0) throw new HttpError(400, "No files uploaded");
+    if (files.length > MAX_UPLOAD_FILES) throw new HttpError(400, `Upload at most ${MAX_UPLOAD_FILES} files at a time.`);
 
     const results = [];
 
     for (const file of files) {
+      assertSafeSpreadsheetFile(file);
       const buf = Buffer.from(await file.arrayBuffer());
       let rowCount = 0;
       let employeeCount = 0;
       let preview: any[] = [];
 
       if (fileType === "attendance") {
-        const records = parseAttendanceFile(buf, batchId);
+        const records = await parseAttendanceFile(buf, batchId);
         rowCount = records.length;
         employeeCount = (records as any).employeeCount ?? new Set(records.map((r) => r.employee_id)).size;
         preview = records.slice(0, 10);
 
         // Smart mismatch warning: file dropped in the wrong box
-        if (records.length === 0 && detectFileKind(buf) === "salary") {
+        if (records.length === 0 && (await detectFileKind(buf)) === "salary") {
           throw new HttpError(400, "WRONG_BOX_SALARY: This looks like a Salary file. Please upload it in the \"Salary File\" box, not Attendance.");
         }
 
@@ -205,13 +227,13 @@ export async function POST(req: NextRequest) {
           ]);
         }
       } else if (fileType === "salary") {
-        const emps = parseSalaryFile(buf);
+        const emps = await parseSalaryFile(buf);
         rowCount = emps.length;
         employeeCount = emps.length;
         preview = emps.slice(0, 10);
 
         // Smart mismatch warning: file dropped in the wrong box
-        if (emps.length === 0 && detectFileKind(buf) === "attendance") {
+        if (emps.length === 0 && (await detectFileKind(buf)) === "attendance") {
           throw new HttpError(400, "WRONG_BOX_ATTENDANCE: This looks like an Attendance file. Please upload it in the \"Attendance Files\" box, not Salary.");
         }
 
@@ -385,12 +407,12 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    await logAudit(session, "upload", "upload", batchId, {
+    await logAudit(session, "upload", "upload", batchId, withAuditMeta(req, {
       type: fileType,
       filesCount: files.length,
       totalRows: results.reduce((s, r) => s + (r.row_count || 0), 0),
       totalEmployees: results.reduce((s, r) => s + (r.employee_count || 0), 0),
-    });
+    }));
     return NextResponse.json({
       success: true,
       batch_id: batchId,

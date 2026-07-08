@@ -3,9 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { errorResponse } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { passwordPolicyMessage } from "@/lib/passwordPolicy";
+import { getClientIp, rateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: Request) {
   try {
+    const limited = rateLimit(`reset-password:${getClientIp(req)}`, 10, 60 * 60_000);
+    if (limited) return limited;
+
     const { token, password } = await req.json();
     if (!token || !password) {
       return NextResponse.json({ error: "Token and password required" }, { status: 400 });

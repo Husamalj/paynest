@@ -37,6 +37,17 @@ for (const file of envFiles) {
 
 const errors = [];
 const warnings = [];
+const forbiddenProductionKeys = [
+  "PAYNEST_ALLOW_TEST_DB",
+  "PAYNEST_TEST_DB_READY",
+  "TEST_DATABASE_URL",
+  "TEST_DIRECT_URL",
+  "PLAYWRIGHT_BASE_URL",
+  "K6_EMPLOYEE_EMAIL",
+  "K6_EMPLOYEE_PASSWORD",
+  "K6_OWNER_EMAIL",
+  "K6_OWNER_PASSWORD",
+];
 
 function valueOf(key) {
   return process.env[key]?.trim() ?? "";
@@ -68,7 +79,10 @@ function requireUrl(key, options = {}) {
 function requireEmail(key) {
   const value = valueOf(key);
   if (!value) return;
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+  const displayNameMatch = value.match(/^[^<>]+<([^<>]+)>$/);
+  const email = displayNameMatch ? displayNameMatch[1].trim() : value;
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     errors.push(`${key} must be a valid email address.`);
   }
 }
@@ -100,8 +114,20 @@ for (const key of required) {
   requirePresent(key);
 }
 
-requireUrl("DATABASE_URL", { protocols: ["postgresql:", "postgres:"] });
-requireUrl("DIRECT_URL", { protocols: ["postgresql:", "postgres:"] });
+for (const key of forbiddenProductionKeys) {
+  if (valueOf(key)) {
+    errors.push(`${key} must not be set in production.`);
+  }
+}
+
+for (const key of Object.keys(process.env)) {
+  if (key.startsWith("PAYNEST_TEST_") && !forbiddenProductionKeys.includes(key)) {
+    errors.push(`${key} must not be set in production.`);
+  }
+}
+
+requireUrl("DATABASE_URL", { protocols: ["postgresql:", "postgres:"], noLocalhost: true });
+requireUrl("DIRECT_URL", { protocols: ["postgresql:", "postgres:"], noLocalhost: true });
 requireUrl("NEXT_PUBLIC_APP_URL", { protocols: ["https:"] });
 requireEmail("FROM_EMAIL");
 requireEmail("CONTACT_EMAIL");

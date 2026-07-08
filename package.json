@@ -9,6 +9,9 @@
     "lint": "eslint .",
     "check:env": "node scripts/check-production-env.mjs",
     "check:isolation": "node scripts/check-tenant-isolation.mjs",
+    "check:ci": "npm run lint && npx tsc --noEmit && npm run check:isolation && npm run test:unit && npm run build",
+    "check:production": "npm run lint && npm run check:env && npm run check:isolation && npm run test:unit && npm run build",
+    "security:audit": "npm audit --audit-level=high",
     "db:backup": "node scripts/backup-database.mjs",
     "db:restore": "node scripts/restore-database.mjs",
     "db:migrate:dev": "prisma migrate dev",
@@ -54,8 +57,8 @@
     "pizzip": "^3.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "read-excel-file": "^9.2.0",
     "resend": "^6.12.4",
-    "xlsx": "^0.18.5",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -77,5 +80,10 @@
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.10"
+    }
   }
 }

@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendDemoRequest } from "@/lib/email";
 import { requireAuth, requireRole, errorResponse } from "@/lib/auth";
+import { getClientIp, rateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
 // POST /api/contact — public demo-request form (landing page). No auth.
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimit(`contact:${getClientIp(req)}`, 5, 60 * 60_000);
+    if (limited) return limited;
+
     const body = await req.json().catch(() => ({}));
     const firstName = String(body?.firstName ?? "").trim();
     const email = String(body?.email ?? "").trim();

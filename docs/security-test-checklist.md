@@ -16,6 +16,7 @@ Use only seeded test data or staging data. Never run destructive, stress, soak, 
 - `/api/auth/me` returns the authenticated user.
 - Missing or invalid tokens return `401`.
 - Inactive or pending companies cannot log in except super admin.
+- Login, forgot-password, reset-password, contact, and upload endpoints are rate-limited.
 
 ## RBAC
 
@@ -30,6 +31,12 @@ Use only seeded test data or staging data. Never run destructive, stress, soak, 
 - Every Prisma-backed API route is covered by `npm run check:isolation`.
 - New platform-level routes must be allow-listed with a reason in `scripts/check-tenant-isolation.mjs`.
 
+## Audit And Monitoring
+
+- Sensitive write paths should call `logAudit`.
+- Upload audit events include request metadata under `changes._meta`.
+- Customer support should ask for `requestId` when users report API errors.
+
 ## Payroll And Attendance
 
 - Payroll calculation handles daily, hourly, fixed, and daily-wage employees.
@@ -40,6 +47,9 @@ Use only seeded test data or staging data. Never run destructive, stress, soak, 
 ## OWASP Baseline
 
 - Run `npm run zap:baseline` against staging before releases.
+- Or run the GitHub Actions `Security ZAP` workflow manually with a staging/preview `target_url`.
+- Keep `allow_production` disabled unless there is explicit approval and a planned maintenance window.
+- Enable `fail_on_warn` for release-candidate scans after expected findings are triaged.
 - Review `zap-report.html`.
 - Triage authentication, session, CSP, mixed-content, insecure cookie, and injection findings.
 
@@ -53,4 +63,7 @@ Use only seeded test data or staging data. Never run destructive, stress, soak, 
 
 - `k6:smoke` can run locally.
 - `k6:normal`, `k6:employee`, `k6:clockin`, `k6:payroll`, `k6:stress`, and `k6:soak` must target staging/non-production.
+- Or run the GitHub Actions `Load k6` workflow manually against a Vercel preview or staging URL.
+- Authenticated k6 scenarios require GitHub secrets `K6_EMPLOYEE_EMAIL`, `K6_EMPLOYEE_PASSWORD`, `K6_OWNER_EMAIL`, and `K6_OWNER_PASSWORD` with fake staging users.
+- Keep `allow_production` disabled unless there is explicit approval, monitoring, and a maintenance window.
 - Stress and soak tests require monitoring for database pool saturation, API latency, and error rates.

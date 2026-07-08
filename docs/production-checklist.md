@@ -5,6 +5,7 @@ Use this checklist before deploying PayNest or changing production settings.
 ## Required Environment Variables
 
 Use `.env.production.example` as the checklist for Vercel. Add the real values in Vercel Project Settings > Environment Variables, not in git.
+For the full Vercel setup flow, use [vercel-production-setup.md](vercel-production-setup.md).
 
 - `DATABASE_URL`: production PostgreSQL pooled connection string.
 - `DIRECT_URL`: direct PostgreSQL connection string for Prisma operations.
@@ -26,12 +27,12 @@ Use `.env.production.example` as the checklist for Vercel. Add the real values i
 ## Pre-Deploy Checks
 
 ```bash
-npm run lint
-npm run check:env
-npm run check:isolation
-npm run test:unit
-npm run build
+npm run check:ci
+npm run check:production
+npm run security:audit
 ```
+
+Review [dependency-security.md](dependency-security.md) if any dependency finding appears.
 
 For staging releases, also run:
 
@@ -39,6 +40,9 @@ For staging releases, also run:
 npm run test:e2e:smoke
 npm run zap:baseline
 ```
+
+You can also run the GitHub Actions `Security ZAP` workflow manually against a Vercel preview or staging URL and download the `zap-baseline-report` artifact.
+For performance checks, run the GitHub Actions `Load k6` workflow against staging or preview. Use `smoke` for every release candidate, and reserve `stress`/`soak` for monitored staging windows.
 
 ## Tenant And RBAC Checks
 

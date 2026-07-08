@@ -9,6 +9,7 @@ dist/
 .env.test.txt
 uploads/
 backups/
+.pg-test-data/
 playwright-report/
 test-results/
 .vercel

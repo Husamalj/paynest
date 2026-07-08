@@ -25,8 +25,14 @@ Production must not include:
 
 - `PAYNEST_ALLOW_TEST_DB`
 - `PAYNEST_TEST_DB_READY`
+- `PAYNEST_TEST_*`
+- `TEST_DATABASE_URL`
+- `TEST_DIRECT_URL`
+- `PLAYWRIGHT_BASE_URL`
 - `.env.test` values
 - test email credentials
+
+For the full setup and post-deploy verification flow, see [vercel-production-setup.md](vercel-production-setup.md).
 
 ## After Changing Env
 

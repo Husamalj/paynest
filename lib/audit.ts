@@ -18,6 +18,27 @@ export type AuditEntity =
   | "upload"
   | "user";
 
+export function auditMetaFromRequest(req: Request) {
+  const forwardedFor = req.headers.get("x-forwarded-for");
+  const ip = forwardedFor?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+  const userAgent = req.headers.get("user-agent") || "unknown";
+
+  return {
+    ip,
+    userAgent: userAgent.slice(0, 500),
+  };
+}
+
+export function withAuditMeta(
+  req: Request,
+  changes?: Record<string, unknown> | null,
+): Record<string, unknown> {
+  return {
+    ...(changes ?? {}),
+    _meta: auditMetaFromRequest(req),
+  };
+}
+
 /**
  * Best-effort audit log writer. Never throws — audit failures should not
  * break the main API path. Caller is expected to await but tolerate undefined.

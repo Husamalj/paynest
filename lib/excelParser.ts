@@ -1,7 +1,7 @@
 /**
  * Excel/CSV parser — ported from backend/src/utils/excelParser.js
  */
-import * as XLSX from "xlsx";
+import readXlsxFile from "read-excel-file/node";
 
 function normalizeHeader(v: unknown): string {
   return String(v || "").toLowerCase().trim();
@@ -33,14 +33,11 @@ function findHeaderIndex(headers: string[], keys: string[]): number {
 
 function parseDateValue(val: unknown): string | null {
   if (val == null || val === "") return null;
+  if (val instanceof Date && !isNaN(val.getTime())) return val.toISOString().substring(0, 10);
   if (typeof val === "number") {
-    const date = (XLSX.SSF as any).parse_date_code(val);
-    if (date) {
-      const y = date.y;
-      const m = String(date.m).padStart(2, "0");
-      const d = String(date.d).padStart(2, "0");
-      return `${y}-${m}-${d}`;
-    }
+    const excelEpoch = Date.UTC(1899, 11, 30);
+    const date = new Date(excelEpoch + val * 86400000);
+    if (!isNaN(date.getTime())) return date.toISOString().substring(0, 10);
   }
   const str = String(val).trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.substring(0, 10);
@@ -170,6 +167,57 @@ export interface EmployeeRecord {
   contract_end_date?: string | null;
 }
 
+function parseCsvRows(buffer: Buffer): unknown[][] {
+  const text = buffer.toString("utf8").replace(/^\uFEFF/, "");
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const next = text[i + 1];
+
+    if (quoted) {
+      if (ch === "\"" && next === "\"") {
+        cell += "\"";
+        i++;
+      } else if (ch === "\"") {
+        quoted = false;
+      } else {
+        cell += ch;
+      }
+      continue;
+    }
+
+    if (ch === "\"") {
+      quoted = true;
+    } else if (ch === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (ch === "\n") {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else if (ch !== "\r") {
+      cell += ch;
+    }
+  }
+
+  row.push(cell);
+  if (row.some((value) => value.trim() !== "")) rows.push(row);
+  return rows;
+}
+
+async function readWorkbookRows(buffer: Buffer): Promise<unknown[][][]> {
+  const isCsv = buffer.subarray(0, 2048).toString("utf8").includes(",") && !buffer.subarray(0, 2).equals(Buffer.from("PK"));
+  if (isCsv) return [parseCsvRows(buffer)];
+
+  const sheets = await readXlsxFile(buffer);
+  return sheets.map((sheet) => sheet.data as unknown[][]);
+}
+
 /**
  * Detect the new SANA salary workbook (المصنف المحدث): header on row 1 with
  * "الرقم الوظيفي" + "تاريخ بدء العقد", data starting row 4. Columns by letter:
@@ -190,15 +238,12 @@ function findSalaryV2HeaderRow(rows: unknown[][]): number {
   return -1;
 }
 
-export function parseAttendanceFile(buffer: Buffer, batchId: string): AttendanceRecord[] & { employeeCount?: number } {
-  const workbook = XLSX.read(buffer, { type: "buffer", cellDates: false, cellNF: false });
+export async function parseAttendanceFile(buffer: Buffer, batchId: string): Promise<AttendanceRecord[] & { employeeCount?: number }> {
+  const workbookRows = await readWorkbookRows(buffer);
   const allRecords: AttendanceRecord[] = [];
   const seenEmployees = new Set<string>();
 
-  for (const sheetName of workbook.SheetNames) {
-    const ws = workbook.Sheets[sheetName];
-    if (!ws) continue;
-    const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "", raw: true });
+  for (const rows of workbookRows) {
     if (!rows.length) continue;
 
     const headerRow = findAttendanceHeaderRow(rows);
@@ -258,11 +303,8 @@ export function parseAttendanceFile(buffer: Buffer, batchId: string): Attendance
   return allRecords as AttendanceRecord[] & { employeeCount?: number };
 }
 
-export function parseSalaryFile(buffer: Buffer): EmployeeRecord[] {
-  const workbook = XLSX.read(buffer, { type: "buffer" });
-  const sheetName = workbook.SheetNames[0];
-  const ws = workbook.Sheets[sheetName];
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" });
+export async function parseSalaryFile(buffer: Buffer): Promise<EmployeeRecord[]> {
+  const [rows = []] = await readWorkbookRows(buffer);
   if (!rows.length) return [];
 
   // ── New SANA workbook format (header row 1, data from row 4) ──────────────
@@ -379,13 +421,10 @@ function parseSalaryV2(rows: unknown[][], headerRow: number): EmployeeRecord[] {
  * file or a salary file — used to warn when a file is dropped in the wrong box.
  * Returns "attendance" | "salary" | "unknown".
  */
-export function detectFileKind(buffer: Buffer): "attendance" | "salary" | "unknown" {
+export async function detectFileKind(buffer: Buffer): Promise<"attendance" | "salary" | "unknown"> {
   try {
-    const workbook = XLSX.read(buffer, { type: "buffer", cellDates: false, cellNF: false });
-    for (const sheetName of workbook.SheetNames) {
-      const ws = workbook.Sheets[sheetName];
-      if (!ws) continue;
-      const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "", raw: true });
+    const workbookRows = await readWorkbookRows(buffer);
+    for (const rows of workbookRows) {
       if (!rows.length) continue;
       if (findSalaryV2HeaderRow(rows) >= 0) return "salary";
       if (findAttendanceHeaderRow(rows) >= 0) return "attendance";

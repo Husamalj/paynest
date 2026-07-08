@@ -1,0 +1,70 @@
+name: Load k6
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "k6 scenario to run"
+        required: true
+        default: "smoke"
+        type: choice
+        options:
+          - smoke
+          - normal
+          - employee
+          - clockin
+          - payroll
+          - stress
+          - soak
+      target_url:
+        description: "Staging, preview, or localhost-equivalent URL to test"
+        required: true
+        type: string
+      allow_production:
+        description: "Explicitly allow production load testing"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: grafana/setup-k6-action@v1
+
+      - name: Select k6 script
+        id: script
+        shell: bash
+        run: |
+          case "${{ inputs.scenario }}" in
+            smoke) file="k6/homepage-smoke.js" ;;
+            normal) file="k6/normal-day-load.js" ;;
+            employee) file="k6/authenticated-employee-load.js" ;;
+            clockin) file="k6/morning-clockin-spike.js" ;;
+            payroll) file="k6/payroll-day.js" ;;
+            stress) file="k6/stress.js" ;;
+            soak) file="k6/soak.js" ;;
+            *) echo "Unknown scenario: ${{ inputs.scenario }}" >&2; exit 1 ;;
+          esac
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+
+      - name: Run k6
+        env:
+          K6_BASE_URL: ${{ inputs.target_url }}
+          K6_ALLOW_PRODUCTION: ${{ inputs.allow_production }}
+          K6_EMPLOYEE_EMAIL: ${{ secrets.K6_EMPLOYEE_EMAIL }}
+          K6_EMPLOYEE_PASSWORD: ${{ secrets.K6_EMPLOYEE_PASSWORD }}
+          K6_OWNER_EMAIL: ${{ secrets.K6_OWNER_EMAIL }}
+          K6_OWNER_PASSWORD: ${{ secrets.K6_OWNER_PASSWORD }}
+        run: k6 run --summary-export k6-summary.json "${{ steps.script.outputs.file }}"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-summary-${{ inputs.scenario }}
+          path: k6-summary.json
+          if-no-files-found: ignore
