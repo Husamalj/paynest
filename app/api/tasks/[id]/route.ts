@@ -39,8 +39,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       if (body.attachment !== undefined) { empData.attachment = body.attachment || null; empData.attachmentName = body.attachment_name || null; }
       if (body.report !== undefined) { empData.report = body.report || null; empData.reportAt = body.report ? new Date() : null; }
       if (Object.keys(empData).length === 0) empData.status = "completed";
-      await prisma.task.update({ where: { id: Number(id) }, data: empData });
-      return NextResponse.json(await prisma.task.findUnique({ where: { id: Number(id) } }));
+      const updated = await prisma.task.update({
+        where: { id: target.id },
+        data: empData,
+      });
+      return NextResponse.json(updated);
     }
 
     const data: Record<string, unknown> = {};
@@ -60,7 +63,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       data,
     });
     if (task.count === 0) throw new HttpError(404, "Task not found");
-    return NextResponse.json(await prisma.task.findUnique({ where: { id: Number(id) } }));
+    const updated = await prisma.task.findFirst({
+      where: { id: Number(id), companyId: session.companyId },
+    });
+    return NextResponse.json(updated);
   } catch (err) {
     return errorResponse(err);
   }

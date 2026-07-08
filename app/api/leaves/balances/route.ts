@@ -92,7 +92,7 @@ export async function PUT(req: NextRequest) {
     const sickUsed = Math.min(num(body.sick_used, 0), sickTotal);
 
     const saved = await prisma.leaveBalance.upsert({
-      where: { employeeId_year: { employeeId, year } },
+      where: { companyId_employeeId_year: { companyId: session.companyId, employeeId, year } },
       create: { companyId: session.companyId, employeeId, year, annualTotal, annualUsed, sickTotal, sickUsed },
       update: { annualTotal, annualUsed, sickTotal, sickUsed },
     });

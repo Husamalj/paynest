@@ -283,7 +283,7 @@ model LeaveBalance {
 
   company Company @relation(fields: [companyId], references: [id])
 
-  @@unique([employeeId, year])
+  @@unique([companyId, employeeId, year], map: "leave_balances_company_employee_year_uidx")
   @@map("leave_balances")
 }
 
@@ -291,11 +291,12 @@ model OfficialHoliday {
   id          Int      @id @default(autoincrement())
   companyId   Int      @default(1) @map("company_id")
   name        String?  @db.VarChar(255)
-  holidayDate DateTime @unique @map("holiday_date") @db.Date
+  holidayDate DateTime @map("holiday_date") @db.Date
   createdAt   DateTime @default(now()) @map("created_at")
 
   company Company @relation(fields: [companyId], references: [id])
 
+  @@unique([companyId, holidayDate], map: "official_holidays_company_date_uidx")
   @@map("official_holidays")
 }
 
@@ -357,7 +358,7 @@ model RemoteAssignment {
 
   company Company @relation(fields: [companyId], references: [id])
 
-  @@unique([employeeId, startDate, endDate], map: "remote_assignments_unique_idx")
+  @@unique([companyId, employeeId, startDate, endDate], map: "remote_assignments_company_employee_dates_uidx")
   @@map("remote_assignments")
 }
 

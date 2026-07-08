@@ -87,13 +87,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       const leaveYear = new Date(leave.startDate).getFullYear();
       if (leave.leaveType === "annual") {
         await prisma.leaveBalance.upsert({
-          where: { employeeId_year: { employeeId: leave.employeeId ?? "", year: leaveYear } },
+          where: { companyId_employeeId_year: { companyId: session.companyId, employeeId: leave.employeeId ?? "", year: leaveYear } },
           create: { companyId: session.companyId, employeeId: leave.employeeId, year: leaveYear, annualUsed: leave.daysCount ?? 0 },
           update: { annualUsed: { increment: leave.daysCount ?? 0 } },
         });
       } else if (leave.leaveType === "sick") {
         await prisma.leaveBalance.upsert({
-          where: { employeeId_year: { employeeId: leave.employeeId ?? "", year: leaveYear } },
+          where: { companyId_employeeId_year: { companyId: session.companyId, employeeId: leave.employeeId ?? "", year: leaveYear } },
           create: { companyId: session.companyId, employeeId: leave.employeeId, year: leaveYear, sickUsed: leave.daysCount ?? 0 },
           update: { sickUsed: { increment: leave.daysCount ?? 0 } },
         });

@@ -58,6 +58,7 @@ async function main() {
       { companyId: alpha.id, employeeId: "A001", name: "Alpha Employee", email: TEST_ACCOUNTS.alphaEmployee.email, baseSalary: 2600, socialSecurity: true, systemMode: "daily", workType: "standard" },
       { companyId: alpha.id, employeeId: "A002", name: "Alpha Second", email: "alpha.second@example.test", baseSalary: 2200, socialSecurity: false, systemMode: "daily", workType: "standard" },
       { companyId: beta.id, employeeId: "B001", name: "Beta Employee", email: TEST_ACCOUNTS.betaEmployee.email, baseSalary: 2400, socialSecurity: false, systemMode: "daily", workType: "standard" },
+      { companyId: beta.id, employeeId: "A001", name: "Beta Shared Id", email: "beta.shared-id@example.test", baseSalary: 9999, socialSecurity: false, systemMode: "daily", workType: "standard" },
     ],
   });
 
@@ -65,6 +66,7 @@ async function main() {
     data: [
       { companyId: alpha.id, employeeId: "A001", year: 2026, annualTotal: 14, annualUsed: 0, sickTotal: 14, sickUsed: 0 },
       { companyId: beta.id, employeeId: "B001", year: 2026, annualTotal: 14, annualUsed: 0, sickTotal: 14, sickUsed: 0 },
+      { companyId: beta.id, employeeId: "A001", year: 2026, annualTotal: 20, annualUsed: 5, sickTotal: 10, sickUsed: 1 },
     ],
   });
 
@@ -82,12 +84,27 @@ async function main() {
       status: "approved",
     },
   });
+  await prisma.leaveRequest.create({
+    data: {
+      companyId: beta.id,
+      employeeId: "A001",
+      employeeName: "Beta Shared Id",
+      leaveType: "annual",
+      startDate: dateOnly("2026-06-11"),
+      endDate: dateOnly("2026-06-11"),
+      daysCount: 1,
+      supervisorStatus: "approved",
+      hrStatus: "approved",
+      status: "approved",
+    },
+  });
 
   await prisma.attendanceRecord.createMany({
     data: [
       { companyId: alpha.id, employeeId: "A001", workDate: dateOnly("2026-06-01"), clockIn: timeOnly("09:00"), clockOut: timeOnly("17:00"), hoursWorked: 8, systemMode: "daily", uploadBatch: "test" },
       { companyId: alpha.id, employeeId: "A001", workDate: dateOnly("2026-06-02"), clockIn: timeOnly("09:00"), clockOut: timeOnly("16:00"), hoursWorked: 7, systemMode: "daily", uploadBatch: "test" },
       { companyId: beta.id, employeeId: "B001", workDate: dateOnly("2026-06-01"), clockIn: timeOnly("09:00"), clockOut: timeOnly("17:00"), hoursWorked: 8, systemMode: "daily", uploadBatch: "test" },
+      { companyId: beta.id, employeeId: "A001", workDate: dateOnly("2026-06-01"), clockIn: timeOnly("08:00"), clockOut: timeOnly("18:00"), hoursWorked: 10, systemMode: "daily", uploadBatch: "test-beta-shared-id" },
     ],
   });
 
@@ -96,15 +113,36 @@ async function main() {
       { companyId: alpha.id, employeeId: "A001", periodMonth: 6, periodYear: 2026, baseSalary: 2600, totalHours: 15, requiredHours: 16, hourDiff: -1, adjustment: -100, bonusTotal: 100, deductionTotal: 0, netSalary: 2600, status: "calculated", systemMode: "daily" },
       { companyId: alpha.id, employeeId: "A002", periodMonth: 6, periodYear: 2026, baseSalary: 2200, totalHours: 16, requiredHours: 16, hourDiff: 0, adjustment: 0, bonusTotal: 0, deductionTotal: 0, netSalary: 2200, status: "calculated", systemMode: "daily" },
       { companyId: beta.id, employeeId: "B001", periodMonth: 6, periodYear: 2026, baseSalary: 2400, totalHours: 16, requiredHours: 16, hourDiff: 0, adjustment: 0, bonusTotal: 0, deductionTotal: 0, netSalary: 2400, status: "calculated", systemMode: "daily" },
+      { companyId: beta.id, employeeId: "A001", periodMonth: 6, periodYear: 2026, baseSalary: 9999, totalHours: 20, requiredHours: 16, hourDiff: 4, adjustment: 0, bonusTotal: 0, deductionTotal: 0, netSalary: 9999, status: "calculated", systemMode: "daily" },
     ],
   });
 
   await prisma.bonusDeduction.create({
     data: { companyId: alpha.id, employeeId: "A001", employeeName: "Alpha Employee", type: "bonus", reason: "Test bonus", amount: 100, periodMonth: 6, periodYear: 2026, systemMode: "daily" },
   });
+  await prisma.bonusDeduction.create({
+    data: { companyId: beta.id, employeeId: "A001", employeeName: "Beta Shared Id", type: "bonus", reason: "Beta Secret Bonus", amount: 999, periodMonth: 6, periodYear: 2026, systemMode: "daily" },
+  });
 
   await prisma.auditLog.create({
     data: { companyId: alpha.id, userId: 1, userName: "Test Seed", userRole: "system", action: "create", entity: "employee", entityId: "A001", changes: { source: "test-seed" } },
+  });
+  await prisma.auditLog.create({
+    data: { companyId: beta.id, userId: 1, userName: "Beta Test Seed", userRole: "system", action: "create", entity: "employee", entityId: "BETA-A001", changes: { source: "beta-secret" } },
+  });
+
+  await prisma.officialHoliday.createMany({
+    data: [
+      { companyId: alpha.id, name: "Alpha Founders Day", holidayDate: dateOnly("2026-07-01") },
+      { companyId: beta.id, name: "Beta Founders Day", holidayDate: dateOnly("2026-07-01") },
+    ],
+  });
+
+  await prisma.remoteAssignment.createMany({
+    data: [
+      { companyId: alpha.id, employeeId: "A001", startDate: dateOnly("2026-07-10"), endDate: dateOnly("2026-07-12"), label: "Alpha Remote", note: "Alpha only" },
+      { companyId: beta.id, employeeId: "A001", startDate: dateOnly("2026-07-10"), endDate: dateOnly("2026-07-12"), label: "Beta Remote", note: "Beta only" },
+    ],
   });
 
   await prisma.contactRequest.create({

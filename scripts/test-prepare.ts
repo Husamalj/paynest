@@ -39,7 +39,7 @@ function run(command: string, args: string[]) {
 
 async function main() {
   console.log("Preparing PayNest test database...");
-  await run("npx", ["prisma", "db", "push"]);
+  await run("npx", ["prisma", "db", "push", "--accept-data-loss"]);
   await run("npx", ["tsx", "scripts/test-seed.ts"]);
   console.log("Test database is ready. Set PAYNEST_TEST_DB_READY=true before auth/API/RBAC E2E tests.");
 }

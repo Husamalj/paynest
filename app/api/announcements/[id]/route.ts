@@ -26,7 +26,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       data,
     });
     if (result.count === 0) throw new HttpError(404, "Announcement not found");
-    return NextResponse.json(await prisma.announcement.findUnique({ where: { id: Number(id) } }));
+    const announcement = await prisma.announcement.findFirst({
+      where: { id: Number(id), companyId: session.companyId },
+    });
+    return NextResponse.json(announcement);
   } catch (err) {
     return errorResponse(err);
   }

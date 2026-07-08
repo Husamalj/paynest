@@ -75,3 +75,24 @@ ALTER TABLE companies
 -- 7) Owner onboarding completion flag
 ALTER TABLE companies
   ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN NOT NULL DEFAULT false;
+
+-- 8) Tenant-safe uniqueness. Any business table unique key must include
+-- company_id so one company cannot collide with or update another company's
+-- records when employee numbers/dates are reused.
+ALTER TABLE leave_balances
+  DROP CONSTRAINT IF EXISTS leave_balances_employee_id_year_key;
+DROP INDEX IF EXISTS leave_balances_employee_id_year_key;
+CREATE UNIQUE INDEX IF NOT EXISTS leave_balances_company_employee_year_uidx
+  ON leave_balances (company_id, employee_id, year);
+
+ALTER TABLE official_holidays
+  DROP CONSTRAINT IF EXISTS official_holidays_holiday_date_key;
+DROP INDEX IF EXISTS official_holidays_holiday_date_key;
+CREATE UNIQUE INDEX IF NOT EXISTS official_holidays_company_date_uidx
+  ON official_holidays (company_id, holiday_date);
+
+ALTER TABLE remote_assignments
+  DROP CONSTRAINT IF EXISTS remote_assignments_unique_idx;
+DROP INDEX IF EXISTS remote_assignments_unique_idx;
+CREATE UNIQUE INDEX IF NOT EXISTS remote_assignments_company_employee_dates_uidx
+  ON remote_assignments (company_id, employee_id, start_date, end_date);
