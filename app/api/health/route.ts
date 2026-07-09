@@ -25,6 +25,8 @@ export async function GET(req: NextRequest) {
 
   const strict = req.nextUrl.searchParams.get("strict") === "1";
   if (checks.jwt === "missing") status = "degraded";
+  if (strict && checks.email !== "configured") status = "degraded";
+  if (strict && checks.cron !== "configured") status = "degraded";
   if (strict && checks.storage !== "configured") status = "degraded";
 
   return NextResponse.json({
