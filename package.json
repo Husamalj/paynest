@@ -24,6 +24,7 @@
     "test:e2e:auth": "playwright test tests/auth",
     "test:e2e:api": "playwright test tests/api",
     "test:e2e:rbac": "playwright test tests/rbac",
+    "test:e2e:flow": "playwright test tests/flow",
     "test:prepare": "tsx scripts/test-prepare.ts",
     "test:seed": "tsx scripts/test-seed.ts",
     "test:seed:users": "tsx scripts/seed-test-users.ts",

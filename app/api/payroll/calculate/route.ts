@@ -201,7 +201,7 @@ export async function POST(req: NextRequest) {
     // the salary can cover (net floored at 0) and defer the rest to next month.
     const nextMonth = periodMonth === 12 ? 1 : periodMonth + 1;
     const nextYear = periodMonth === 12 ? periodYear + 1 : periodYear;
-    const carryReason = `مرحّل من ${periodMonth}/${periodYear}`;
+    const carryReason = `Deferred from ${periodMonth}/${periodYear}`;
     const carryovers: { employeeId: string; name: string; amount: number }[] = [];
 
     for (const pr of payrollResults as any[]) {

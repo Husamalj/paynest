@@ -13,6 +13,7 @@ export default defineConfig({
     "**/auth/**/*.spec.ts",
     "**/rbac/**/*.spec.ts",
     "**/api/**/*.spec.ts",
+    "**/flow/**/*.spec.ts",
   ],
   timeout: 45_000,
   expect: { timeout: 10_000 },
