@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
+import { getCompanySystemMode } from "@/lib/companyContext";
+import { paginationQuery, parsePagination, withPaginationHeaders } from "@/lib/pagination";
 
 export const runtime = "nodejs";
 
@@ -19,6 +21,7 @@ export async function GET(req: NextRequest) {
     const employeeId = url.searchParams.get("employee_id");
     const month = parseInt(url.searchParams.get("month") || "0", 10);
     const year  = parseInt(url.searchParams.get("year")  || "0", 10);
+    const pagination = parsePagination(url, { limit: 250 });
 
     // Employee can only fetch their own data
     let targetEmployeeId: string | undefined;
@@ -29,8 +32,7 @@ export async function GET(req: NextRequest) {
       targetEmployeeId = employeeId ?? undefined;
     }
 
-    const settings = await prisma.companySettings.findFirst({ where: { companyId: session.companyId } });
-    const mode = settings?.systemMode ?? "daily";
+    const mode = await getCompanySystemMode(session.companyId);
 
     const where: any = { companyId: session.companyId, systemMode: mode };
     if (targetEmployeeId) where.employeeId = targetEmployeeId;
@@ -40,10 +42,14 @@ export async function GET(req: NextRequest) {
       where.workDate = { gte: start, lte: end };
     }
 
-    const records = await prisma.attendanceRecord.findMany({
-      where,
-      orderBy: { workDate: "asc" },
-    });
+    const [records, total] = await Promise.all([
+      prisma.attendanceRecord.findMany({
+        where,
+        orderBy: { workDate: "asc" },
+        ...paginationQuery(pagination),
+      }),
+      pagination.enabled ? prisma.attendanceRecord.count({ where }) : Promise.resolve(undefined),
+    ]);
 
     // Format times for display
     const formatTime = (d: Date | null) => {
@@ -61,7 +67,7 @@ export async function GET(req: NextRequest) {
       clock_out: formatTime(r.clockOut ?? null),
       hours_worked: Number(r.hoursWorked),
     }));
-    return NextResponse.json(out);
+    return withPaginationHeaders(out, pagination, total);
   } catch (err) {
     return errorResponse(err);
   }

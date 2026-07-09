@@ -12,6 +12,7 @@ Set these in Vercel Project Settings > Environment Variables. Do not commit real
 - `FROM_EMAIL`: verified sender.
 - `CONTACT_EMAIL`: support/contact inbox.
 - `CRON_SECRET`: long random value, at least 32 characters.
+- `BLOB_READ_WRITE_TOKEN`: Vercel Blob token for uploaded files and employee documents.
 
 ## Checks
 

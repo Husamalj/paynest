@@ -13,7 +13,10 @@ export async function GET(req: NextRequest) {
     if (s.companyId == null) throw new HttpError(403, "No company scope");
     const me = s.employeeNumber ?? "";
     if (!me) throw new HttpError(400, "No employee identity");
-    const other = new URL(req.url).searchParams.get("with") || "";
+    const url = new URL(req.url);
+    const other = url.searchParams.get("with") || "";
+    const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "300", 10) || 300, 1), 500);
+    const beforeId = parseInt(url.searchParams.get("before_id") || "", 10);
     if (!other) throw new HttpError(400, "with is required");
 
     const msgs = await prisma.message.findMany({
@@ -23,9 +26,10 @@ export async function GET(req: NextRequest) {
           { senderId: me, receiverId: other },
           { senderId: other, receiverId: me },
         ],
+        ...(beforeId ? { id: { lt: beforeId } } : {}),
       },
       orderBy: { createdAt: "asc" },
-      take: 300,
+      take: limit,
       select: { id: true, senderId: true, receiverId: true, body: true, attachmentName: true, createdAt: true, read: true },
     });
 

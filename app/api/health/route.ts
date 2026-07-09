@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
     jwt: process.env.JWT_SECRET ? "configured" : "missing",
     email: process.env.RESEND_API_KEY && process.env.FROM_EMAIL ? "configured" : "missing",
     cron: process.env.CRON_SECRET ? "configured" : "missing",
+    storage: process.env.BLOB_READ_WRITE_TOKEN ? "configured" : "database-fallback",
   };
 
   let status = "ok";
@@ -22,9 +23,9 @@ export async function GET(req: NextRequest) {
     status = "degraded";
   }
 
-  if (checks.jwt === "missing") status = "degraded";
-
   const strict = req.nextUrl.searchParams.get("strict") === "1";
+  if (checks.jwt === "missing") status = "degraded";
+  if (strict && checks.storage !== "configured") status = "degraded";
 
   return NextResponse.json({
     status,

@@ -1,6 +1,8 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
+import { getCompanyContext } from "@/lib/companyContext";
+import { paginationQuery, parsePagination, withPaginationHeaders } from "@/lib/pagination";
 
 export const runtime = "nodejs";
 
@@ -11,9 +13,10 @@ export async function GET(req: NextRequest) {
     await requirePageAccess(session, "payroll");
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
+    const url = new URL(req.url);
+    const pagination = parsePagination(url, { limit: 100 });
     const companyId = session.companyId;
-    const settings = await prisma.companySettings.findFirst({ where: { companyId } });
-    const mode = settings?.systemMode ?? "daily";
+    const { systemMode: mode } = await getCompanyContext(companyId);
     const isEmployee = session.role === "employee";
 
     const latest = await prisma.payrollRecord.findFirst({
@@ -44,7 +47,11 @@ export async function GET(req: NextRequest) {
       where.employeeId = session.employeeNumber;
     }
 
-    const records = await prisma.payrollRecord.findMany({ where, orderBy: { calculatedAt: "desc" } });
+    const records = await prisma.payrollRecord.findMany({
+      where,
+      orderBy: { calculatedAt: "desc" },
+      ...paginationQuery(pagination),
+    });
 
     // Exclude owner / super_admin rows from the payroll list
     const adminUsers = await prisma.user.findMany({
@@ -81,7 +88,7 @@ export async function GET(req: NextRequest) {
       social_security:         empMap[r.employeeId ?? ""]?.socialSecurity ?? false,
     }));
 
-    return NextResponse.json({ period_month: periodMonth, period_year: periodYear, system_mode: mode, results });
+    return withPaginationHeaders({ period_month: periodMonth, period_year: periodYear, system_mode: mode, results }, pagination);
   } catch (err) {
     return errorResponse(err);
   }

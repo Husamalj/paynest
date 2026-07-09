@@ -114,7 +114,7 @@ export default function UploadPage() {
     if (hadBoth) return;
     if (!nextFiles.some((f) => f.fileType === "attendance") || !nextFiles.some((f) => f.fileType === "salary")) return;
     try {
-      await api.post("/payroll/calculate", { month: periodMonth, year: periodYear });
+      await api.post("/payroll/jobs", { month: periodMonth, year: periodYear });
       setSuccess((p) => p ? `${p} - ${t("calculationDone")}` : t("calculationDone"));
     } catch (err: any) { setError(err.message); }
   };
@@ -122,7 +122,7 @@ export default function UploadPage() {
   const runCalculate = async () => {
     setCalculating(true); setError(""); setSuccess("");
     try {
-      await api.post("/payroll/calculate", { month: periodMonth, year: periodYear });
+      await api.post("/payroll/jobs", { month: periodMonth, year: periodYear });
       setSuccess(`${t("calculationDone")} — ${months[periodMonth - 1]} ${periodYear}`);
     } catch (err: any) {
       const msg = err.response?.data?.error || err.message;

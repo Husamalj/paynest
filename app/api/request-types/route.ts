@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
+import { paginationQuery, parsePagination, withPaginationHeaders } from "@/lib/pagination";
 
 export const runtime = "nodejs";
 
@@ -12,10 +13,15 @@ export async function GET(req: NextRequest) {
     const s = await requireAuth(req);
     await requirePageAccess(s, "customRequests");
     if (s.companyId == null) throw new HttpError(403, "No company scope");
+    const url = new URL(req.url);
+    const pagination = parsePagination(url, { limit: 100 });
     const where: any = { companyId: s.companyId };
     if (s.role === "employee") where.active = true;
-    const types = await prisma.requestType.findMany({ where, orderBy: { createdAt: "desc" } });
-    return NextResponse.json(types);
+    const [types, total] = await Promise.all([
+      prisma.requestType.findMany({ where, orderBy: { createdAt: "desc" }, ...paginationQuery(pagination) }),
+      pagination.enabled ? prisma.requestType.count({ where }) : Promise.resolve(undefined),
+    ]);
+    return withPaginationHeaders(types, pagination, total);
   } catch (e) { return errorResponse(e); }
 }
 

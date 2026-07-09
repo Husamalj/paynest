@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
+import { paginationQuery, parsePagination, withPaginationHeaders } from "@/lib/pagination";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,7 @@ export async function GET(req: NextRequest) {
 
     const url = new URL(req.url);
     const all = url.searchParams.get("all") === "true";
+    const pagination = parsePagination(url, { limit: 100 });
 
     let where: any = { companyId: session.companyId };
     if (session.role === "employee") {
@@ -21,11 +23,15 @@ export async function GET(req: NextRequest) {
       where = { ...where, published: true };
     }
 
-    const announcements = await prisma.announcement.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    });
-    return NextResponse.json(announcements);
+    const [announcements, total] = await Promise.all([
+      prisma.announcement.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        ...paginationQuery(pagination),
+      }),
+      pagination.enabled ? prisma.announcement.count({ where }) : Promise.resolve(undefined),
+    ]);
+    return withPaginationHeaders(announcements, pagination, total);
   } catch (err) {
     return errorResponse(err);
   }

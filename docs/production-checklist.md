@@ -15,6 +15,7 @@ For the full Vercel setup flow, use [vercel-production-setup.md](vercel-producti
 - `RESEND_API_KEY`: production email provider key.
 - `CONTACT_EMAIL`: inbox for contact form submissions.
 - `CRON_SECRET`: secret for protected cron routes.
+- `BLOB_READ_WRITE_TOKEN`: Vercel Blob token so uploads/documents stay out of PostgreSQL.
 
 ## Database Safety
 

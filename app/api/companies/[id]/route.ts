@@ -4,6 +4,7 @@ import { requireAuth, requireRole, errorResponse, HttpError } from "@/lib/auth";
 import { hiddenPageAliases } from "@/lib/responseShape";
 import { HIDDEN_PAGE_KEYS, normalizeHiddenPages } from "@/lib/pageRegistry";
 import { logAuditForCompany } from "@/lib/audit";
+import { invalidateCompanyContext } from "@/lib/companyContext";
 
 export const runtime = "nodejs";
 
@@ -80,6 +81,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         where: { id: Number(id) },
         data: { hiddenPages: unique },
       });
+      invalidateCompanyContext(updated.id);
       await logAuditForCompany(session, updated.id, "update", "company", updated.id, {
         hiddenPages: { from: normalizeHiddenPages(current.hiddenPages), to: unique },
       });

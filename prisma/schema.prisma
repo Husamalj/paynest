@@ -74,6 +74,7 @@ model User {
   company     Company?     @relation(fields: [companyId], references: [id])
   evaluations Evaluation[] @relation("EvaluatorEvaluations")
 
+  @@index([companyId, role])
   @@map("users")
 }
 
@@ -145,6 +146,8 @@ model Employee {
   // One record per person per company; systemMode is kept only as a legacy
   // default and is no longer part of the identity key.
   @@unique([employeeId, companyId], map: "employees_emp_company_uidx")
+  @@index([companyId, name])
+  @@index([companyId, department])
   @@index([supervisorId])
   @@map("employees")
 }
@@ -155,11 +158,15 @@ model EmployeeDocument {
   employeeId   String   @map("employee_id") @db.VarChar(50)
   documentType String   @map("document_type") @db.VarChar(50)
   fileName     String   @map("file_name") @db.VarChar(255)
-  fileData     String   @map("file_data") @db.Text
+  fileData     String?  @map("file_data") @db.Text
+  fileUrl      String?  @map("file_url") @db.Text
+  fileStorageKey String? @map("file_storage_key") @db.Text
+  mimeType     String?  @map("mime_type") @db.VarChar(150)
   uploadedAt   DateTime @default(now()) @map("uploaded_at")
 
   company Company @relation(fields: [companyId], references: [id])
 
+  @@index([companyId, employeeId, uploadedAt])
   @@map("employee_documents")
 }
 
@@ -177,6 +184,9 @@ model AttendanceRecord {
 
   company Company @relation(fields: [companyId], references: [id])
 
+  @@index([companyId, workDate])
+  @@index([companyId, employeeId, workDate])
+  @@index([companyId, systemMode, workDate])
   @@map("attendance_records")
 }
 
@@ -202,7 +212,32 @@ model PayrollRecord {
 
   company Company @relation(fields: [companyId], references: [id])
 
+  @@index([companyId, periodYear, periodMonth])
+  @@index([companyId, employeeId, periodYear, periodMonth])
+  @@index([companyId, systemMode, calculatedAt])
   @@map("payroll_records")
+}
+
+model PayrollJob {
+  id            Int       @id @default(autoincrement())
+  companyId     Int       @map("company_id")
+  requestedBy   Int       @map("requested_by")
+  periodMonth   Int       @map("period_month")
+  periodYear    Int       @map("period_year")
+  systemMode    String    @default("daily") @map("system_mode") @db.VarChar(20)
+  status        String    @default("queued") @db.VarChar(20)
+  processedRows Int       @default(0) @map("processed_rows")
+  totalRows     Int       @default(0) @map("total_rows")
+  error         String?
+  resultSummary Json?     @map("result_summary")
+  startedAt     DateTime? @map("started_at")
+  finishedAt    DateTime? @map("finished_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@index([companyId, status, createdAt])
+  @@index([companyId, periodYear, periodMonth])
+  @@map("payroll_jobs")
 }
 
 model BonusDeduction {
@@ -220,6 +255,8 @@ model BonusDeduction {
 
   company Company @relation(fields: [companyId], references: [id])
 
+  @@index([companyId, periodYear, periodMonth, employeeId])
+  @@index([companyId, systemMode, createdAt])
   @@map("bonuses_deductions")
 }
 
@@ -236,6 +273,8 @@ model UploadedFile {
   // Original uploaded file kept (base64) so HR can re-download it if the local
   // copy is lost. Nullable: files uploaded before this feature have no bytes.
   fileData      String?  @map("file_data") @db.Text
+  fileUrl       String?  @map("file_url") @db.Text
+  fileStorageKey String? @map("file_storage_key") @db.Text
   mimeType      String?  @map("mime_type") @db.VarChar(150)
   // The month/year this file's data belongs to (a label, independent of the
   // upload date — e.g. a May payroll file uploaded in June).
@@ -245,6 +284,8 @@ model UploadedFile {
 
   company Company @relation(fields: [companyId], references: [id])
 
+  @@index([companyId, systemMode, createdAt])
+  @@index([companyId, periodYear, periodMonth])
   @@map("uploaded_files")
 }
 
@@ -268,6 +309,8 @@ model LeaveRequest {
 
   company Company @relation(fields: [companyId], references: [id])
 
+  @@index([companyId, status, createdAt])
+  @@index([companyId, employeeId, startDate, endDate])
   @@map("leave_requests")
 }
 
@@ -343,6 +386,8 @@ model Task {
 
   company Company @relation(fields: [companyId], references: [id])
 
+  @@index([companyId, employeeId, status])
+  @@index([companyId, createdAt])
   @@map("tasks")
 }
 
@@ -406,6 +451,7 @@ model BonusTier {
   amount    Int      @default(0)
   createdAt DateTime @default(now()) @map("created_at")
 
+  @@index([companyId, minGrade])
   @@map("bonus_tiers")
 }
 
@@ -447,6 +493,7 @@ model JobOffer {
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
 
+  @@index([companyId, createdAt])
   @@map("job_offers")
 }
 
@@ -490,6 +537,7 @@ model Announcement {
 
   company Company @relation(fields: [companyId], references: [id])
 
+  @@index([companyId, published, createdAt])
   @@map("announcements")
 }
 
@@ -534,6 +582,8 @@ model AdvanceRequest {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
+  @@index([companyId, status, createdAt])
+  @@index([companyId, employeeId, createdAt])
   @@map("advance_requests")
 }
 
@@ -562,6 +612,7 @@ model CompanyEvent {
   title     String   @db.VarChar(255)
   createdAt DateTime @default(now()) @map("created_at")
 
+  @@index([companyId, eventDate])
   @@map("company_events")
 }
 

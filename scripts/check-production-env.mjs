@@ -11,6 +11,7 @@ const required = [
   "FROM_EMAIL",
   "CONTACT_EMAIL",
   "CRON_SECRET",
+  "BLOB_READ_WRITE_TOKEN",
 ];
 
 function loadEnvFile(file) {
@@ -144,6 +145,10 @@ if (valueOf("DIRECT_URL").includes("pgbouncer=true")) {
 
 if (valueOf("RESEND_API_KEY").toLowerCase().includes("test")) {
   errors.push("RESEND_API_KEY looks like a test value.");
+}
+
+if (valueOf("BLOB_READ_WRITE_TOKEN").toLowerCase().includes("test")) {
+  errors.push("BLOB_READ_WRITE_TOKEN looks like a test value.");
 }
 
 if (valueOf("NEXT_PUBLIC_APP_URL").startsWith("http://")) {

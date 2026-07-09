@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
+import { paginationQuery, parsePagination, withPaginationHeaders } from "@/lib/pagination";
 
 export const runtime = "nodejs";
 
@@ -29,13 +30,20 @@ export async function GET(req: NextRequest) {
     requireRole(session, ["owner", "hr"]);
     await requirePageAccess(session, "jobOffer");
     if (session.companyId == null) throw new HttpError(403, "No company scope");
+    const url = new URL(req.url);
+    const pagination = parsePagination(url, { limit: 100 });
 
-    const offers = await prisma.jobOffer.findMany({
-      where: { companyId: session.companyId },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, name: true, trainingTitle: true, offerDate: true, createdAt: true, kind: true },
-    });
-    return NextResponse.json(offers);
+    const where = { companyId: session.companyId };
+    const [offers, total] = await Promise.all([
+      prisma.jobOffer.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        select: { id: true, name: true, trainingTitle: true, offerDate: true, createdAt: true, kind: true },
+        ...paginationQuery(pagination),
+      }),
+      pagination.enabled ? prisma.jobOffer.count({ where }) : Promise.resolve(undefined),
+    ]);
+    return withPaginationHeaders(offers, pagination, total);
   } catch (err) {
     return errorResponse(err);
   }

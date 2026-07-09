@@ -1,8 +1,8 @@
 import jwt from "jsonwebtoken";
 import { NextResponse, type NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { normalizeHiddenPages, type HiddenPageKey } from "@/lib/pageRegistry";
+import { type HiddenPageKey } from "@/lib/pageRegistry";
 import { createRequestId, logError } from "@/lib/logger";
+import { getCompanyContext } from "@/lib/companyContext";
 
 const SECRET = process.env.JWT_SECRET!;
 
@@ -52,11 +52,7 @@ export function requireRole(user: SessionUser, roles: SessionUser["role"][]) {
 export async function requirePageAccess(user: SessionUser, pageKey: HiddenPageKey) {
   if (user.role === "super_admin" || user.companyId == null) return;
 
-  const company = await prisma.company.findUnique({
-    where: { id: user.companyId },
-    select: { hiddenPages: true },
-  });
-  const hiddenPages = normalizeHiddenPages(company?.hiddenPages);
+  const { hiddenPages } = await getCompanyContext(user.companyId);
   if (hiddenPages.includes(pageKey)) {
     throw new HttpError(403, "This page is hidden for your company");
   }

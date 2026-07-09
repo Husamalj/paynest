@@ -2,12 +2,13 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { getCompanySystemMode } from "@/lib/companyContext";
+import { paginationQuery, parsePagination, withPaginationHeaders } from "@/lib/pagination";
 
 export const runtime = "nodejs";
 
 async function getSystemMode(companyId: number) {
-  const s = await prisma.companySettings.findFirst({ where: { companyId } });
-  return s?.systemMode ?? "daily";
+  return getCompanySystemMode(companyId);
 }
 
 export async function GET(req: NextRequest) {
@@ -20,6 +21,7 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const month = url.searchParams.get("month");
     const year = url.searchParams.get("year");
+    const pagination = parsePagination(url, { limit: 100 });
     const companyId = session.companyId;
     const mode = await getSystemMode(companyId);
 
@@ -32,11 +34,15 @@ export async function GET(req: NextRequest) {
       where.periodYear = parseInt(year, 10);
     }
 
-    const bonuses = await prisma.bonusDeduction.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    });
-    return NextResponse.json(bonuses);
+    const [bonuses, total] = await Promise.all([
+      prisma.bonusDeduction.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        ...paginationQuery(pagination),
+      }),
+      pagination.enabled ? prisma.bonusDeduction.count({ where }) : Promise.resolve(undefined),
+    ]);
+    return withPaginationHeaders(bonuses, pagination, total);
   } catch (err) {
     return errorResponse(err);
   }

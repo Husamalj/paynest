@@ -91,12 +91,12 @@ export default function PayrollPage() {
     setCalculating(true); setError(""); setSuccess("");
     try {
       try {
-        await api.post("/payroll/calculate", { month: periodMonth, year: periodYear });
+        await api.post("/payroll/jobs", { month: periodMonth, year: periodYear });
       } catch (e1: any) {
         // Retry once on a transient network/cold-start failure (no server response)
         if (/network|wak|fetch|connect/i.test(e1?.message || "")) {
           await new Promise((r) => setTimeout(r, 1500));
-          await api.post("/payroll/calculate", { month: periodMonth, year: periodYear });
+          await api.post("/payroll/jobs", { month: periodMonth, year: periodYear });
         } else { throw e1; }
       }
       setSuccess(`${t("calculationDone")} — ${months[periodMonth - 1]} ${periodYear}`);

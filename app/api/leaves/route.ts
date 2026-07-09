@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
+import { paginationQuery, parsePagination, withPaginationHeaders } from "@/lib/pagination";
 
 export const runtime = "nodejs";
 
@@ -15,6 +16,7 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const status = url.searchParams.get("status");
     const employee_id = url.searchParams.get("employee_id");
+    const pagination = parsePagination(url, { limit: 100 });
 
     const where: any = { companyId: session.companyId };
 
@@ -29,7 +31,11 @@ export async function GET(req: NextRequest) {
 
     let leaves: any[];
     try {
-      leaves = await prisma.leaveRequest.findMany({ where, orderBy: { createdAt: "desc" } });
+      leaves = await prisma.leaveRequest.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        ...paginationQuery(pagination),
+      });
     } catch {
       // Fallback: new columns may not exist yet in DB — use raw query with only original columns
       const employeeFilter = where.employeeId ? Prisma.sql`AND employee_id = ${where.employeeId}` : Prisma.empty;
@@ -42,10 +48,12 @@ export async function GET(req: NextRequest) {
           ${employeeFilter}
           ${statusFilter}
           ORDER BY created_at DESC
+          ${pagination.enabled ? Prisma.sql`LIMIT ${pagination.limit} OFFSET ${pagination.skip}` : Prisma.empty}
         `,
       ) as any[];
     }
-    return NextResponse.json(leaves);
+    const total = pagination.enabled ? await prisma.leaveRequest.count({ where }) : undefined;
+    return withPaginationHeaders(leaves, pagination, total);
   } catch (err) {
     return errorResponse(err);
   }
@@ -79,11 +87,18 @@ export async function PATCH(req: NextRequest) {
     const subIds = subs.map((s) => s.employeeId).filter(Boolean) as string[];
     if (subIds.length === 0) return NextResponse.json([]);
 
-    const leaves = await prisma.leaveRequest.findMany({
-      where: { companyId: session.companyId, employeeId: { in: subIds } },
-      orderBy: { createdAt: "desc" },
-    });
-    return NextResponse.json(leaves);
+    const url = new URL(req.url);
+    const pagination = parsePagination(url, { limit: 100 });
+    const where = { companyId: session.companyId, employeeId: { in: subIds } };
+    const [leaves, total] = await Promise.all([
+      prisma.leaveRequest.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        ...paginationQuery(pagination),
+      }),
+      pagination.enabled ? prisma.leaveRequest.count({ where }) : Promise.resolve(undefined),
+    ]);
+    return withPaginationHeaders(leaves, pagination, total);
   } catch (err) {
     return errorResponse(err);
   }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
+import { deleteStoredFile, storeFile } from "@/lib/fileStorage";
 
 export const runtime = "nodejs";
 
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const docs = await prisma.employeeDocument.findMany({
       where: { employeeId: id, companyId: session.companyId },
-      select: { id: true, documentType: true, fileName: true, uploadedAt: true },
+      select: { id: true, documentType: true, fileName: true, uploadedAt: true, fileUrl: true },
       orderBy: { uploadedAt: "desc" },
     });
     return NextResponse.json(docs);
@@ -37,9 +38,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     if (!file || !documentType) throw new HttpError(400, "file and documentType are required");
 
-    const bytes = await file.arrayBuffer();
-    const base64 = Buffer.from(bytes).toString("base64");
-    const fileData = `data:${file.type};base64,${base64}`;
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const stored = await storeFile({
+      companyId: session.companyId,
+      area: `employees/${encodeURIComponent(id)}/documents`,
+      filename: file.name,
+      mimeType: file.type || "application/octet-stream",
+      bytes,
+    });
+    const fileData = stored.base64
+      ? `data:${file.type || "application/octet-stream"};base64,${stored.base64}`
+      : null;
 
     // Upsert — one document per type per employee
     const existing = await prisma.employeeDocument.findFirst({
@@ -48,9 +57,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     let doc;
     if (existing) {
+      if (existing.fileStorageKey && existing.fileStorageKey !== stored.key) {
+        await deleteStoredFile(existing.fileStorageKey);
+      }
       doc = await prisma.employeeDocument.update({
         where: { id: existing.id },
-        data: { fileName: file.name, fileData, uploadedAt: new Date() },
+        data: {
+          fileName: file.name,
+          fileData,
+          fileUrl: stored.url,
+          fileStorageKey: stored.key,
+          mimeType: file.type || "application/octet-stream",
+          uploadedAt: new Date(),
+        },
       });
     } else {
       doc = await prisma.employeeDocument.create({
@@ -60,6 +79,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           documentType,
           fileName: file.name,
           fileData,
+          fileUrl: stored.url,
+          fileStorageKey: stored.key,
+          mimeType: file.type || "application/octet-stream",
         },
       });
     }
@@ -78,9 +100,14 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { id } = await params;
 
     const { documentType } = await req.json();
+    const docs = await prisma.employeeDocument.findMany({
+      where: { employeeId: id, companyId: session.companyId, documentType },
+      select: { fileStorageKey: true },
+    });
     await prisma.employeeDocument.deleteMany({
       where: { employeeId: id, companyId: session.companyId, documentType },
     });
+    await Promise.all(docs.map((doc) => deleteStoredFile(doc.fileStorageKey)));
     return NextResponse.json({ success: true });
   } catch (err) {
     return errorResponse(err);

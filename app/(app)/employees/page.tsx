@@ -9,6 +9,7 @@ import clsx from "clsx";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import api, { apiPostForm } from "@/lib/api";
+import VirtualizedList from "@/components/VirtualizedList";
 
 // True when the value is empty (phone optional) or a valid international number.
 function phoneOk(phone: string) {
@@ -481,15 +482,29 @@ export default function EmployeesPage() {
           </div>
           <div className="table-wrapper">
             {filteredEmployees.length === 0 ? <div className="text-center py-12 text-sm text-slate-400">{t("noEmployees")}</div> : (
-              <table>
-                <thead><tr><th /><th>{t("employeeId")}</th><th>{t("name")}</th><th>{emailTitle}</th><th className="text-right">{t("baseSalary")}</th><th className="text-right">{t("socialSecurity")}</th></tr></thead>
-                <tbody>
-                  {filteredEmployees.map((emp) => (
-                    <tr key={emp.employee_id} className={clsx("group cursor-pointer", emp.employee_id === selectedId && "bg-brand-50")} onClick={() => setSelectedId(emp.employee_id)}>
-                      <td className="pl-3" />
-                      <td className="font-mono text-xs text-slate-500">{emp.employee_id}</td>
-                      <td className="font-medium">
-                        <div className="flex items-center gap-2">
+              <div className="min-w-[760px]">
+                <div className="grid grid-cols-[36px_110px_1.35fr_1.25fr_120px_130px] items-center border-b border-slate-200 bg-slate-50/80 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <div />
+                  <div>{t("employeeId")}</div>
+                  <div>{t("name")}</div>
+                  <div>{emailTitle}</div>
+                  <div className="text-right">{t("baseSalary")}</div>
+                  <div className="text-right">{t("socialSecurity")}</div>
+                </div>
+                <VirtualizedList
+                  items={filteredEmployees}
+                  height={520}
+                  rowHeight={58}
+                  getKey={(emp) => emp.employee_id}
+                  renderRow={(emp) => (
+                    <div
+                      className={clsx("grid h-full grid-cols-[36px_110px_1.35fr_1.25fr_120px_130px] items-center border-b border-slate-100 px-3 text-sm transition hover:bg-slate-50 cursor-pointer", emp.employee_id === selectedId && "bg-brand-50")}
+                      onClick={() => setSelectedId(emp.employee_id)}
+                    >
+                      <div />
+                      <div className="font-mono text-xs text-slate-500">{emp.employee_id}</div>
+                      <div className="font-medium min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
                           {emp.photo_url ? (
                             <img src={emp.photo_url} alt={emp.name} className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
                           ) : (
@@ -497,14 +512,14 @@ export default function EmployeesPage() {
                           )}
                           <span className="truncate">{emp.name}</span>
                         </div>
-                      </td>
-                      <td className="text-sm text-slate-600 max-w-[180px]"><div className="truncate">{emp.email || "-"}</div></td>
-                      <td className="text-right font-mono">{formatCurrency(emp.base_salary)}</td>
-                      <td className="text-right">{emp.social_security ? <span className="badge badge-purple"><Shield size={11} /> {t("enabled")}</span> : <span className="badge badge-gray">{t("disabled")}</span>}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                      <div className="text-sm text-slate-600 min-w-0"><div className="truncate">{emp.email || "-"}</div></div>
+                      <div className="text-right font-mono">{formatCurrency(emp.base_salary)}</div>
+                      <div className="text-right">{emp.social_security ? <span className="badge badge-purple"><Shield size={11} /> {t("enabled")}</span> : <span className="badge badge-gray">{t("disabled")}</span>}</div>
+                    </div>
+                  )}
+                />
+              </div>
             )}
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
+import { paginationQuery, parsePagination, withPaginationHeaders } from "@/lib/pagination";
 
 export const runtime = "nodejs";
 
@@ -11,7 +12,11 @@ export async function GET(req: NextRequest) {
     await requirePageAccess(session, "tasks");
     if (session.companyId == null) throw new HttpError(403, "No company scope");
 
+    const url = new URL(req.url);
+    const pagination = parsePagination(url, { limit: 100 });
+    const status = url.searchParams.get("status");
     const where: any = { companyId: session.companyId };
+    if (status) where.status = status;
     if (session.role === "employee") {
       // Own tasks + tasks of direct subordinates (so a supervisor sees & tracks team targets)
       const me = await prisma.employee.findFirst({
@@ -34,8 +39,11 @@ export async function GET(req: NextRequest) {
       where.employeeId = { in: [session.employeeNumber, ...subEmpIds].filter(Boolean) as string[] };
     }
 
-    const tasks = await prisma.task.findMany({ where, orderBy: { createdAt: "desc" } });
-    return NextResponse.json(tasks);
+    const [tasks, total] = await Promise.all([
+      prisma.task.findMany({ where, orderBy: { createdAt: "desc" }, ...paginationQuery(pagination) }),
+      pagination.enabled ? prisma.task.count({ where }) : Promise.resolve(undefined),
+    ]);
+    return withPaginationHeaders(tasks, pagination, total);
   } catch (err) {
     return errorResponse(err);
   }

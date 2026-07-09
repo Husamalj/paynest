@@ -5,12 +5,13 @@ import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError }
 import { logAudit } from "@/lib/audit";
 import { sendNewEmployeeCredentials } from "@/lib/email";
 import { assertDeliverableEmail, assertValidPhone } from "@/lib/validate";
+import { getCompanySystemMode } from "@/lib/companyContext";
+import { paginationQuery, parsePagination, withPaginationHeaders } from "@/lib/pagination";
 
 export const runtime = "nodejs";
 
 async function getSystemMode(companyId: number) {
-  const s = await prisma.companySettings.findFirst({ where: { companyId } });
-  return s?.systemMode ?? "daily";
+  return getCompanySystemMode(companyId);
 }
 
 export async function GET(req: NextRequest) {
@@ -27,15 +28,35 @@ export async function GET(req: NextRequest) {
       select: { employeeNumber: true },
     });
     const adminNums = adminUsers.map((u) => u.employeeNumber).filter(Boolean) as string[];
+    const url = new URL(req.url);
+    const pagination = parsePagination(url, { limit: 100 });
+    const search = url.searchParams.get("search")?.trim();
+    const department = url.searchParams.get("department")?.trim();
 
-    const employees = await prisma.employee.findMany({
-      where: {
-        companyId: session.companyId,
-        ...(adminNums.length > 0 ? { NOT: { employeeId: { in: adminNums } } } : {}),
-      },
-      orderBy: { name: "asc" },
-    });
-    return NextResponse.json(employees.map(toSnake));
+    const where: any = {
+      companyId: session.companyId,
+      ...(adminNums.length > 0 ? { NOT: { employeeId: { in: adminNums } } } : {}),
+      ...(department ? { department } : {}),
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { employeeId: { contains: search, mode: "insensitive" } },
+              { email: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    };
+
+    const [employees, total] = await Promise.all([
+      prisma.employee.findMany({
+        where,
+        orderBy: { name: "asc" },
+        ...paginationQuery(pagination),
+      }),
+      pagination.enabled ? prisma.employee.count({ where }) : Promise.resolve(undefined),
+    ]);
+    return withPaginationHeaders(employees.map(toSnake), pagination, total);
   } catch (err) {
     return errorResponse(err);
   }

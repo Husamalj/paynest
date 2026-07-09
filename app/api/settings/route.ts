@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
 import { logAudit, diff } from "@/lib/audit";
+import { invalidateCompanyContext } from "@/lib/companyContext";
 
 export const runtime = "nodejs";
 
@@ -63,6 +64,7 @@ export async function PUT(req: NextRequest) {
       ? await prisma.companySettings.update({ where: { id: existing.id }, data: clean })
       : await prisma.companySettings.create({ data: { ...clean, companyId: session.companyId } });
 
+    invalidateCompanyContext(session.companyId);
     await logAudit(session, existing ? "update" : "create", "settings", settings.id, existing ? diff(existing, settings) : settings);
     return NextResponse.json(toSnake(settings));
   } catch (err) {

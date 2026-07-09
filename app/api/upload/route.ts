@@ -6,6 +6,9 @@ import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError }
 import { parseAttendanceFile, parseSalaryFile, detectFileKind } from "@/lib/excelParser";
 import { logAudit, withAuditMeta } from "@/lib/audit";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
+import { getCompanySystemMode } from "@/lib/companyContext";
+import { paginationQuery, parsePagination, withPaginationHeaders } from "@/lib/pagination";
+import { deleteStoredFile, storeFile } from "@/lib/fileStorage";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -15,8 +18,7 @@ const MAX_SPREADSHEET_BYTES = 5 * 1024 * 1024;
 const ALLOWED_SPREADSHEET_EXTENSIONS = new Set([".csv", ".xlsx"]);
 
 async function getSystemMode(companyId: number) {
-  const s = await prisma.companySettings.findFirst({ where: { companyId } });
-  return s?.systemMode ?? "daily";
+  return getCompanySystemMode(companyId);
 }
 
 export async function GET(req: NextRequest) {
@@ -27,25 +29,36 @@ export async function GET(req: NextRequest) {
 
     const companyId = session.companyId;
     const mode = await getSystemMode(companyId);
+    const url = new URL(req.url);
+    const pagination = parsePagination(url, { limit: 100 });
+    const where = { companyId, systemMode: mode };
 
-    const files = await prisma.uploadedFile.findMany({
-      where: { companyId, systemMode: mode },
-      orderBy: { createdAt: "desc" },
-      take: 100,
-      // Exclude the heavy base64 blob from the list; expose only whether a
-      // downloadable copy exists via `hasFile`.
-      select: {
-        id: true, companyId: true, filename: true, originalName: true,
-        fileType: true, uploadBatch: true, rowCount: true, employeeCount: true,
-        systemMode: true, mimeType: true, periodMonth: true, periodYear: true, createdAt: true,
-        fileData: false,
-      },
-    });
-    const withFlag = await prisma.$queryRaw<{ id: number; has: boolean }[]>(
-      Prisma.sql`SELECT id, (file_data IS NOT NULL) AS has FROM uploaded_files WHERE company_id = ${companyId} AND system_mode = ${mode}`,
-    );
+    const [files, total] = await Promise.all([
+      prisma.uploadedFile.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        ...(pagination.enabled ? paginationQuery(pagination) : { take: 100 }),
+        // Exclude the heavy base64 blob from the list; expose only whether a
+        // downloadable copy exists via `hasFile`.
+        select: {
+          id: true, companyId: true, filename: true, originalName: true,
+          fileType: true, uploadBatch: true, rowCount: true, employeeCount: true,
+          systemMode: true, mimeType: true, periodMonth: true, periodYear: true, createdAt: true,
+          fileData: false,
+          fileUrl: true,
+          fileStorageKey: true,
+        },
+      }),
+      pagination.enabled ? prisma.uploadedFile.count({ where }) : Promise.resolve(undefined),
+    ]);
+    const visibleIds = files.map((file) => file.id);
+    const withFlag = visibleIds.length > 0
+      ? await prisma.$queryRaw<{ id: number; has: boolean }[]>(
+          Prisma.sql`SELECT id, (file_data IS NOT NULL OR file_url IS NOT NULL) AS has FROM uploaded_files WHERE company_id = ${companyId} AND id IN (${Prisma.join(visibleIds)})`,
+        )
+      : [];
     const hasMap = new Map(withFlag.map((r) => [r.id, r.has]));
-    return NextResponse.json(files.map((f) => ({ ...f, hasFile: hasMap.get(f.id) ?? false })));
+    return withPaginationHeaders(files.map((f) => ({ ...f, hasFile: hasMap.get(f.id) ?? false })), pagination, total);
   } catch (err) {
     return errorResponse(err);
   }
@@ -69,6 +82,7 @@ export async function DELETE(req: NextRequest) {
       await prisma.attendanceRecord.deleteMany({ where: { uploadBatch: file.uploadBatch, companyId } });
     }
     await prisma.uploadedFile.delete({ where: { id: Number(id) } });
+    await deleteStoredFile(file.fileStorageKey);
     return NextResponse.json({ success: true, deleted: file });
   } catch (err) {
     return errorResponse(err);
@@ -379,6 +393,14 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      const stored = await storeFile({
+        companyId,
+        area: "uploads",
+        filename: file.name,
+        mimeType: file.type || "application/octet-stream",
+        bytes: buf,
+      });
+
       await prisma.uploadedFile.create({
         data: {
           companyId,
@@ -389,8 +411,11 @@ export async function POST(req: NextRequest) {
           rowCount,
           employeeCount,
           systemMode,
-          // Keep the original bytes so HR can re-download the file later.
-          fileData: buf.toString("base64"),
+          // Keep the original bytes in Blob when configured; fall back to DB
+          // base64 only in local/test or when external storage is unavailable.
+          fileData: stored.base64,
+          fileUrl: stored.url,
+          fileStorageKey: stored.key,
           mimeType: file.type || "application/octet-stream",
           // The month/year this file belongs to (chosen at upload).
           periodMonth,
