@@ -1,0 +1,49 @@
+name: Staging Full Flow
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Staging/preview URL"
+        required: true
+        type: string
+
+jobs:
+  full-flow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run customer full flow against staging
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ inputs.base_url }}
+          PLAYWRIGHT_SKIP_WEB_SERVER: "true"
+          PAYNEST_TEST_DB_READY: "true"
+          JWT_SECRET: ${{ secrets.STAGING_JWT_SECRET }}
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.STAGING_DIRECT_URL }}
+          RESEND_API_KEY: "test-resend-disabled"
+          FROM_EMAIL: "noreply@example.test"
+        run: npm run test:e2e:flow
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: staging-full-flow-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+
