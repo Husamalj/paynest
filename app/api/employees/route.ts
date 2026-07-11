@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
         });
 
         if (newUser.email && tempPassword) {
-          sendNewEmployeeCredentials(
+          await sendNewEmployeeCredentials(
             session.companyId,
             newUser.email,
             name,

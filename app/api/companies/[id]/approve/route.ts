@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       select: { email: true, name: true },
     });
     if (owner?.email) {
-      sendWelcomeCompany(owner.email, company.name);
+      await sendWelcomeCompany(owner.email, company.name);
     }
 
     return NextResponse.json(company);

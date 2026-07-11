@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
         data: { userId: ownerUser.id, token: verifyToken, expiresAt },
       });
       const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://paynest.app"}/verify-email?token=${verifyToken}`;
-      sendEmailVerification(email, verifyUrl);
+      await sendEmailVerification(email, verifyUrl);
     } catch (e) {
       console.error("[verify email]", e);
     }

@@ -236,9 +236,11 @@ export async function calculatePayrollRun(input: PayrollRunInput) {
       where: { companyId, role: "employee" },
       select: { email: true, name: true },
     });
-    for (const u of empUsers) {
-      if (u.email) sendPayslipReady(companyId, u.email, u.name || "Employee", periodMonth, periodYear);
-    }
+    await Promise.allSettled(
+      empUsers
+        .filter((u) => u.email)
+        .map((u) => sendPayslipReady(companyId, u.email!, u.name || "Employee", periodMonth, periodYear))
+    );
   } catch (error) {
     console.error("[payslip email]", error);
   }

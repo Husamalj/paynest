@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     // Also notify by email (best-effort).
     const to = process.env.CONTACT_EMAIL || process.env.FROM_EMAIL || "info@paynest.app";
-    sendDemoRequest(to, {
+    await sendDemoRequest(to, {
       firstName, lastName: data.lastName ?? undefined, email,
       company: data.company ?? undefined, teamSize: data.teamSize ?? undefined, message: data.message ?? undefined,
     });

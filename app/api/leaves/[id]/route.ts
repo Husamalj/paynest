@@ -138,7 +138,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           select: { email: true },
         });
         if (empUser?.email && leave.employeeName) {
-          sendLeaveDecision(
+          await sendLeaveDecision(
             session.companyId,
             empUser.email,
             leave.employeeName,

@@ -18,7 +18,7 @@ function safeName(name: string) {
   return name.replace(/["<>\r\n,]/g, "").trim().slice(0, 100) || "PayNest";
 }
 
-function send(
+async function send(
   to: string,
   subject: string,
   html: string,
@@ -28,15 +28,18 @@ function send(
   if (!key) return;
   const resend = new Resend(key);
   const from = `${safeName(opts?.fromName ?? "PayNest")} <${FROM_ADDRESS}>`;
-  resend.emails
-    .send({
-      from,
-      to,
-      subject,
-      html,
-      ...(opts?.replyTo ? { replyTo: opts.replyTo } : {}),
-    })
-    .catch((err) => console.error("[email]", subject, err));
+  const result = await resend.emails.send({
+    from,
+    to,
+    subject,
+    html,
+    ...(opts?.replyTo ? { replyTo: opts.replyTo } : {}),
+  });
+  if (result.error) {
+    console.error("[email]", subject, result.error);
+    throw new Error(result.error.message || "Email delivery failed");
+  }
+  return result.data;
 }
 
 // Load a company's branding from its settings (falls back to PayNest defaults).
@@ -73,26 +76,26 @@ function button(url: string, label: string, color: string) {
 }
 
 // ── Platform emails (always PayNest-branded) ────────────────────────────────
-export function sendWelcomeCompany(to: string, companyName: string) {
+export async function sendWelcomeCompany(to: string, companyName: string) {
   const b = DEFAULT_BRAND;
-  send(to, "Welcome to PayNest!", wrap(b, `
+  return send(to, "Welcome to PayNest!", wrap(b, `
     <h3>Welcome to PayNest, ${companyName}!</h3>
     <p>Your company account has been approved. You can now log in and set up your workspace.</p>
     ${button(`${APP_URL}/login`, "Log In Now", b.color)}`));
 }
 
-export function sendPasswordReset(to: string, resetUrl: string) {
+export async function sendPasswordReset(to: string, resetUrl: string) {
   const b = DEFAULT_BRAND;
-  send(to, "Reset your PayNest password", wrap(b, `
+  return send(to, "Reset your PayNest password", wrap(b, `
     <h3>Password Reset Request</h3>
     <p>We received a request to reset your password. This link expires in 1 hour.</p>
     ${button(resetUrl, "Reset Password", b.color)}
     <p>If you didn't request this, you can safely ignore this email.</p>`));
 }
 
-export function sendEmailVerification(to: string, verifyUrl: string) {
+export async function sendEmailVerification(to: string, verifyUrl: string) {
   const b = DEFAULT_BRAND;
-  send(to, "Verify your PayNest email", wrap(b, `
+  return send(to, "Verify your PayNest email", wrap(b, `
     <h3>Verify Your Email Address</h3>
     <p>Click below to verify your email and activate your PayNest account.</p>
     ${button(verifyUrl, "Verify Email", b.color)}`));
@@ -107,7 +110,7 @@ export async function sendNewEmployeeCredentials(
   portalUrl: string
 ) {
   const b = await loadBrand(companyId);
-  send(to, `Your ${b.name} account is ready`, wrap(b, `
+  return send(to, `Your ${b.name} account is ready`, wrap(b, `
     <h3>Welcome, ${name}!</h3>
     <p>Your HR team has created an account for you. Use the credentials below to log in.</p>
     <table style="border-collapse:collapse;width:100%;margin:16px 0">
@@ -131,7 +134,7 @@ export async function sendLeaveDecision(
 ) {
   const b = await loadBrand(companyId);
   const approved = status === "approved";
-  send(to, `Your leave request has been ${approved ? "approved" : "rejected"}`, wrap(b, `
+  return send(to, `Your leave request has been ${approved ? "approved" : "rejected"}`, wrap(b, `
     <h3>Leave Request ${approved ? "Approved ✅" : "Rejected ❌"}</h3>
     <p>Hi ${employeeName},</p>
     <p>Your <strong>${leaveType}</strong> leave request from <strong>${startDate}</strong> to <strong>${endDate}</strong> has been <strong>${status}</strong>.</p>
@@ -148,7 +151,7 @@ export async function sendPayslipReady(
 ) {
   const b = await loadBrand(companyId);
   const monthName = new Date(year, month - 1).toLocaleString("en-US", { month: "long" });
-  send(to, `Your ${monthName} ${year} payslip is ready`, wrap(b, `
+  return send(to, `Your ${monthName} ${year} payslip is ready`, wrap(b, `
     <h3>Payslip Ready 💼</h3>
     <p>Hi ${employeeName},</p>
     <p>Your payslip for <strong>${monthName} ${year}</strong> is now available in your portal.</p>
@@ -156,14 +159,14 @@ export async function sendPayslipReady(
 }
 
 // ── Sales: a demo request submitted from the public landing page ─────────────
-export function sendDemoRequest(
+export async function sendDemoRequest(
   to: string,
   data: { firstName: string; lastName?: string; email: string; company?: string; teamSize?: string; message?: string }
 ) {
   const b = DEFAULT_BRAND;
   const row = (k: string, v?: string) =>
     v ? `<tr><td style="padding:8px;background:#f1f5f9;font-weight:bold;white-space:nowrap">${k}</td><td style="padding:8px">${v}</td></tr>` : "";
-  send(to, `New demo request — ${data.company || `${data.firstName} ${data.lastName ?? ""}`.trim()}`, wrap(b, `
+  return send(to, `New demo request — ${data.company || `${data.firstName} ${data.lastName ?? ""}`.trim()}`, wrap(b, `
     <h3>New demo request 🚀</h3>
     <table style="border-collapse:collapse;width:100%;margin:16px 0">
       ${row("Name", `${data.firstName} ${data.lastName ?? ""}`.trim())}
