@@ -15,6 +15,12 @@ model Company {
   status        String   @default("active") @db.VarChar(20)
   isActive      Boolean  @default(true) @map("is_active")
   maxEmployees        Int?     @map("max_employees")
+  subscriptionPlan    String   @default("manual") @map("subscription_plan") @db.VarChar(50)
+  subscriptionStatus  String   @default("active") @map("subscription_status") @db.VarChar(30)
+  trialEndsAt         DateTime? @map("trial_ends_at")
+  subscriptionEndsAt  DateTime? @map("subscription_ends_at")
+  billingEmail        String?  @map("billing_email") @db.VarChar(255)
+  billingNotes        String?  @map("billing_notes") @db.Text
   hiddenPages         Json     @default("[]") @map("hidden_pages")
   createdAt           DateTime @default(now()) @map("created_at")
   onboardingCompleted Boolean  @default(false) @map("onboarding_completed")
@@ -37,6 +43,7 @@ model Company {
   auditLogs          AuditLog[]
   notifications      Notification[]
 
+  @@index([subscriptionStatus])
   @@map("companies")
 }
 

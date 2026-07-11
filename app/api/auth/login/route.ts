@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { signJwt, errorResponse, HttpError } from "@/lib/auth";
 import { clearFailedLogin, getClientIp, loginLockout, rateLimit, recordFailedLogin } from "@/lib/rateLimit";
 import { hiddenPageAliases } from "@/lib/responseShape";
+import { isCompanySubscriptionBlocked, subscriptionBlockReason } from "@/lib/subscription";
 
 export const runtime = "nodejs";
 
@@ -32,6 +33,9 @@ export async function POST(req: NextRequest) {
             slug: true,
             status: true,
             isActive: true,
+            subscriptionStatus: true,
+            trialEndsAt: true,
+            subscriptionEndsAt: true,
             hiddenPages: true,
           },
         },
@@ -52,17 +56,18 @@ export async function POST(req: NextRequest) {
     if (
       user.role !== "super_admin" &&
       user.companyId &&
-      user.company?.isActive === false
+      user.company?.status === "pending"
     ) {
-      throw new HttpError(403, "Company subscription is inactive");
+      throw new HttpError(403, "Company registration is pending administrator approval.");
     }
 
     if (
       user.role !== "super_admin" &&
       user.companyId &&
-      user.company?.status === "pending"
+      user.company &&
+      isCompanySubscriptionBlocked(user.company)
     ) {
-      throw new HttpError(403, "Company registration is pending administrator approval.");
+      throw new HttpError(403, subscriptionBlockReason(user.company));
     }
 
     const token = signJwt({
@@ -90,6 +95,8 @@ export async function POST(req: NextRequest) {
         company_name: user.company?.name ?? null,
         company_slug: user.company?.slug ?? null,
         is_active: user.company?.isActive ?? null,
+        subscription_status: user.company?.subscriptionStatus ?? null,
+        subscriptionStatus: user.company?.subscriptionStatus ?? null,
         ...hiddenPageAliases(user.company),
       },
     });

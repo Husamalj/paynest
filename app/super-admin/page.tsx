@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Building2, Plus, X, CheckCircle2, AlertTriangle, Edit3,
   Trash2, LogOut, Power, Clock, Users, Ban, RefreshCw,
-  Mail, EyeOff,
+  Mail, EyeOff, CreditCard,
 } from "lucide-react";
 import api from "@/lib/api";
 import clsx from "clsx";
@@ -34,6 +34,15 @@ export default function SuperAdminPage() {
   const [editMax, setEditMax] = useState<{ company: any; value: string } | null>(null);
   const [requests, setRequests] = useState<any[]>([]);
   const [pageEdit, setPageEdit] = useState<{ company: any; hidden: string[] } | null>(null);
+  const [billingEdit, setBillingEdit] = useState<{
+    company: any;
+    subscriptionPlan: string;
+    subscriptionStatus: string;
+    trialEndsAt: string;
+    subscriptionEndsAt: string;
+    billingEmail: string;
+    billingNotes: string;
+  } | null>(null);
 
   const signOut = () => {
     ["token", "paynest_logged_in", "role", "user", "paynest_employee_id"].forEach((k) => localStorage.removeItem(k));
@@ -127,6 +136,25 @@ export default function SuperAdminPage() {
     finally { setBusyId(null); }
   };
 
+  const saveBilling = async () => {
+    if (!billingEdit) return;
+    setBusyId(billingEdit.company.id); setError(""); setSuccess("");
+    try {
+      await api.patch(`/companies/${billingEdit.company.id}`, {
+        subscriptionPlan: billingEdit.subscriptionPlan,
+        subscriptionStatus: billingEdit.subscriptionStatus,
+        trialEndsAt: billingEdit.trialEndsAt || null,
+        subscriptionEndsAt: billingEdit.subscriptionEndsAt || null,
+        billingEmail: billingEdit.billingEmail || null,
+        billingNotes: billingEdit.billingNotes || null,
+      });
+      setSuccess(`Billing updated for "${billingEdit.company.name}"`);
+      setBillingEdit(null);
+      await load();
+    } catch (e: any) { setError(safeErr(e)); }
+    finally { setBusyId(null); }
+  };
+
   const handleDelete = async (company: any) => {
     setBusyId(company.id); setError(""); setSuccess("");
     try {
@@ -150,6 +178,12 @@ export default function SuperAdminPage() {
     if (tab === "suspended") return c.is_active === false && c.status !== "pending" && c.status !== "rejected";
     return true;
   });
+
+  const toDateInput = (value: any) => {
+    if (!value) return "";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -259,7 +293,7 @@ export default function SuperAdminPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>Company</th><th>Owner Email</th><th>Slug</th><th>Employees</th><th>Max</th><th>Status</th><th>Registered</th><th className="text-right">Actions</th>
+                    <th>Company</th><th>Owner Email</th><th>Slug</th><th>Employees</th><th>Max</th><th>Plan</th><th>Status</th><th>Registered</th><th className="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -284,6 +318,17 @@ export default function SuperAdminPage() {
                           </span>
                         </td>
                         <td>
+                          <div className="text-xs">
+                            <div className="font-semibold text-slate-700 capitalize">{c.subscription_plan || "manual"}</div>
+                            <div className={clsx(
+                              "capitalize",
+                              (c.subscription_status || "active") === "active" ? "text-emerald-600" :
+                              c.subscription_status === "trialing" ? "text-blue-600" :
+                              "text-rose-600"
+                            )}>{String(c.subscription_status || "active").replace("_", " ")}</div>
+                          </div>
+                        </td>
+                        <td>
                           {isPending && <span className="badge badge-yellow">Pending</span>}
                           {isActive && <span className="badge badge-green">Active</span>}
                           {isSuspended && <span className="badge badge-red">Suspended</span>}
@@ -296,6 +341,17 @@ export default function SuperAdminPage() {
                             </button>
                             <button className="btn btn-sm btn-secondary" disabled={busyId === c.id} onClick={() => setPageEdit({ company: c, hidden: readHiddenPages(c) })}>
                               <EyeOff size={13} /> Pages
+                            </button>
+                            <button className="btn btn-sm btn-secondary" disabled={busyId === c.id} onClick={() => setBillingEdit({
+                              company: c,
+                              subscriptionPlan: c.subscription_plan || "manual",
+                              subscriptionStatus: c.subscription_status || "active",
+                              trialEndsAt: toDateInput(c.trial_ends_at),
+                              subscriptionEndsAt: toDateInput(c.subscription_ends_at),
+                              billingEmail: c.billing_email || c.owner_email || "",
+                              billingNotes: c.billing_notes || "",
+                            })}>
+                              <CreditCard size={13} /> Billing
                             </button>
                             {isPending && (
                               <>
@@ -432,6 +488,61 @@ export default function SuperAdminPage() {
                 {busyId === pageEdit.company.id ? <span className="spinner" /> : <CheckCircle2 size={15} />} Save Pages
               </button>
             </div>
+        </ModalShell>
+      )}
+
+      {/* Billing Modal */}
+      {billingEdit && (
+        <ModalShell title={<>Billing & Subscription - {billingEdit.company.name}</>} onClose={() => setBillingEdit(null)} className="max-w-xl">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="form-label">Plan</label>
+                <select className="form-input" value={billingEdit.subscriptionPlan} onChange={(e) => setBillingEdit({ ...billingEdit, subscriptionPlan: e.target.value })}>
+                  <option value="manual">Manual</option>
+                  <option value="starter">Starter</option>
+                  <option value="growth">Growth</option>
+                  <option value="scale">Scale</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Status</label>
+                <select className="form-input" value={billingEdit.subscriptionStatus} onChange={(e) => setBillingEdit({ ...billingEdit, subscriptionStatus: e.target.value })}>
+                  <option value="trialing">Trialing</option>
+                  <option value="active">Active</option>
+                  <option value="past_due">Past due</option>
+                  <option value="suspended">Suspended</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Trial Ends</label>
+                <input type="date" className="form-input" value={billingEdit.trialEndsAt} onChange={(e) => setBillingEdit({ ...billingEdit, trialEndsAt: e.target.value })} />
+              </div>
+              <div>
+                <label className="form-label">Subscription Ends</label>
+                <input type="date" className="form-input" value={billingEdit.subscriptionEndsAt} onChange={(e) => setBillingEdit({ ...billingEdit, subscriptionEndsAt: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <label className="form-label">Billing Email</label>
+              <input type="email" className="form-input" value={billingEdit.billingEmail} onChange={(e) => setBillingEdit({ ...billingEdit, billingEmail: e.target.value })} placeholder="billing@company.com" />
+            </div>
+            <div>
+              <label className="form-label">Billing Notes</label>
+              <textarea className="form-input min-h-[100px]" value={billingEdit.billingNotes} onChange={(e) => setBillingEdit({ ...billingEdit, billingNotes: e.target.value })} placeholder="Contract terms, payment notes, invoice reference..." />
+            </div>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              Past due, suspended, cancelled, or expired trial/subscription statuses block non-super-admin login.
+            </div>
+            <div className="flex justify-end gap-2">
+              <button type="button" className="btn btn-secondary" onClick={() => setBillingEdit(null)}>Cancel</button>
+              <button type="button" className="btn btn-primary" onClick={saveBilling} disabled={busyId === billingEdit.company.id}>
+                {busyId === billingEdit.company.id ? <span className="spinner" /> : <CheckCircle2 size={15} />} Save Billing
+              </button>
+            </div>
+          </div>
         </ModalShell>
       )}
     </div>

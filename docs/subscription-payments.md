@@ -1,16 +1,16 @@
 # Subscription / Payments Plan
 
-PayNest does not yet have live payment processing. This must be completed before self-serve commercial billing.
+PayNest now has a manual subscription gate for first customers. Live online payment processing is still not enabled and requires a payment provider account, secrets, and webhook testing before self-serve commercial billing.
 
 ## Recommended Phases
 
 ### Phase 1: Manual Billing Gate
 
-- Add plans in code/database.
-- Super admin assigns a plan to each company.
-- Enforce `maxEmployees`.
-- Track trial start/end dates.
-- Show subscription status in Super Admin.
+- Plans and subscription status are stored on `companies`.
+- Super admin can assign a plan/status from the CEO Dashboard.
+- `maxEmployees` is enforced server-side.
+- Trial/subscription end dates are tracked.
+- Non-super-admin login is blocked for `past_due`, `suspended`, `cancelled`, expired trial, or expired subscription.
 
 This supports first customers without online card payments.
 
@@ -61,4 +61,3 @@ Do not enable live paid signup until:
 - cancellation tested
 - invoice email tested
 - support runbook written
-

@@ -180,3 +180,16 @@ CREATE INDEX IF NOT EXISTS payroll_jobs_company_id_status_created_at_idx
   ON payroll_jobs (company_id, status, created_at);
 CREATE INDEX IF NOT EXISTS payroll_jobs_company_id_period_year_period_month_idx
   ON payroll_jobs (company_id, period_year, period_month);
+
+-- 11) Company subscription/billing metadata. Payment gateway integration can
+-- write to these fields later; super admin can manage them manually now.
+ALTER TABLE companies
+  ADD COLUMN IF NOT EXISTS subscription_plan VARCHAR(50) NOT NULL DEFAULT 'manual',
+  ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(30) NOT NULL DEFAULT 'active',
+  ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMP,
+  ADD COLUMN IF NOT EXISTS subscription_ends_at TIMESTAMP,
+  ADD COLUMN IF NOT EXISTS billing_email VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS billing_notes TEXT;
+
+CREATE INDEX IF NOT EXISTS companies_subscription_status_idx
+  ON companies (subscription_status);
