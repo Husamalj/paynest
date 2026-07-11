@@ -349,6 +349,7 @@ export default function OwnerPortalPage() {
 
   /* ─── financial / overview computations ─── */
   const MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+  const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const num = (v: unknown) => parseFloat(v as string) || 0;
   const fin = useMemo(() => {
     const totalBase = payrollLatest.reduce((s, r) => s + num(r.base_salary), 0);
@@ -476,7 +477,7 @@ export default function OwnerPortalPage() {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="text-sm text-slate-500">
                 {payrollPeriod.month
-                  ? <>{ar ? "فترة الرواتب: " : "Payroll period: "}<span className="font-semibold text-slate-700">{(ar ? MONTHS_AR : MONTHS_AR)[(payrollPeriod.month || 1) - 1]} {payrollPeriod.year}</span></>
+                  ? <>{ar ? "فترة الرواتب: " : "Payroll period: "}<span className="font-semibold text-slate-700">{(ar ? MONTHS_AR : MONTHS_EN)[(payrollPeriod.month || 1) - 1]} {payrollPeriod.year}</span></>
                   : (ar ? "لا توجد رواتب محسوبة بعد — احسب الرواتب أولاً." : "No payroll calculated yet.")}
               </div>
             </div>
