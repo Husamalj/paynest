@@ -34,7 +34,12 @@ export async function POST(req: Request) {
       });
 
       const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://paynest.app"}/reset-password?token=${token}`;
-      await sendPasswordReset(email, resetUrl);
+      try {
+        await sendPasswordReset(email, resetUrl);
+      } catch (error) {
+        // Password reset must not expose email existence or provider failures to the UI.
+        console.error("[password reset email]", error);
+      }
     }
 
     // Always return ok — don't leak whether email exists
