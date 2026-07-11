@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Building2, Plus, X, CheckCircle2, AlertTriangle, Edit3,
   Trash2, LogOut, Power, Clock, Users, Ban, RefreshCw,
-  Mail, EyeOff, CreditCard,
+  Mail, EyeOff, CreditCard, Languages,
 } from "lucide-react";
 import api from "@/lib/api";
 import clsx from "clsx";
@@ -372,7 +372,14 @@ export default function SuperAdminPage() {
             <span className="ms-2 text-sm font-semibold text-slate-400 tracking-widest uppercase">{text.dashboard}</span>
           </h1>
           <div className="flex gap-2">
-            <button className="btn btn-secondary" onClick={() => toggleLanguage()}>{text.language}</button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => toggleLanguage()}
+              title={isRTL ? "Switch to English" : "التبديل إلى العربية"}
+            >
+              <Languages size={16} /> {text.language}
+            </button>
             <button className="btn btn-primary" onClick={() => setShowAdd(true)}><Plus size={16} /> {text.addCompany}</button>
             <button className="btn btn-secondary" onClick={signOut}><LogOut size={16} /> {text.signOut}</button>
           </div>
