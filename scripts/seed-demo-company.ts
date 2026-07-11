@@ -150,6 +150,7 @@ async function resetDemoTenant(companyId: number) {
     prisma.jobOfferTemplate.deleteMany({ where: { companyId } }),
     prisma.jobOffer.deleteMany({ where: { companyId } }),
     prisma.evaluation.deleteMany({ where: { companyId } }),
+    prisma.task.deleteMany({ where: { companyId } }),
     prisma.bonusTier.deleteMany({ where: { companyId } }),
     prisma.bonusDeduction.deleteMany({ where: { companyId } }),
     prisma.payrollRecord.deleteMany({ where: { companyId } }),
@@ -645,6 +646,7 @@ async function main() {
   const company = await ensureCompany();
   await createUsers(company.id);
   await seedCompany(company.id);
+  await verifyDemoTenant(company.id);
 
   console.log("Seeded PayNest demo company.");
   console.log(`Company: PayNest Demo Company (${DEMO_SLUG})`);
@@ -652,6 +654,46 @@ async function main() {
   console.log(`HR: hr@${DEMO_EMAIL_DOMAIN}`);
   console.log(`Employee: employee@${DEMO_EMAIL_DOMAIN}`);
   console.log(`Password: ${demoPassword}`);
+}
+
+async function verifyDemoTenant(companyId: number) {
+  const [userCount, employeeCount, payrollCount, leaveCount, taskCount, messageCount] = await Promise.all([
+    prisma.user.count({ where: { companyId } }),
+    prisma.employee.count({ where: { companyId } }),
+    prisma.payrollRecord.count({ where: { companyId } }),
+    prisma.leaveRequest.count({ where: { companyId } }),
+    prisma.task.count({ where: { companyId } }),
+    prisma.message.count({ where: { companyId } }),
+  ]);
+
+  const missing: string[] = [];
+  if (userCount < 3) missing.push("owner/hr/employee users");
+  if (employeeCount < employees.length + 2) missing.push("employee roster");
+  if (payrollCount < employees.length) missing.push("payroll records");
+  if (leaveCount < 2) missing.push("leave requests");
+  if (taskCount < 2) missing.push("tasks");
+  if (messageCount < 2) missing.push("messages");
+
+  if (missing.length > 0) {
+    throw new Error(`Demo seed verification failed. Missing: ${missing.join(", ")}`);
+  }
+
+  const users = await prisma.user.findMany({
+    where: { companyId },
+    select: { email: true },
+  });
+  const employeesWithEmails = await prisma.employee.findMany({
+    where: { companyId },
+    select: { email: true },
+  });
+  const unsafeEmails = [...users, ...employeesWithEmails]
+    .map((row) => row.email)
+    .filter((email): email is string => Boolean(email))
+    .filter((email) => !email.endsWith(`@${DEMO_EMAIL_DOMAIN}`));
+
+  if (unsafeEmails.length > 0) {
+    throw new Error(`Demo seed contains non-demo email addresses: ${unsafeEmails.join(", ")}`);
+  }
 }
 
 main()

@@ -27,6 +27,7 @@ If `PAYNEST_DEMO_PASSWORD` is omitted, the script generates a strong password an
 ## Scope
 
 The script only resets and recreates the tenant with slug `paynest-demo`.
+It verifies the seeded tenant after every run and fails if required demo records are missing or if any seeded user/employee email is outside `@demo.paynest.app`.
 
 It seeds:
 
