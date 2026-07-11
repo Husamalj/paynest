@@ -1,0 +1,65 @@
+name: Uptime Health
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "Health endpoint to check"
+        required: false
+        default: "https://www.paynest.app/api/health?strict=1"
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    name: Strict production health
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DEFAULT_TARGET_URL: "https://www.paynest.app/api/health?strict=1"
+
+    steps:
+      - name: Check strict health endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TARGET_URL="${{ github.event.inputs.target_url }}"
+          if [ -z "$TARGET_URL" ]; then
+            TARGET_URL="$DEFAULT_TARGET_URL"
+          fi
+
+          echo "Checking $TARGET_URL"
+          response="$(curl --fail-with-body --silent --show-error --location --max-time 20 "$TARGET_URL")"
+          echo "$response"
+
+          node - "$response" <<'NODE'
+          const response = process.argv[2];
+          let data;
+
+          try {
+            data = JSON.parse(response);
+          } catch {
+            console.error("Health response is not valid JSON.");
+            process.exit(1);
+          }
+
+          if (data.status !== "ok") {
+            console.error(`Health status is ${data.status || "missing"}.`);
+            process.exit(1);
+          }
+
+          const failedChecks = Object.entries(data.checks || {}).filter(([, value]) => {
+            return value !== "ok" && value !== "configured";
+          });
+
+          if (failedChecks.length > 0) {
+            console.error(`Unhealthy checks: ${JSON.stringify(failedChecks)}`);
+            process.exit(1);
+          }
+
+          console.log("PayNest strict health is OK.");
+          NODE
