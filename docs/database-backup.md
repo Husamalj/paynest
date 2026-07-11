@@ -61,3 +61,17 @@ PAYNEST_ALLOW_PRODUCTION_RESTORE=true
 - Manual backup before schema changes or data migrations.
 - Monthly restore drill into staging.
 - Keep at least 7 daily backups and 4 weekly backups.
+
+## Supabase Production Backup Check
+
+The current production database connection host points to Supabase. Before onboarding the first paying customer, confirm the provider-level backup is active from the Supabase dashboard:
+
+1. Open Supabase.
+2. Select the PayNest production project.
+3. Go to **Database > Backups**.
+4. Confirm at least one recent backup exists.
+5. Confirm the project is on a plan that includes daily backups for production use.
+6. Record the latest backup timestamp in the launch checklist.
+7. If the project is on a free/non-production plan, upgrade before onboarding customer payroll data.
+
+Supabase provider backups cover the Postgres database. They do not replace the restore drill; still restore into staging monthly before trusting the recovery path.
