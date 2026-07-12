@@ -29,7 +29,7 @@ const defaultScores = () => Object.fromEntries(EVAL_CRITERIA.map((c) => [c.key, 
 const MAX_TOTAL = EVAL_CRITERIA.length * 5; // 65
 
 function totalScore(ev: any) {
-  return EVAL_CRITERIA.reduce((sum, c) => sum + (parseInt(ev[c.key]) || 0), 0);
+  return EVAL_CRITERIA.reduce((sum, c) => sum + (parseFloat(ev[c.key]) || 0), 0);
 }
 // Each star = 20% of its criterion; the grade is the average of the 13
 // criterion percentages, which simplifies to (totalScore / 65) * 100.
@@ -204,10 +204,11 @@ export default function EvaluationsPage() {
   const months = ar ? MONTHS_AR : MONTHS_EN;
   const yearOptions = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1];
 
-  const totalEvaluated = evaluations.length;
+  const totalEvaluated = evaluations.reduce((sum, e) => sum + (Number(e.evaluation_count) || 1), 0);
   const withBonus = evaluations.filter((e) => e.bonus_worthy).length;
-  const overallAvg = totalEvaluated
-    ? (evaluations.reduce((s, e) => s + parseFloat(grade100(e)), 0) / totalEvaluated).toFixed(1)
+  const evaluatedEmployees = evaluations.length;
+  const overallAvg = evaluatedEmployees
+    ? (evaluations.reduce((s, e) => s + parseFloat(grade100(e)), 0) / evaluatedEmployees).toFixed(1)
     : "—";
 
   return (
@@ -296,9 +297,14 @@ export default function EvaluationsPage() {
                       </div>
                       <div className="min-w-0">
                         <div className="font-semibold text-slate-900 truncate">{ev.employee_name || ev.employee_id}</div>
-                        {ev.evaluator_name && (
+                        {(ev.evaluator_names || ev.evaluator_name) && (
                           <div className="text-[11px] text-slate-400">
-                            {ar ? "بواسطة" : "By"}: {ev.evaluator_name}
+                            {ar ? "بواسطة" : "By"}: {ev.evaluator_names || ev.evaluator_name}
+                          </div>
+                        )}
+                        {Number(ev.evaluation_count || 1) > 1 && (
+                          <div className="text-[11px] text-brand-600 font-medium">
+                            {ar ? `تقييم مجمع من ${ev.evaluation_count} مشرفين` : `Aggregated from ${ev.evaluation_count} supervisors`}
                           </div>
                         )}
                       </div>
@@ -330,16 +336,18 @@ export default function EvaluationsPage() {
                     <div className="px-5 pb-5 bg-slate-50 border-t border-slate-100">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 mt-4">
                         {EVAL_CRITERIA.map((c) => {
-                          const val = parseInt(ev[c.key]) || 0;
+                          const val = parseFloat(ev[c.key]) || 0;
+                          const filled = Math.round(val);
                           return (
                             <div key={c.key} className="flex items-center justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
                               <span className="text-xs text-slate-600 flex-1">{ar ? c.ar : c.en}</span>
                               <div className="flex gap-0.5 shrink-0">
                                 {[1, 2, 3, 4, 5].map((n) => (
-                                  <span key={n} className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${n <= val ? "bg-brand-600 text-white" : "bg-slate-200 text-slate-400"}`}>
+                                  <span key={n} className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${n <= filled ? "bg-brand-600 text-white" : "bg-slate-200 text-slate-400"}`}>
                                     {n}
                                   </span>
                                 ))}
+                                <span className="ms-1 text-[10px] font-semibold text-slate-500">{val.toFixed(1)}</span>
                               </div>
                             </div>
                           );

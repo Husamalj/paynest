@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS job_offers (
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS join_date DATE;
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS contract_end_date DATE;
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS department VARCHAR(50);
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS department_number VARCHAR(50);
 
 -- 5) Platform-level contact/demo requests
 CREATE TABLE IF NOT EXISTS contact_requests (
@@ -104,6 +105,8 @@ CREATE INDEX IF NOT EXISTS employees_company_id_name_idx
   ON employees (company_id, name);
 CREATE INDEX IF NOT EXISTS employees_company_id_department_idx
   ON employees (company_id, department);
+CREATE INDEX IF NOT EXISTS employees_company_id_department_number_idx
+  ON employees (company_id, department_number);
 CREATE INDEX IF NOT EXISTS employee_documents_company_id_employee_id_uploaded_at_idx
   ON employee_documents (company_id, employee_id, uploaded_at);
 CREATE INDEX IF NOT EXISTS attendance_records_company_id_work_date_idx

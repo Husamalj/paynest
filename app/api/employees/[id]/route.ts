@@ -25,6 +25,10 @@ function toSnake(e: any) {
     national_id: e.nationalId,
     birth_date: e.birthDate,
     photo_url: e.photoUrl,
+    department: e.department,
+    department_number: e.departmentNumber,
+    join_date: e.joinDate,
+    contract_end_date: e.contractEndDate,
     social_security: e.socialSecurity,
     work_type: e.workType,
     workdays: e.workdays,
@@ -97,6 +101,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (body.base_salary !== undefined) data.baseSalary = Number(body.base_salary) || 0;
     if (body.allowance !== undefined) data.allowance = Number(body.allowance) || 0;
     if (body.job_title !== undefined) data.jobTitle = body.job_title || null;
+    if (body.department !== undefined) data.department = body.department || null;
+    if (body.department_number !== undefined) data.departmentNumber = body.department_number || null;
+    if (body.join_date !== undefined) data.joinDate = body.join_date ? new Date(body.join_date) : null;
+    if (body.contract_end_date !== undefined) data.contractEndDate = body.contract_end_date ? new Date(body.contract_end_date) : null;
     if (body.nationality !== undefined) data.nationality = body.nationality || null;
     if (body.gender !== undefined) data.gender = body.gender || null;
     if (body.national_id !== undefined) data.nationalId = body.national_id || null;

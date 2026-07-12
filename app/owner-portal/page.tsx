@@ -55,7 +55,7 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) 
 const TABS = ["overview", "employees", "team", "announcements", "hr_team"] as const;
 type Tab = typeof TABS[number];
 
-const emptyEmp  = { employee_id: "", name: "", email: "", phone: "", base_salary: "", social_security: false, religion: "" };
+const emptyEmp  = { employee_id: "", name: "", email: "", phone: "", base_salary: "", department: "", department_number: "", join_date: "", contract_end_date: "", social_security: false, religion: "" };
 const emptyHR   = { name: "", email: "", password: "", phone: "", base_salary: "" };
 
 export default function OwnerPortalPage() {
@@ -253,7 +253,19 @@ export default function OwnerPortalPage() {
   /* ─── employee edit ─── */
   const openEditEmp = () => {
     if (!selectedEmp) return;
-    setEditEmpForm({ employee_id: selectedEmp.employee_id || "", name: selectedEmp.name || "", email: selectedEmp.email || "", phone: selectedEmp.phone || "", base_salary: selectedEmp.base_salary || "", social_security: !!selectedEmp.social_security, religion: selectedEmp.religion || "" });
+    setEditEmpForm({
+      employee_id: selectedEmp.employee_id || "",
+      name: selectedEmp.name || "",
+      email: selectedEmp.email || "",
+      phone: selectedEmp.phone || "",
+      base_salary: selectedEmp.base_salary || "",
+      department: selectedEmp.department || "",
+      department_number: selectedEmp.department_number || "",
+      join_date: selectedEmp.join_date ? String(selectedEmp.join_date).substring(0, 10) : "",
+      contract_end_date: selectedEmp.contract_end_date ? String(selectedEmp.contract_end_date).substring(0, 10) : "",
+      social_security: !!selectedEmp.social_security,
+      religion: selectedEmp.religion || "",
+    });
     setShowEditEmp(true);
   };
   const handleEditEmp = async (e: React.FormEvent) => {
@@ -799,6 +811,10 @@ export default function OwnerPortalPage() {
                 <div><label className="form-label">{ar ? "البريد" : "Email"} *</label><input type="email" className="form-input" value={empForm.email} onChange={(e) => setEmpForm((f) => ({ ...f, email: e.target.value }))} /></div>
                 <div><label className="form-label">{ar ? "الهاتف" : "Phone"}</label><PhoneInput value={empForm.phone} onChange={(v) => setEmpForm((f) => ({ ...f, phone: v }))} /></div>
                 <div><label className="form-label">{ar ? "الراتب" : "Salary"} *</label><input type="number" className="form-input" value={empForm.base_salary} onChange={(e) => setEmpForm((f) => ({ ...f, base_salary: e.target.value }))} /></div>
+                <div><label className="form-label">{ar ? "اسم القسم" : "Department Name"}</label><input className="form-input" value={empForm.department} onChange={(e) => setEmpForm((f) => ({ ...f, department: e.target.value }))} placeholder={ar ? "مثال: المبيعات" : "e.g. Sales"} /></div>
+                <div><label className="form-label">{ar ? "رقم القسم" : "Department Number"}</label><input className="form-input" value={empForm.department_number} onChange={(e) => setEmpForm((f) => ({ ...f, department_number: e.target.value }))} placeholder="DEP-001" /></div>
+                <div><label className="form-label">{ar ? "بداية العقد" : "Contract Start"}</label><input type="date" className="form-input" value={empForm.join_date} onChange={(e) => setEmpForm((f) => ({ ...f, join_date: e.target.value }))} /></div>
+                <div><label className="form-label">{ar ? "نهاية العقد" : "Contract End"}</label><input type="date" className="form-input" value={empForm.contract_end_date} onChange={(e) => setEmpForm((f) => ({ ...f, contract_end_date: e.target.value }))} /></div>
                 <div className="flex justify-end gap-2">
                   <button type="button" className="btn btn-secondary" onClick={() => setShowAddEmp(false)}>{ar ? "إلغاء" : "Cancel"}</button>
                   <button type="submit" className="btn btn-primary" style={{ background: "#006fc6" }}>{ar ? "التالي" : "Next"} <ChevronRight size={15} /></button>
@@ -851,6 +867,10 @@ export default function OwnerPortalPage() {
               <div><label className="form-label">{ar ? "البريد" : "Email"}</label><input type="email" className="form-input" value={editEmpForm.email} onChange={(e) => setEditEmpForm((f) => ({ ...f, email: e.target.value }))} /></div>
               <div><label className="form-label">{ar ? "الهاتف" : "Phone"}</label><PhoneInput value={editEmpForm.phone} onChange={(v) => setEditEmpForm((f) => ({ ...f, phone: v }))} /></div>
               <div><label className="form-label">{ar ? "الراتب" : "Salary"}</label><input type="number" className="form-input" value={editEmpForm.base_salary} onChange={(e) => setEditEmpForm((f) => ({ ...f, base_salary: e.target.value }))} /></div>
+              <div><label className="form-label">{ar ? "اسم القسم" : "Department Name"}</label><input className="form-input" value={editEmpForm.department} onChange={(e) => setEditEmpForm((f) => ({ ...f, department: e.target.value }))} placeholder={ar ? "مثال: المبيعات" : "e.g. Sales"} /></div>
+              <div><label className="form-label">{ar ? "رقم القسم" : "Department Number"}</label><input className="form-input" value={editEmpForm.department_number} onChange={(e) => setEditEmpForm((f) => ({ ...f, department_number: e.target.value }))} placeholder="DEP-001" /></div>
+              <div><label className="form-label">{ar ? "بداية العقد" : "Contract Start"}</label><input type="date" className="form-input" value={editEmpForm.join_date} onChange={(e) => setEditEmpForm((f) => ({ ...f, join_date: e.target.value }))} /></div>
+              <div><label className="form-label">{ar ? "نهاية العقد" : "Contract End"}</label><input type="date" className="form-input" value={editEmpForm.contract_end_date} onChange={(e) => setEditEmpForm((f) => ({ ...f, contract_end_date: e.target.value }))} /></div>
               <div className="flex gap-3 pt-2">
                 <button type="button" className="btn btn-secondary flex-1" onClick={() => setShowEditEmp(false)}>{ar ? "إلغاء" : "Cancel"}</button>
                 <button type="submit" disabled={savingEmp} className="btn btn-primary flex-1" style={{ background: "#006fc6" }}>{savingEmp ? (ar ? "جاري الحفظ..." : "Saving...") : (ar ? "حفظ" : "Save")}</button>

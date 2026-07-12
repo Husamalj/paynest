@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     const mode = await getSystemMode(session.companyId);
     const body = await req.json();
-    const { employee_id, name, email, phone, base_salary, social_security, religion, allowance, job_title, nationality, gender, national_id, birth_date, work_type, workdays, req_hours } = body;
+    const { employee_id, name, email, phone, base_salary, social_security, religion, allowance, job_title, nationality, gender, national_id, birth_date, department, department_number, join_date, contract_end_date, work_type, workdays, req_hours } = body;
 
     // Validate contact info — email must be a real deliverable address, phone must be valid.
     if (email) {
@@ -126,6 +126,10 @@ export async function POST(req: NextRequest) {
         baseSalary: Number(base_salary) || 0,
         allowance: Number(allowance) || 0,
         jobTitle: job_title ?? null,
+        department: department ?? null,
+        departmentNumber: department_number ?? null,
+        joinDate: join_date ? new Date(join_date) : null,
+        contractEndDate: contract_end_date ? new Date(contract_end_date) : null,
         nationality: nationality ?? null,
         gender: gender ?? null,
         nationalId: national_id ?? null,
@@ -145,6 +149,10 @@ export async function POST(req: NextRequest) {
         baseSalary: Number(base_salary) || 0,
         allowance: Number(allowance) || 0,
         jobTitle: job_title ?? null,
+        department: department ?? null,
+        departmentNumber: department_number ?? null,
+        joinDate: join_date ? new Date(join_date) : null,
+        contractEndDate: contract_end_date ? new Date(contract_end_date) : null,
         nationality: nationality ?? null,
         gender: gender ?? null,
         nationalId: national_id ?? null,
@@ -196,6 +204,10 @@ export async function POST(req: NextRequest) {
     await logAudit(session, "update", "employee", employee.employeeId, {
       name, email, baseSalary: Number(base_salary) || 0, allowance: Number(allowance) || 0,
       jobTitle: job_title ?? null,
+      department: department ?? null,
+      departmentNumber: department_number ?? null,
+      joinDate: join_date ?? null,
+      contractEndDate: contract_end_date ?? null,
     });
     return NextResponse.json(toSnake(employee));
   } catch (err) {
@@ -221,6 +233,7 @@ function toSnake(e: any) {
     birth_date: e.birthDate,
     photo_url: e.photoUrl,
     department: e.department,
+    department_number: e.departmentNumber,
     join_date: e.joinDate,
     contract_end_date: e.contractEndDate,
     social_security: e.socialSecurity,

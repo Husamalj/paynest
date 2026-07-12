@@ -46,9 +46,31 @@ export async function GET(req: NextRequest) {
     let rows: any[];
     if (session.role === "owner" || session.role === "hr") {
       rows = await prisma.$queryRaw<any[]>`
-        SELECT ev.*,
+        SELECT MIN(ev.id) AS id,
+               ev.company_id,
+               ev.employee_id,
+               ev.period_month,
+               ev.period_year,
+               AVG(COALESCE(ev.score_accuracy, 3))::float AS score_accuracy,
+               AVG(COALESCE(ev.score_innovation, 3))::float AS score_innovation,
+               AVG(COALESCE(ev.score_speed, 3))::float AS score_speed,
+               AVG(COALESCE(ev.score_development, 3))::float AS score_development,
+               AVG(COALESCE(ev.score_quality_check, 3))::float AS score_quality_check,
+               AVG(COALESCE(ev.score_prioritization, 3))::float AS score_prioritization,
+               AVG(COALESCE(ev.score_independence, 3))::float AS score_independence,
+               AVG(COALESCE(ev.score_deadlines, 3))::float AS score_deadlines,
+               AVG(COALESCE(ev.score_teamwork, 3))::float AS score_teamwork,
+               AVG(COALESCE(ev.score_communication, 3))::float AS score_communication,
+               AVG(COALESCE(ev.score_knowledge_sharing, 3))::float AS score_knowledge_sharing,
+               AVG(COALESCE(ev.score_feedback, 3))::float AS score_feedback,
+               AVG(COALESCE(ev.score_compliance, 3))::float AS score_compliance,
+               COUNT(*)::int AS evaluation_count,
+               STRING_AGG(COALESCE(u.name, 'Unknown'), ', ' ORDER BY u.name) AS evaluator_names,
+               BOOL_OR(ev.bonus_override) AS bonus_override,
+               MAX(CASE WHEN ev.bonus_override THEN ev.bonus_amount ELSE 0 END)::int AS override_bonus_amount,
+               STRING_AGG(NULLIF(ev.recommendations, ''), E'\n---\n') AS recommendations,
                emp.name AS employee_name,
-               u.name   AS evaluator_name
+               NULL::text AS evaluator_name
         FROM   evaluations ev
         LEFT JOIN employees emp
                ON emp.employee_id = ev.employee_id
@@ -57,11 +79,15 @@ export async function GET(req: NextRequest) {
         WHERE  ev.company_id   = ${session.companyId}
           AND  ev.period_month = ${month}
           AND  ev.period_year  = ${year}
+        GROUP BY ev.company_id, ev.employee_id, ev.period_month, ev.period_year, emp.name
         ORDER BY emp.name
       `;
     } else {
       rows = await prisma.$queryRaw<any[]>`
         SELECT ev.*,
+               1::int AS evaluation_count,
+               u.name AS evaluator_names,
+               ev.bonus_amount AS override_bonus_amount,
                emp.name AS employee_name,
                u.name   AS evaluator_name
         FROM   evaluations ev
@@ -82,7 +108,30 @@ export async function GET(req: NextRequest) {
         Object.entries(r).map(([k, v]) => [k, typeof v === "bigint" ? Number(v) : v])
       )
     );
-    return NextResponse.json(safe);
+    const tiers = await prisma.bonusTier.findMany({
+      where: { companyId: session.companyId },
+      orderBy: { minGrade: "asc" },
+    });
+    const scoreKeys = [
+      "score_accuracy", "score_innovation", "score_speed", "score_development",
+      "score_quality_check", "score_prioritization", "score_independence",
+      "score_deadlines", "score_teamwork", "score_communication",
+      "score_knowledge_sharing", "score_feedback", "score_compliance",
+    ];
+    const withCalculatedBonus = safe.map((row: any) => {
+      const total = scoreKeys.reduce((sum, key) => sum + (Number(row[key]) || 0), 0);
+      const grade = (total / (scoreKeys.length * 5)) * 100;
+      const tier = tiers.find((t) => grade >= t.minGrade && grade <= t.maxGrade);
+      const bonusAmount = row.bonus_override ? Number(row.override_bonus_amount || 0) : (tier?.amount ?? 0);
+      return {
+        ...row,
+        aggregated: Number(row.evaluation_count || 1) > 1,
+        calculated_grade: grade,
+        bonus_amount: bonusAmount,
+        bonus_worthy: bonusAmount > 0,
+      };
+    });
+    return NextResponse.json(withCalculatedBonus);
   } catch (err) {
     return errorResponse(err);
   }

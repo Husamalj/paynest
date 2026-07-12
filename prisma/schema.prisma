@@ -135,6 +135,7 @@ model Employee {
   joinDate        DateTime? @map("join_date") @db.Date
   contractEndDate DateTime? @map("contract_end_date") @db.Date
   department      String?   @map("department") @db.VarChar(50)
+  departmentNumber String?  @map("department_number") @db.VarChar(50)
   systemMode     String   @default("daily") @map("system_mode") @db.VarChar(20)
   // Per-employee work schedule (override company defaults). null = use company setting.
   workType       String   @default("standard") @map("work_type") @db.VarChar(20) // standard | fixed
