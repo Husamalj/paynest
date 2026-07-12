@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowRight, Wallet, Clock, BarChart3, ShieldCheck, Users, Calendar,
+  ArrowRight, Wallet, Clock, ShieldCheck, Users, Calendar,
   Globe, LogIn, CheckCircle2, Sparkles,
   Flower2, Sun, Sparkle, Diamond, Hexagon,
 } from "lucide-react";
@@ -285,11 +285,11 @@ function Features({ ar }: { ar: boolean }) {
         : "Custom leave types, approval chains, holiday calendars, and automatic balance tracking.",
     },
     {
-      icon: BarChart3,
-      title: ar ? "التقارير والتحليلات" : "Reports & Analytics",
+      icon: Users,
+      title: ar ? "بوابة الخدمة الذاتية" : "Self-service Portal",
       desc: ar
-        ? "تقارير لحظية للرواتب والتكاليف وأعداد الموظفين تساعدك على اتخاذ قرارات أفضل."
-        : "Real-time payroll, cost, and headcount reports to help you make better decisions.",
+        ? "واجهة آمنة للموظفين لتقديم طلبات الإجازة، استعراض مسيرات الرواتب، ومتابعة سجلاتهم بكل شفافية واستقلالية."
+        : "A secure employee portal for leave requests, payslip access, and transparent self-service records.",
     },
     {
       icon: ShieldCheck,
