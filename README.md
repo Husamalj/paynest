@@ -97,6 +97,7 @@ Use [docs/dependency-security.md](docs/dependency-security.md) for dependency au
 Use [docs/vercel-env.md](docs/vercel-env.md) when editing Vercel environment variables.
 Use [docs/vercel-production-setup.md](docs/vercel-production-setup.md) for the full Vercel production setup checklist.
 Use [docs/customer-readiness-roadmap.md](docs/customer-readiness-roadmap.md) for storage, billing, support, and rollout decisions that require external services.
+Use [docs/support-runbook.md](docs/support-runbook.md) for first-response customer support steps.
 
 The legacy `frontend/` and `backend/` folders were removed after migration. The Next.js app at the repository root is the single source of truth.
 

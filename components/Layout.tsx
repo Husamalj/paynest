@@ -30,6 +30,8 @@ import {
   X,
   AlertTriangle,
   CheckCircle2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -120,6 +122,7 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [passwordVisible, setPasswordVisible] = useState({ currentPassword: false, newPassword: false, confirmPassword: false });
 
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -222,7 +225,6 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
     )
     .filter((item) => !item.children || item.children.length > 0);
   const companyName = settings?.company_name || user.company_name || "PayNest";
-
   useEffect(() => {
     const hiddenPath = hiddenPages.some((key) => (HIDDEN_PAGE_PATHS[key] || []).some((path) => matchesPath(pathname, path)));
     if (!hiddenPath) return;
@@ -495,15 +497,30 @@ export default function Layout({ children, settings, NotificationBell }: LayoutP
             <form onSubmit={changePassword} className="space-y-4">
               <div>
                 <label className="form-label">{lang === "ar" ? "كلمة السر الحالية" : "Current Password"}</label>
-                <input type="password" className="form-input" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm((f) => ({ ...f, currentPassword: e.target.value }))} />
+                <div className="relative">
+                  <input type={passwordVisible.currentPassword ? "text" : "password"} className={clsx("form-input", isRTL ? "pl-11" : "pr-11")} value={passwordForm.currentPassword} onChange={(e) => setPasswordForm((f) => ({ ...f, currentPassword: e.target.value }))} dir="ltr" />
+                  <button type="button" aria-label={passwordVisible.currentPassword ? "Hide password" : "Show password"} onClick={() => setPasswordVisible((v) => ({ ...v, currentPassword: !v.currentPassword }))} className={clsx("absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700", isRTL ? "left-3" : "right-3")}>
+                    {passwordVisible.currentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="form-label">{lang === "ar" ? "كلمة السر الجديدة" : "New Password"}</label>
-                <input type="password" className="form-input" value={passwordForm.newPassword} onChange={(e) => setPasswordForm((f) => ({ ...f, newPassword: e.target.value }))} />
+                <div className="relative">
+                  <input type={passwordVisible.newPassword ? "text" : "password"} className={clsx("form-input", isRTL ? "pl-11" : "pr-11")} value={passwordForm.newPassword} onChange={(e) => setPasswordForm((f) => ({ ...f, newPassword: e.target.value }))} dir="ltr" />
+                  <button type="button" aria-label={passwordVisible.newPassword ? "Hide password" : "Show password"} onClick={() => setPasswordVisible((v) => ({ ...v, newPassword: !v.newPassword }))} className={clsx("absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700", isRTL ? "left-3" : "right-3")}>
+                    {passwordVisible.newPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="form-label">{lang === "ar" ? "تأكيد كلمة السر الجديدة" : "Confirm New Password"}</label>
-                <input type="password" className="form-input" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm((f) => ({ ...f, confirmPassword: e.target.value }))} />
+                <div className="relative">
+                  <input type={passwordVisible.confirmPassword ? "text" : "password"} className={clsx("form-input", isRTL ? "pl-11" : "pr-11")} value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm((f) => ({ ...f, confirmPassword: e.target.value }))} dir="ltr" />
+                  <button type="button" aria-label={passwordVisible.confirmPassword ? "Hide password" : "Show password"} onClick={() => setPasswordVisible((v) => ({ ...v, confirmPassword: !v.confirmPassword }))} className={clsx("absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700", isRTL ? "left-3" : "right-3")}>
+                    {passwordVisible.confirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
               <div className="flex justify-end gap-2">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowPasswordModal(false)}>

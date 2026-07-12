@@ -303,14 +303,14 @@ function Features({ ar }: { ar: boolean }) {
     <section className="py-16 sm:py-24">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-12">
-          <div className="text-sm font-bold text-brand-600 mb-3">{ar ? "كل ما تحتاجه" : "Everything you need"}</div>
+          <div className="text-sm font-bold text-brand-600 mb-3">{ar ? "هيكل موحد" : "Unified system"}</div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight mb-4">
-            {ar ? "منصّة واحدة لكل دورة حياة الموظف" : "One platform for the entire employee lifecycle"}
+            {ar ? "هيكل موحد للعمليات المعقدة" : "One structure for complex operations"}
           </h2>
           <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto">
             {ar
-              ? "من التعيين حتى نهاية الخدمة — استبدل ملفات الإكسل والأدوات المتفرّقة والعمل اليدوي."
-              : "From hire to retire — replace the spreadsheets, the disconnected tools, and the manual work."}
+              ? "قمنا بتفكيك التعقيد المالي والإداري وإعادة هندسته في منصة واحدة تعمل بتناغم تام وموثوقية مطلقة لتمنحك السيطرة الكاملة."
+              : "We broke down financial and administrative complexity and rebuilt it into one reliable platform that gives you full control."}
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -421,8 +421,8 @@ export default function Page() {
       <TopNav ar={ar} />
       <Hero ar={ar} />
       <TrustStrip ar={ar} />
-      <Features ar={ar} />
       <AnalyticsShowcase ar={ar} />
+      <Features ar={ar} />
       <Footer ar={ar} />
     </div>
   );

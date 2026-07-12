@@ -11,6 +11,7 @@ import {
   AlertTriangle, Bell, Calendar, CheckCircle2, CheckSquare, ChevronDown,
   ClipboardList, Clock, KeyRound, Languages, LogOut, Palmtree, Paperclip, Send,
   ThumbsDown, ThumbsUp, User, UserCheck, Users, X, Plus, Wifi, Inbox, MessageSquare,
+  Eye, EyeOff,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import ChatLauncher from "@/components/ChatLauncher";
@@ -64,6 +65,7 @@ export default function EmployeePortalPage() {
   const [pwdCurrent, setPwdCurrent] = useState("");
   const [pwdNew, setPwdNew] = useState("");
   const [pwdConfirm, setPwdConfirm] = useState("");
+  const [pwdVisible, setPwdVisible] = useState({ current: false, next: false, confirm: false });
   const [pwdSaving, setPwdSaving] = useState(false);
   const [pwdError, setPwdError] = useState("");
   const [pwdSuccess, setPwdSuccess] = useState("");
@@ -1875,15 +1877,30 @@ export default function EmployeePortalPage() {
             <form onSubmit={changePassword} className="px-5 py-5 space-y-3">
               <div>
                 <label className="form-label">{isRTL ? "كلمة السر الحالية" : "Current Password"}</label>
-                <input type="password" required className="form-input" value={pwdCurrent} onChange={(e) => setPwdCurrent(e.target.value)} />
+                <div className="relative">
+                  <input type={pwdVisible.current ? "text" : "password"} required className={clsx("form-input", isRTL ? "pl-11" : "pr-11")} value={pwdCurrent} onChange={(e) => setPwdCurrent(e.target.value)} dir="ltr" />
+                  <button type="button" aria-label={pwdVisible.current ? "Hide password" : "Show password"} onClick={() => setPwdVisible((v) => ({ ...v, current: !v.current }))} className={clsx("absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700", isRTL ? "left-3" : "right-3")}>
+                    {pwdVisible.current ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="form-label">{isRTL ? "كلمة السر الجديدة" : "New Password"}</label>
-                <input type="password" required className="form-input" value={pwdNew} onChange={(e) => setPwdNew(e.target.value)} />
+                <div className="relative">
+                  <input type={pwdVisible.next ? "text" : "password"} required className={clsx("form-input", isRTL ? "pl-11" : "pr-11")} value={pwdNew} onChange={(e) => setPwdNew(e.target.value)} dir="ltr" />
+                  <button type="button" aria-label={pwdVisible.next ? "Hide password" : "Show password"} onClick={() => setPwdVisible((v) => ({ ...v, next: !v.next }))} className={clsx("absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700", isRTL ? "left-3" : "right-3")}>
+                    {pwdVisible.next ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="form-label">{isRTL ? "تأكيد كلمة السر" : "Confirm Password"}</label>
-                <input type="password" required className="form-input" value={pwdConfirm} onChange={(e) => setPwdConfirm(e.target.value)} />
+                <div className="relative">
+                  <input type={pwdVisible.confirm ? "text" : "password"} required className={clsx("form-input", isRTL ? "pl-11" : "pr-11")} value={pwdConfirm} onChange={(e) => setPwdConfirm(e.target.value)} dir="ltr" />
+                  <button type="button" aria-label={pwdVisible.confirm ? "Hide password" : "Show password"} onClick={() => setPwdVisible((v) => ({ ...v, confirm: !v.confirm }))} className={clsx("absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700", isRTL ? "left-3" : "right-3")}>
+                    {pwdVisible.confirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
               {pwdError && <div className="text-rose-600 text-sm bg-rose-50 rounded-lg px-3 py-2">{pwdError}</div>}
               {pwdSuccess && <div className="text-emerald-700 text-sm bg-emerald-50 rounded-lg px-3 py-2 flex items-center gap-2"><CheckCircle2 size={14} /> {pwdSuccess}</div>}

@@ -84,7 +84,7 @@ function PhoneInput({ value, onChange, error }: { value: string; onChange: (v: s
   );
 }
 
-const emptyForm = { employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", nationality: "", gender: "", national_id: "", birth_date: "", social_security: false, religion: "", work_type: "standard", workdays: "", req_hours: "" };
+const emptyForm = { employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", department: "", department_number: "", join_date: "", contract_end_date: "", nationality: "", gender: "", national_id: "", birth_date: "", social_security: false, religion: "", work_type: "standard", workdays: "", req_hours: "" };
 const WEEKDAYS: { key: string; ar: string; en: string }[] = [
   { key: "Sat", ar: "السبت", en: "Sat" }, { key: "Sun", ar: "الأحد", en: "Sun" },
   { key: "Mon", ar: "الاثنين", en: "Mon" }, { key: "Tue", ar: "الثلاثاء", en: "Tue" },
@@ -173,7 +173,7 @@ export default function EmployeesPage() {
   const [showLetterModal, setShowLetterModal] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [editForm, setEditForm] = useState({ employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", nationality: "", gender: "", national_id: "", birth_date: "", social_security: false, religion: "", photo_url: "", work_type: "standard", workdays: "", req_hours: "" });
+  const [editForm, setEditForm] = useState({ employee_id: "", name: "", email: "", phone: "", base_salary: "", allowance: "", job_title: "", department: "", department_number: "", join_date: "", contract_end_date: "", nationality: "", gender: "", national_id: "", birth_date: "", social_security: false, religion: "", photo_url: "", work_type: "standard", workdays: "", req_hours: "" });
 
   // Existing employee documents
   const [empDocs, setEmpDocs] = useState<any[]>([]);
@@ -343,6 +343,10 @@ export default function EmployeesPage() {
       base_salary: selectedEmployee.base_salary || "",
       allowance: selectedEmployee.allowance || "",
       job_title: selectedEmployee.job_title || "",
+      department: selectedEmployee.department || "",
+      department_number: selectedEmployee.department_number || "",
+      join_date: selectedEmployee.join_date ? String(selectedEmployee.join_date).substring(0, 10) : "",
+      contract_end_date: selectedEmployee.contract_end_date ? String(selectedEmployee.contract_end_date).substring(0, 10) : "",
       social_security: !!selectedEmployee.social_security,
       religion: selectedEmployee.religion || "",
       nationality: selectedEmployee.nationality || "",
@@ -629,7 +633,11 @@ export default function EmployeesPage() {
                     <div className="text-sm font-medium text-slate-800">{selectedEmployee.department || "-"}</div>
                   </div>
                   <div>
-                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{ar ? "تاريخ الانضمام" : "Join Date"}</div>
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{ar ? "رقم القسم" : "Department Number"}</div>
+                    <div className="text-sm font-medium text-slate-800">{selectedEmployee.department_number || "-"}</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{ar ? "بداية العقد" : "Contract Start"}</div>
                     <div className="text-sm font-medium text-slate-800">{selectedEmployee.join_date ? String(selectedEmployee.join_date).substring(0, 10) : "-"}</div>
                   </div>
                   <div>
@@ -813,6 +821,10 @@ export default function EmployeesPage() {
                 <div><label className="form-label">{t("name")} *</label><input className="form-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} /></div>
                 <div><label className="form-label">{idFieldLabel()}</label><input className="form-input" value={form.national_id} onChange={(e) => setForm((f) => ({ ...f, national_id: e.target.value }))} placeholder={ar ? "الرقم الوطني أو رقم الوثيقة/الجواز" : "National ID or Document/Passport No."} /></div>
                 <div><label className="form-label">{ar ? "تاريخ الميلاد" : "Date of Birth"}</label><input type="date" className="form-input" value={form.birth_date} onChange={(e) => setForm((f) => ({ ...f, birth_date: e.target.value }))} /></div>
+                <div><label className="form-label">{ar ? "اسم القسم" : "Department Name"}</label><input className="form-input" value={form.department} onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))} placeholder={ar ? "مثال: المبيعات" : "e.g. Sales"} /></div>
+                <div><label className="form-label">{ar ? "رقم القسم" : "Department Number"}</label><input className="form-input" value={form.department_number} onChange={(e) => setForm((f) => ({ ...f, department_number: e.target.value }))} placeholder="DEP-001" /></div>
+                <div><label className="form-label">{ar ? "بداية العقد" : "Contract Start"}</label><input type="date" className="form-input" value={form.join_date} onChange={(e) => setForm((f) => ({ ...f, join_date: e.target.value }))} /></div>
+                <div><label className="form-label">{ar ? "نهاية العقد" : "Contract End"}</label><input type="date" className="form-input" value={form.contract_end_date} onChange={(e) => setForm((f) => ({ ...f, contract_end_date: e.target.value }))} /></div>
                 <div><label className="form-label">{ar ? "الجنسية" : "Nationality"}</label><input className="form-input" value={form.nationality} onChange={(e) => setForm((f) => ({ ...f, nationality: e.target.value }))} placeholder={ar ? "مثال: أردني" : "e.g. Jordanian"} /></div>
                 <div>
                   <label className="form-label">{emailTitle} *</label>
@@ -942,6 +954,10 @@ export default function EmployeesPage() {
               <div><label className="form-label">{t("name")} *</label><input className="form-input" value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} /></div>
               <div><label className="form-label">{idFieldLabel()}</label><input className="form-input" value={editForm.national_id} onChange={(e) => setEditForm((f) => ({ ...f, national_id: e.target.value }))} placeholder={ar ? "الرقم الوطني أو رقم الوثيقة/الجواز" : "National ID or Document/Passport No."} /></div>
               <div><label className="form-label">{ar ? "تاريخ الميلاد" : "Date of Birth"}</label><input type="date" className="form-input" value={editForm.birth_date} onChange={(e) => setEditForm((f) => ({ ...f, birth_date: e.target.value }))} /></div>
+              <div><label className="form-label">{ar ? "اسم القسم" : "Department Name"}</label><input className="form-input" value={editForm.department} onChange={(e) => setEditForm((f) => ({ ...f, department: e.target.value }))} placeholder={ar ? "مثال: المبيعات" : "e.g. Sales"} /></div>
+              <div><label className="form-label">{ar ? "رقم القسم" : "Department Number"}</label><input className="form-input" value={editForm.department_number} onChange={(e) => setEditForm((f) => ({ ...f, department_number: e.target.value }))} placeholder="DEP-001" /></div>
+              <div><label className="form-label">{ar ? "بداية العقد" : "Contract Start"}</label><input type="date" className="form-input" value={editForm.join_date} onChange={(e) => setEditForm((f) => ({ ...f, join_date: e.target.value }))} /></div>
+              <div><label className="form-label">{ar ? "نهاية العقد" : "Contract End"}</label><input type="date" className="form-input" value={editForm.contract_end_date} onChange={(e) => setEditForm((f) => ({ ...f, contract_end_date: e.target.value }))} /></div>
               <div><label className="form-label">{ar ? "الجنسية" : "Nationality"}</label><input className="form-input" value={editForm.nationality} onChange={(e) => setEditForm((f) => ({ ...f, nationality: e.target.value }))} placeholder={ar ? "مثال: أردني" : "e.g. Jordanian"} /></div>
               <div>
                 <label className="form-label">{emailTitle} *</label>

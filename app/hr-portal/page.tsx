@@ -7,7 +7,7 @@ import {
   Users, Bell, CheckSquare, Calendar, LogOut, Menu, X,
   Plus, AlertTriangle, CheckCircle2, ChevronDown, Shield,
   Edit2, Trash2, Phone, Mail, Hash, FileText, CheckCircle,
-  Upload, ChevronRight, Languages, KeyRound,
+  Upload, ChevronRight, Languages, KeyRound, Eye, EyeOff,
 } from "lucide-react";
 import clsx from "clsx";
 import api, { apiPostForm } from "@/lib/api";
@@ -66,6 +66,14 @@ export default function HRPortalPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("employees");
+  const [showPwdModal, setShowPwdModal] = useState(false);
+  const [pwdCurrent, setPwdCurrent] = useState("");
+  const [pwdNew, setPwdNew] = useState("");
+  const [pwdConfirm, setPwdConfirm] = useState("");
+  const [pwdVisible, setPwdVisible] = useState({ current: false, next: false, confirm: false });
+  const [pwdSaving, setPwdSaving] = useState(false);
+  const [pwdError, setPwdError] = useState("");
+  const [pwdSuccess, setPwdSuccess] = useState("");
 
   /* ─── data ─── */
   const [employees, setEmployees] = useState<any[]>([]);
@@ -82,7 +90,7 @@ export default function HRPortalPage() {
   const [empDocs, setEmpDocs] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [addStep, setAddStep] = useState(1);
-  const emptyForm = { employee_id: "", name: "", email: "", phone: "", base_salary: "", social_security: false, religion: "" };
+  const emptyForm = { employee_id: "", name: "", email: "", phone: "", base_salary: "", department: "", department_number: "", join_date: "", contract_end_date: "", social_security: false, religion: "" };
   const [form, setForm] = useState({ ...emptyForm });
   const [createdEmpId, setCreatedEmpId] = useState("");
   const [docFiles, setDocFiles] = useState<Record<string, File | null>>({});
@@ -133,6 +141,33 @@ export default function HRPortalPage() {
     window.location.href = "/";
   };
 
+  const changePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwdError("");
+    setPwdSuccess("");
+    if (!pwdNew || pwdNew.length < 6) {
+      setPwdError(ar ? "كلمة السر الجديدة لازم تكون 6 أحرف أو أكثر" : "New password must be at least 6 characters");
+      return;
+    }
+    if (pwdNew !== pwdConfirm) {
+      setPwdError(ar ? "كلمة السر الجديدة غير متطابقة" : "New passwords do not match");
+      return;
+    }
+    try {
+      setPwdSaving(true);
+      await api.put("/auth/change-password", { currentPassword: pwdCurrent, newPassword: pwdNew });
+      setPwdSuccess(ar ? "تم تغيير كلمة السر" : "Password changed");
+      setPwdCurrent("");
+      setPwdNew("");
+      setPwdConfirm("");
+      setTimeout(() => setShowPwdModal(false), 800);
+    } catch (err: any) {
+      setPwdError(err.message || (ar ? "فشل تغيير كلمة السر" : "Failed to change password"));
+    } finally {
+      setPwdSaving(false);
+    }
+  };
+
   const selectedEmployee = employees.find((e) => e.employee_id === selectedId) || null;
   const selectedBalance = balances.find((b) => b.employee_id === selectedId) || null;
 
@@ -170,7 +205,19 @@ export default function HRPortalPage() {
   /* ─── edit ─── */
   const openEdit = () => {
     if (!selectedEmployee) return;
-    setEditForm({ employee_id: selectedEmployee.employee_id || "", name: selectedEmployee.name || "", email: selectedEmployee.email || "", phone: selectedEmployee.phone || "", base_salary: selectedEmployee.base_salary || "", social_security: !!selectedEmployee.social_security, religion: selectedEmployee.religion || "" });
+    setEditForm({
+      employee_id: selectedEmployee.employee_id || "",
+      name: selectedEmployee.name || "",
+      email: selectedEmployee.email || "",
+      phone: selectedEmployee.phone || "",
+      base_salary: selectedEmployee.base_salary || "",
+      department: selectedEmployee.department || "",
+      department_number: selectedEmployee.department_number || "",
+      join_date: selectedEmployee.join_date ? String(selectedEmployee.join_date).substring(0, 10) : "",
+      contract_end_date: selectedEmployee.contract_end_date ? String(selectedEmployee.contract_end_date).substring(0, 10) : "",
+      social_security: !!selectedEmployee.social_security,
+      religion: selectedEmployee.religion || "",
+    });
     setShowEdit(true);
   };
 
@@ -267,6 +314,10 @@ export default function HRPortalPage() {
                   <Languages size={16} className="text-slate-400" />
                   <span>{lang === "en" ? "العربية" : "English"}</span>
                   <span className="ml-auto text-[11px] font-bold text-slate-400 uppercase">{lang === "en" ? "AR" : "EN"}</span>
+                </button>
+                <button onClick={() => { setShowPwdModal(true); setProfileOpen(false); setPwdError(""); setPwdSuccess(""); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-700 hover:bg-slate-50">
+                  <KeyRound size={16} className="text-slate-400" />
+                  <span>{ar ? "تغيير كلمة السر" : "Change Password"}</span>
                 </button>
                 <div className="border-t border-slate-100 my-1" />
                 <button onClick={signOut} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-rose-600 hover:bg-rose-50">
@@ -374,6 +425,24 @@ export default function HRPortalPage() {
                     <div className="flex items-start gap-3 py-2.5">
                       <Hash size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
                       <div className="min-w-0 flex-1"><div className="text-[10px] font-semibold text-slate-400 uppercase">{ar ? "الراتب" : "Salary"}</div><div className="text-sm font-mono font-bold">{formatCurrency(selectedEmployee.base_salary)}</div></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 py-2.5">
+                      <div>
+                        <div className="text-[10px] font-semibold text-slate-400 uppercase">{ar ? "اسم القسم" : "Department"}</div>
+                        <div className="text-sm font-medium text-slate-800">{selectedEmployee.department || "-"}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-semibold text-slate-400 uppercase">{ar ? "رقم القسم" : "Department Number"}</div>
+                        <div className="text-sm font-medium text-slate-800">{selectedEmployee.department_number || "-"}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-semibold text-slate-400 uppercase">{ar ? "بداية العقد" : "Contract Start"}</div>
+                        <div className="text-sm font-medium text-slate-800">{selectedEmployee.join_date ? String(selectedEmployee.join_date).substring(0, 10) : "-"}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-semibold text-slate-400 uppercase">{ar ? "نهاية العقد" : "Contract End"}</div>
+                        <div className="text-sm font-medium text-slate-800">{selectedEmployee.contract_end_date ? String(selectedEmployee.contract_end_date).substring(0, 10) : "-"}</div>
+                      </div>
                     </div>
                     <div className="py-2.5">
                       <div className="text-[10px] font-semibold text-slate-400 uppercase mb-2">{ar ? "الوثائق" : "Documents"}</div>
@@ -504,6 +573,10 @@ export default function HRPortalPage() {
                 <div><label className="form-label">{ar ? "البريد الإلكتروني" : "Email"} *</label><input type="email" className="form-input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} /></div>
                 <div><label className="form-label">{ar ? "الهاتف" : "Phone"}</label><PhoneInput value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} /></div>
                 <div><label className="form-label">{ar ? "الراتب الأساسي" : "Base Salary"} *</label><input type="number" className="form-input" value={form.base_salary} onChange={(e) => setForm((f) => ({ ...f, base_salary: e.target.value }))} /></div>
+                <div><label className="form-label">{ar ? "اسم القسم" : "Department Name"}</label><input className="form-input" value={form.department} onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))} placeholder={ar ? "مثال: المبيعات" : "e.g. Sales"} /></div>
+                <div><label className="form-label">{ar ? "رقم القسم" : "Department Number"}</label><input className="form-input" value={form.department_number} onChange={(e) => setForm((f) => ({ ...f, department_number: e.target.value }))} placeholder="DEP-001" /></div>
+                <div><label className="form-label">{ar ? "بداية العقد" : "Contract Start"}</label><input type="date" className="form-input" value={form.join_date} onChange={(e) => setForm((f) => ({ ...f, join_date: e.target.value }))} /></div>
+                <div><label className="form-label">{ar ? "نهاية العقد" : "Contract End"}</label><input type="date" className="form-input" value={form.contract_end_date} onChange={(e) => setForm((f) => ({ ...f, contract_end_date: e.target.value }))} /></div>
                 <div className="flex justify-end gap-2">
                   <button type="button" className="btn btn-secondary" onClick={() => setShowAdd(false)}>{ar ? "إلغاء" : "Cancel"}</button>
                   <button type="submit" className="btn btn-primary">{ar ? "التالي" : "Next"} <ChevronRight size={15} /></button>
@@ -560,7 +633,61 @@ export default function HRPortalPage() {
               <div><label className="form-label">{ar ? "البريد" : "Email"} *</label><input type="email" className="form-input" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} /></div>
               <div><label className="form-label">{ar ? "الهاتف" : "Phone"}</label><PhoneInput value={editForm.phone} onChange={(v) => setEditForm((f) => ({ ...f, phone: v }))} /></div>
               <div><label className="form-label">{ar ? "الراتب الأساسي" : "Base Salary"} *</label><input type="number" className="form-input" value={editForm.base_salary} onChange={(e) => setEditForm((f) => ({ ...f, base_salary: e.target.value }))} /></div>
+              <div><label className="form-label">{ar ? "اسم القسم" : "Department Name"}</label><input className="form-input" value={editForm.department} onChange={(e) => setEditForm((f) => ({ ...f, department: e.target.value }))} placeholder={ar ? "مثال: المبيعات" : "e.g. Sales"} /></div>
+              <div><label className="form-label">{ar ? "رقم القسم" : "Department Number"}</label><input className="form-input" value={editForm.department_number} onChange={(e) => setEditForm((f) => ({ ...f, department_number: e.target.value }))} placeholder="DEP-001" /></div>
+              <div><label className="form-label">{ar ? "بداية العقد" : "Contract Start"}</label><input type="date" className="form-input" value={editForm.join_date} onChange={(e) => setEditForm((f) => ({ ...f, join_date: e.target.value }))} /></div>
+              <div><label className="form-label">{ar ? "نهاية العقد" : "Contract End"}</label><input type="date" className="form-input" value={editForm.contract_end_date} onChange={(e) => setEditForm((f) => ({ ...f, contract_end_date: e.target.value }))} /></div>
               <div className="flex justify-end gap-2"><button type="button" className="btn btn-secondary" onClick={() => setShowEdit(false)}>{ar ? "إلغاء" : "Cancel"}</button><button type="submit" className="btn btn-primary" disabled={savingEdit}>{savingEdit ? <span className="spinner" /> : null}{ar ? "حفظ" : "Save"}</button></div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {showPwdModal && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowPwdModal(false); }}>
+          <div className="modal">
+            <div className="modal-header">
+              <h3 className="modal-title">{ar ? "تغيير كلمة السر" : "Change Password"}</h3>
+              <button className="modal-close" onClick={() => setShowPwdModal(false)}><X size={18} /></button>
+            </div>
+            <form onSubmit={changePassword} className="space-y-4">
+              <div>
+                <label className="form-label">{ar ? "كلمة السر الحالية" : "Current Password"}</label>
+                <div className="relative">
+                  <input type={pwdVisible.current ? "text" : "password"} required className={clsx("form-input", isRTL ? "pl-11" : "pr-11")} value={pwdCurrent} onChange={(e) => setPwdCurrent(e.target.value)} dir="ltr" />
+                  <button type="button" aria-label={pwdVisible.current ? "Hide password" : "Show password"} onClick={() => setPwdVisible((v) => ({ ...v, current: !v.current }))} className={clsx("absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700", isRTL ? "left-3" : "right-3")}>
+                    {pwdVisible.current ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="form-label">{ar ? "كلمة السر الجديدة" : "New Password"}</label>
+                <div className="relative">
+                  <input type={pwdVisible.next ? "text" : "password"} required className={clsx("form-input", isRTL ? "pl-11" : "pr-11")} value={pwdNew} onChange={(e) => setPwdNew(e.target.value)} dir="ltr" />
+                  <button type="button" aria-label={pwdVisible.next ? "Hide password" : "Show password"} onClick={() => setPwdVisible((v) => ({ ...v, next: !v.next }))} className={clsx("absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700", isRTL ? "left-3" : "right-3")}>
+                    {pwdVisible.next ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="form-label">{ar ? "تأكيد كلمة السر الجديدة" : "Confirm New Password"}</label>
+                <div className="relative">
+                  <input type={pwdVisible.confirm ? "text" : "password"} required className={clsx("form-input", isRTL ? "pl-11" : "pr-11")} value={pwdConfirm} onChange={(e) => setPwdConfirm(e.target.value)} dir="ltr" />
+                  <button type="button" aria-label={pwdVisible.confirm ? "Hide password" : "Show password"} onClick={() => setPwdVisible((v) => ({ ...v, confirm: !v.confirm }))} className={clsx("absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700", isRTL ? "left-3" : "right-3")}>
+                    {pwdVisible.confirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+              {pwdError && <div className="text-rose-600 text-sm bg-rose-50 rounded-lg px-3 py-2">{pwdError}</div>}
+              {pwdSuccess && <div className="text-emerald-700 text-sm bg-emerald-50 rounded-lg px-3 py-2 flex items-center gap-2"><CheckCircle2 size={14} />{pwdSuccess}</div>}
+              <div className="flex justify-end gap-2">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowPwdModal(false)}>{ar ? "إلغاء" : "Cancel"}</button>
+                <button type="submit" className="btn btn-primary" disabled={pwdSaving}>
+                  {pwdSaving ? <span className="spinner" /> : <KeyRound size={14} />}
+                  {ar ? "حفظ" : "Save"}
+                </button>
+              </div>
             </form>
           </div>
         </div>
