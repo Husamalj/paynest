@@ -314,7 +314,9 @@ function Features({ ar }: { ar: boolean }) {
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((it, i) => <FeatureCard key={i} {...it} delay={i * 60} />)}
+          {items
+            .filter((it) => it.icon === BarChart3)
+            .map((it, i) => <FeatureCard key={i} {...it} delay={i * 60} />)}
         </div>
       </div>
     </section>
