@@ -53,10 +53,7 @@ type EmployeeWorkplaceProps = {
   myCustomReqs: any[];
   customTypes: any[];
   teamBySub: any[];
-  checkin: any;
   onlineWorkEnabled: boolean;
-  checkinBusy: boolean;
-  onCheck: (action: "in" | "out") => void;
   onOpenLeave: () => void;
   onOpenPermission: () => void;
   onOpenAdvance: () => void;
@@ -281,10 +278,7 @@ export default function EmployeeWorkplace(props: EmployeeWorkplaceProps) {
     myCustomReqs,
     customTypes,
     teamBySub,
-    checkin,
     onlineWorkEnabled,
-    checkinBusy,
-    onCheck,
     onOpenLeave,
     onOpenPermission,
     onOpenAdvance,
@@ -304,29 +298,9 @@ export default function EmployeeWorkplace(props: EmployeeWorkplaceProps) {
   const activeTasks = myTasks.filter((task) => task.status !== "completed");
   const pendingLeaves = myLeaves.filter((leave) => leave.status === "pending");
   const pendingTeamLeaves = subLeaves.filter((leave) => (leave.supervisorStatus ?? leave.supervisor_status ?? "pending") === "pending");
-  const missingAttendance = !checkin?.clock_in && onlineWorkEnabled;
   const photoUrl = employee?.photoUrl || employee?.photo_url;
 
   const primaryActions: WorkplaceAction[] = [
-    {
-      label: onlineWorkEnabled
-        ? checkin?.clock_in && !checkin?.clock_out
-          ? label(isRTL, "سجل خروجك", "Check out")
-          : label(isRTL, "سجل حضورك", "Check in")
-        : label(isRTL, "الحضور", "Attendance"),
-      hint: onlineWorkEnabled
-        ? checkin?.clock_in && !checkin?.clock_out
-          ? label(isRTL, "أنهِ يومك عندما تخلص عملك.", "End your day when your work is done.")
-          : label(isRTL, "ابدأ يومك من هنا عندما تعمل أونلاين.", "Start your online workday from here.")
-        : label(isRTL, "تابع حضورك وساعاتك من السجلات.", "Review your attendance records."),
-      icon: Clock3,
-      onClick: () => {
-        if (!onlineWorkEnabled) return;
-        onCheck(checkin?.clock_in && !checkin?.clock_out ? "out" : "in");
-      },
-      tone: "brand",
-      disabled: checkinBusy || !onlineWorkEnabled || (!!checkin?.clock_in && !!checkin?.clock_out),
-    },
     {
       label: label(isRTL, "اطلب إجازة", "Request leave"),
       hint: pendingLeaves.length
@@ -486,51 +460,6 @@ export default function EmployeeWorkplace(props: EmployeeWorkplaceProps) {
 
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-5">
-              <Surface>
-                <SectionHeader
-                  icon={Clock3}
-                  title={label(isRTL, "اليوم", "Today")}
-                  subtitle={label(isRTL, "نظرة بسيطة على حضورك وما يحدث الآن.", "A calm view of your attendance and what is happening now.")}
-                  action={
-                    onlineWorkEnabled ? (
-                      <button
-                        type="button"
-                        disabled={checkinBusy || (!!checkin?.clock_in && !!checkin?.clock_out)}
-                        onClick={() => onCheck(checkin?.clock_in && !checkin?.clock_out ? "out" : "in")}
-                        className="rounded-2xl bg-brand-600 px-4 py-2 text-sm font-black text-white shadow-btn-primary-hover transition hover:bg-brand-700 disabled:opacity-50"
-                      >
-                        {checkin?.clock_in && !checkin?.clock_out ? label(isRTL, "تسجيل خروج", "Check out") : label(isRTL, "تسجيل دخول", "Check in")}
-                      </button>
-                    ) : null
-                  }
-                />
-                <div className="grid gap-4 p-5 md:grid-cols-3">
-                  <div className="rounded-[20px] bg-slate-50 p-4 ring-1 ring-slate-200">
-                    <div className="text-xs font-bold text-slate-500">{label(isRTL, "حالة اليوم", "Today status")}</div>
-                    <div className="mt-2 text-lg font-black text-slate-950">
-                      {checkin?.clock_in
-                        ? checkin?.clock_out
-                          ? label(isRTL, "تم إنهاء اليوم", "Day completed")
-                          : label(isRTL, "أنت مسجل دخول", "You are checked in")
-                        : label(isRTL, "لم يبدأ بعد", "Not started yet")}
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-slate-500">
-                      {missingAttendance
-                        ? label(isRTL, "عندما تبدأ عملك أونلاين، سجل حضورك من هنا.", "When you start online work, check in from here.")
-                        : label(isRTL, "سنحتفظ بسجل واضح لساعاتك.", "We keep your work hours clear and traceable.")}
-                    </p>
-                  </div>
-                  <div className="rounded-[20px] bg-slate-50 p-4 ring-1 ring-slate-200">
-                    <div className="text-xs font-bold text-slate-500">{label(isRTL, "الدخول", "Check in")}</div>
-                    <div className="mt-2 text-2xl font-black text-slate-950">{checkin?.clock_in || "-"}</div>
-                  </div>
-                  <div className="rounded-[20px] bg-slate-50 p-4 ring-1 ring-slate-200">
-                    <div className="text-xs font-bold text-slate-500">{label(isRTL, "الخروج", "Check out")}</div>
-                    <div className="mt-2 text-2xl font-black text-slate-950">{checkin?.clock_out || "-"}</div>
-                  </div>
-                </div>
-              </Surface>
-
               <Surface>
                 <SectionHeader
                   icon={ZapLike}

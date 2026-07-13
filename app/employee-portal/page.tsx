@@ -770,10 +770,7 @@ export default function EmployeePortalPage() {
             myCustomReqs={myCustomReqs}
             customTypes={customTypes}
             teamBySub={teamBySub}
-            checkin={checkin}
             onlineWorkEnabled={onlineWorkEnabled}
-            checkinBusy={checkinBusy}
-            onCheck={doCheck}
             onOpenLeave={() => setShowLeaveModal(true)}
             onOpenPermission={() => setShowPermModal(true)}
             onOpenAdvance={() => setShowAdvModal(true)}
