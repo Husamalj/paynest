@@ -11,7 +11,7 @@ export default function ContactPage() {
   const { lang, toggleLanguage } = useLanguage();
   const ar = lang === "ar";
   const Back = ar ? ArrowRight : ArrowLeft;
-  const empty = { firstName: "", lastName: "", email: "", company: "", teamSize: "1-25", message: "", website: "" };
+  const empty = { firstName: "", lastName: "", email: "", company: "", teamSize: "1-50", message: "", website: "" };
   const [form, setForm] = useState({ ...empty });
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [err, setErr] = useState("");
@@ -116,7 +116,7 @@ export default function ContactPage() {
                 <div>
                   <label className={label}>{ar ? "حجم الفريق" : "Team size"}</label>
                   <select className={field} value={form.teamSize} onChange={set("teamSize")}>
-                    {["1-25", "26-100", "101-500", "500+"].map((option) => <option key={option} value={option}>{option}</option>)}
+                    {["1-50", "51-150", "151-500", "500+"].map((option) => <option key={option} value={option}>{option}</option>)}
                   </select>
                 </div>
                 <div><label className={label}>{ar ? "كيف نقدر نساعدك؟" : "How can we help?"}</label><textarea rows={4} className={field} value={form.message} onChange={set("message")} /></div>
