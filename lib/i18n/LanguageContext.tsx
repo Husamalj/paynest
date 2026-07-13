@@ -13,10 +13,7 @@ interface LanguageContextValue {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLang] = useState<Lang>(() => {
-    if (typeof window === "undefined") return "ar";
-    return (localStorage.getItem("paynest_lang") as Lang) || "ar";
-  });
+  const [lang, setLang] = useState<Lang>("ar");
 
   const t = useCallback(
     (key: TranslationKey): string => {
@@ -33,6 +30,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     },
     [lang]
   );
+
+  useEffect(() => {
+    const storedLang = localStorage.getItem("paynest_lang") as Lang | null;
+    if (storedLang === "ar" || storedLang === "en") setLang(storedLang);
+  }, []);
 
   useEffect(() => {
     document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";

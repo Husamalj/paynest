@@ -42,6 +42,7 @@ const securityHeaders = [
 const nextConfig = {
   async headers() {
     return [
+      { source: "/", headers: securityHeaders },
       { source: "/:path*", headers: securityHeaders },
       {
         source: "/api/:path*",
