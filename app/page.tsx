@@ -25,8 +25,8 @@ function TopNav({ ar }: { ar: boolean }) {
         >
           <img
             src="/paynest-top-logo.png"
-            alt="PayNest HR & Payroll"
-            className="h-12 w-32 rounded-xl object-cover object-center shadow-sm"
+            alt="PayNest"
+            className="h-12 w-12 rounded-xl object-cover object-center shadow-sm"
           />
         </button>
 
