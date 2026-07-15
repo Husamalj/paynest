@@ -24,7 +24,6 @@ import clsx from "clsx";
 import { readHiddenPages } from "@/lib/responseShape";
 import { calcDays, formatCurrency, formatDate } from "./helpers";
 import { PriorityBadge, StatusBadge, TargetProgress, TaskReportBox } from "./task-components";
-import EmployeeWorkplace from "./workplace-components";
 
 const EVAL_CRITERIA = [
   { key: "score_accuracy",          en: "Accuracy at Work",                              ar: "الدقة في العمل" },
@@ -660,7 +659,7 @@ export default function EmployeePortalPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className={clsx("bg-white border-b border-slate-200", employee && "hidden")}>
+      <header className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-brand-600 text-white flex items-center justify-center"><User size={19} /></div>
@@ -740,7 +739,7 @@ export default function EmployeePortalPage() {
         </div>
       </header>
 
-      <main className={clsx(employee ? "max-w-none p-0 space-y-0" : "max-w-7xl mx-auto p-4 lg:p-6 space-y-5")}>
+      <main className="max-w-7xl mx-auto p-4 lg:p-6 space-y-5">
         {error && <div className="alert alert-error"><AlertTriangle size={16} />{error}</div>}
         {success && <div className="alert alert-success"><CheckCircle2 size={16} />{success}</div>}
         {evalSuccess && <div className="alert alert-success"><CheckCircle2 size={16} />{evalSuccess}</div>}
@@ -751,40 +750,7 @@ export default function EmployeePortalPage() {
             <p className="font-medium text-slate-700">{text.selectFirst}</p>
           </div>
         ) : (
-          <>
-          <EmployeeWorkplace
-            isRTL={isRTL}
-            lang={lang}
-            role={role}
-            savedUser={savedUser}
-            employee={employee}
-            employeeId={employeeId}
-            myPayroll={myPayroll}
-            myTasks={myTasks}
-            myLeaves={myLeaves}
-            myBalance={myBalance}
-            announcements={announcements}
-            subLeaves={subLeaves}
-            onLeave={onLeave}
-            advances={advances}
-            myCustomReqs={myCustomReqs}
-            customTypes={customTypes}
-            teamBySub={teamBySub}
-            onlineWorkEnabled={onlineWorkEnabled}
-            onOpenLeave={() => setShowLeaveModal(true)}
-            onOpenPermission={() => setShowPermModal(true)}
-            onOpenAdvance={() => setShowAdvModal(true)}
-            onOpenOnline={() => { setShowOnlineModal(true); loadCheckin(); }}
-            onOpenMessages={() => setShowChat(true)}
-            onOpenOrg={() => setShowOrg(true)}
-            onOpenCustom={openCustom}
-            onOpenTask={openTaskModal}
-            onOpenEvaluation={openEvalModal}
-            onToggleLanguage={toggleLanguage}
-            onOpenPassword={() => setShowPwdModal(true)}
-            onSignOut={signOut}
-          />
-          <div id="workplace-details" className="max-w-7xl mx-auto flex flex-col xl:flex-row gap-5 items-start p-4 lg:p-6">
+          <div className="flex flex-col xl:flex-row gap-5 items-start">
           {/* ── Sidebar: requests + on-leave ── */}
           <aside className="w-full xl:w-72 shrink-0 space-y-3 xl:order-last xl:sticky xl:top-4">
             <div className="card p-2">
@@ -1620,7 +1586,6 @@ export default function EmployeePortalPage() {
 
           </div>
           </div>
-          </>
         )}
       </main>
 
