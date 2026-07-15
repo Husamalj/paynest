@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
+import { paginationQuery, parsePagination, withPaginationHeaders } from "@/lib/pagination";
 
 export const runtime = "nodejs";
 
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
     const action = url.searchParams.get("action") || undefined;
     const from   = url.searchParams.get("from") || undefined;
     const to     = url.searchParams.get("to") || undefined;
-    const limit  = Math.min(Number(url.searchParams.get("limit") || 200), 1000);
+    const pagination = parsePagination(url, { limit: 200, max: 1000 });
 
     const where: any = { companyId: session.companyId };
     if (entity) where.entity = entity;
@@ -32,12 +33,15 @@ export async function GET(req: NextRequest) {
       if (to)   where.createdAt.lte = new Date(new Date(to).getTime() + 24 * 60 * 60 * 1000);
     }
 
-    const logs = await prisma.auditLog.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: limit,
-    });
-    return NextResponse.json(logs);
+    const [logs, total] = await Promise.all([
+      prisma.auditLog.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        ...(pagination.enabled ? paginationQuery(pagination) : { take: pagination.limit }),
+      }),
+      pagination.enabled ? prisma.auditLog.count({ where }) : Promise.resolve(undefined),
+    ]);
+    return withPaginationHeaders(logs, pagination, total);
   } catch (err) {
     return errorResponse(err);
   }

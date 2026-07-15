@@ -38,7 +38,12 @@ function csrfSafe(req: NextRequest) {
   return sameOrigin(req);
 }
 
-function secure(response: NextResponse) {
+function requestId(req: NextRequest) {
+  return req.headers.get("x-request-id") || crypto.randomUUID();
+}
+
+function secure(response: NextResponse, req: NextRequest) {
+  response.headers.set("x-request-id", requestId(req));
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("X-Frame-Options", "DENY");
@@ -48,24 +53,24 @@ function secure(response: NextResponse) {
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (!pathname.startsWith("/api/")) return secure(NextResponse.next());
+  if (!pathname.startsWith("/api/")) return secure(NextResponse.next(), req);
 
   if (!csrfSafe(req)) {
-    return secure(NextResponse.json({ error: "Invalid request origin" }, { status: 403 }));
+    return secure(NextResponse.json({ error: "Invalid request origin" }, { status: 403 }), req);
   }
 
-  if (req.method === "POST" && pathname === "/api/contact") return secure(NextResponse.next());
-  if (PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p))) return secure(NextResponse.next());
+  if (req.method === "POST" && pathname === "/api/contact") return secure(NextResponse.next(), req);
+  if (PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p))) return secure(NextResponse.next(), req);
 
   const auth = req.headers.get("authorization") || "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : (req.cookies.get("token")?.value || "");
-  if (!token) return secure(NextResponse.json({ error: "Missing token" }, { status: 401 }));
+  if (!token) return secure(NextResponse.json({ error: "Missing token" }, { status: 401 }), req);
 
   try {
     await verifyJwtEdge(token);
-    return secure(NextResponse.next());
+    return secure(NextResponse.next(), req);
   } catch {
-    return secure(NextResponse.json({ error: "Invalid or expired token" }, { status: 401 }));
+    return secure(NextResponse.json({ error: "Invalid or expired token" }, { status: 401 }), req);
   }
 }
 

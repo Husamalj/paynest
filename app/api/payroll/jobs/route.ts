@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, requirePageAccess, errorResponse, HttpError } from "@/lib/auth";
 import { calculatePayrollRun } from "@/lib/payrollRunner";
+import { paginationQuery, parsePagination, withPaginationHeaders } from "@/lib/pagination";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -15,6 +16,7 @@ export async function GET(req: NextRequest) {
 
     const url = new URL(req.url);
     const id = Number(url.searchParams.get("id") || "0");
+    const pagination = parsePagination(url, { limit: 20, max: 100 });
     const where = id
       ? { id, companyId: session.companyId }
       : { companyId: session.companyId };
@@ -22,9 +24,12 @@ export async function GET(req: NextRequest) {
     const jobs = await prisma.payrollJob.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      take: id ? 1 : 20,
+      ...(id ? { take: 1 } : pagination.enabled ? paginationQuery(pagination) : { take: pagination.limit }),
     });
-    return NextResponse.json(id ? jobs[0] ?? null : jobs);
+    if (id) return NextResponse.json(jobs[0] ?? null);
+
+    const total = pagination.enabled ? await prisma.payrollJob.count({ where }) : undefined;
+    return withPaginationHeaders(jobs, pagination, total);
   } catch (err) {
     return errorResponse(err);
   }
