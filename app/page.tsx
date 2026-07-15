@@ -11,7 +11,6 @@ import {
 import clsx from "clsx";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useInView } from "@/lib/useInView";
-import BrandLogo from "@/components/BrandLogo";
 
 /* ─── Top navigation ─── */
 function TopNav({ ar }: { ar: boolean }) {
@@ -22,9 +21,13 @@ function TopNav({ ar }: { ar: boolean }) {
       <div className="max-w-7xl mx-auto h-16 flex items-center justify-between px-4 sm:px-6">
         <button
           onClick={() => router.push("/")}
-          className="flex items-center gap-2"
+          className="flex items-center"
         >
-          <BrandLogo variant="row" markClass="h-9" textClass="h-5" />
+          <img
+            src="/paynest-top-logo.png"
+            alt="PayNest HR & Payroll"
+            className="h-12 w-32 rounded-xl object-cover object-center shadow-sm"
+          />
         </button>
 
         <nav className="flex items-center" />
