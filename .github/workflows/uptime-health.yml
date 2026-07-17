@@ -8,7 +8,7 @@ on:
       target_url:
         description: "Health endpoint to check"
         required: false
-        default: "https://www.paynest.app/api/health?strict=1"
+        default: "https://paynest-two.vercel.app/api/health?strict=1"
 
 permissions:
   contents: read
@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      DEFAULT_TARGET_URL: "https://www.paynest.app/api/health?strict=1"
+      DEFAULT_TARGET_URL: "https://paynest-two.vercel.app/api/health?strict=1"
 
     steps:
       - name: Check strict health endpoint
