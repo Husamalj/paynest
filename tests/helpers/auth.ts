@@ -69,6 +69,6 @@ export async function loginStaff(page: Page, role: Exclude<Role, "employee">) {
 }
 
 export async function logoutFromSuperAdmin(page: Page) {
-  await page.getByRole("button", { name: /sign out/i }).click();
+  await page.getByTestId("super-admin-sign-out").click();
   await expect(page).toHaveURL(/\/$/);
 }

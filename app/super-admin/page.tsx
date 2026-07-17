@@ -367,7 +367,7 @@ export default function SuperAdminPage() {
     <div dir={isRTL ? "rtl" : "ltr"} className="min-h-screen bg-slate-50">
       <div className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <h1 className="text-2xl font-black text-slate-900">
+          <h1 data-testid="super-admin-heading" className="text-2xl font-black text-slate-900">
             Pay<span className="text-blue-600">Nest</span>
             <span className="ms-2 text-sm font-semibold text-slate-400 tracking-widest uppercase">{text.dashboard}</span>
           </h1>
@@ -381,7 +381,7 @@ export default function SuperAdminPage() {
               <Languages size={16} /> {text.language}
             </button>
             <button className="btn btn-primary" onClick={() => setShowAdd(true)}><Plus size={16} /> {text.addCompany}</button>
-            <button className="btn btn-secondary" onClick={signOut}><LogOut size={16} /> {text.signOut}</button>
+            <button data-testid="super-admin-sign-out" className="btn btn-secondary" onClick={signOut}><LogOut size={16} /> {text.signOut}</button>
           </div>
         </div>
       </div>

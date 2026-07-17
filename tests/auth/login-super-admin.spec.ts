@@ -5,6 +5,6 @@ test("super admin can log in from the staff login page", async ({ page }) => {
   skipIfMissingCredentials("superAdmin");
 
   await loginStaff(page, "superAdmin");
-  await expect(page.locator("body")).toContainText(/CEO Dashboard|Add Company/i);
+  await expect(page.getByTestId("super-admin-heading")).toBeVisible();
 });
 
