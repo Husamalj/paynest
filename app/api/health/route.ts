@@ -1,33 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { evaluateHealth, type HealthChecks } from "@/lib/health";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
   const startedAt = Date.now();
-  const checks = {
+  const checks: HealthChecks = {
     database: "unknown",
     jwt: process.env.JWT_SECRET ? "configured" : "missing",
-    email: process.env.RESEND_API_KEY && process.env.FROM_EMAIL ? "configured" : "missing",
-    cron: process.env.CRON_SECRET ? "configured" : "missing",
+    email: process.env.RESEND_API_KEY && process.env.FROM_EMAIL ? "configured" : "disabled",
+    cron: process.env.CRON_SECRET ? "configured" : "disabled",
     storage: process.env.BLOB_READ_WRITE_TOKEN ? "configured" : "database-fallback",
   };
-
-  let status = "ok";
 
   try {
     await prisma.$queryRaw`SELECT 1`;
     checks.database = "ok";
   } catch {
     checks.database = "error";
-    status = "degraded";
   }
 
   const strict = req.nextUrl.searchParams.get("strict") === "1";
-  if (checks.jwt === "missing") status = "degraded";
-  if (strict && checks.email !== "configured") status = "degraded";
-  if (strict && checks.cron !== "configured") status = "degraded";
-  if (strict && checks.storage !== "configured") status = "degraded";
+  const status = evaluateHealth(checks);
 
   return NextResponse.json({
     status,

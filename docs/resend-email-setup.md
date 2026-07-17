@@ -1,8 +1,8 @@
 # Resend Email Setup
 
-Email delivery is disabled until `RESEND_API_KEY` is configured.
+Email delivery is an optional capability and remains a safe no-op until `RESEND_API_KEY` is configured.
 
-## Required Vercel Production Variables
+## Optional Vercel Production Variables
 
 - `RESEND_API_KEY`
 - `FROM_EMAIL`
@@ -31,7 +31,7 @@ npx vercel --prod --yes
 6. Verify:
 
 ```bash
-curl https://paynest-tau.vercel.app/api/health
+curl https://paynest-two.vercel.app/api/health
 ```
 
 Expected:

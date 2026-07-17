@@ -8,7 +8,7 @@ Use this when a customer reports an issue. Start with evidence, check health and
 2. Check production health:
 
 ```text
-https://www.paynest.app/api/health?strict=1
+https://paynest-two.vercel.app/api/health?strict=1
 ```
 
 3. Check the latest Vercel deployment status and logs around the reported time.
@@ -52,7 +52,7 @@ Do not override payroll numbers until the source of the difference is clear.
 3. Check:
 
 ```text
-https://www.paynest.app/api/health?strict=1
+https://paynest-two.vercel.app/api/health?strict=1
 ```
 
 Expected:
@@ -108,7 +108,7 @@ For real customer files, delete local copies after debugging.
 1. Check:
 
 ```text
-https://www.paynest.app/api/health?strict=1
+https://paynest-two.vercel.app/api/health?strict=1
 ```
 
 2. Check Vercel deployment status and function errors.

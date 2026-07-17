@@ -38,7 +38,7 @@ for strict monitoring. It returns `503` when database or critical configuration 
 - GitHub Actions runs `.github/workflows/uptime-health.yml` every 10 minutes against:
 
 ```text
-https://www.paynest.app/api/health?strict=1
+https://paynest-two.vercel.app/api/health?strict=1
 ```
 
   It can also be run manually from GitHub Actions by opening **Uptime Health** and clicking **Run workflow**.
@@ -55,7 +55,7 @@ https://www.paynest.app/api/health?strict=1
 For UptimeRobot, Better Stack, or any other external monitor, create an HTTPS monitor with:
 
 ```text
-URL: https://www.paynest.app/api/health?strict=1
+URL: https://paynest-two.vercel.app/api/health?strict=1
 Expected status: 200
 Interval: 1-5 minutes
 Method: GET

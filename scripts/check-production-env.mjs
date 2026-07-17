@@ -7,11 +7,6 @@ const required = [
   "DIRECT_URL",
   "JWT_SECRET",
   "NEXT_PUBLIC_APP_URL",
-  "RESEND_API_KEY",
-  "FROM_EMAIL",
-  "CONTACT_EMAIL",
-  "CRON_SECRET",
-  "BLOB_READ_WRITE_TOKEN",
 ];
 
 function loadEnvFile(file) {

@@ -8,11 +8,16 @@ Set these in Vercel Project Settings > Environment Variables. Do not commit real
 - `DIRECT_URL`: direct PostgreSQL connection for Prisma operations.
 - `JWT_SECRET`: long random value, at least 48 characters.
 - `NEXT_PUBLIC_APP_URL`: production URL, HTTPS.
+
+## Optional Capabilities
+
 - `RESEND_API_KEY`: production email provider key.
 - `FROM_EMAIL`: verified sender.
 - `CONTACT_EMAIL`: support/contact inbox.
 - `CRON_SECRET`: long random value, at least 32 characters.
 - `BLOB_READ_WRITE_TOKEN`: Vercel Blob token for uploaded files and employee documents.
+
+When these optional values are absent, email delivery is a safe no-op, scheduled cron processing remains unavailable, and uploaded files use the database fallback. Their status remains visible in `/api/health`, but they do not make the core uptime check fail.
 
 ## Checks
 
@@ -42,4 +47,4 @@ Redeploy the Vercel project, then verify:
 - `/api/health` returns JSON.
 - `/api/health?strict=1` returns 200.
 - Staff login works.
-- Contact form sends or safely no-ops according to email provider config.
+- Contact form safely no-ops when email is disabled, or sends when Resend is configured.

@@ -11,11 +11,16 @@ For the full Vercel setup flow, use [vercel-production-setup.md](vercel-producti
 - `DIRECT_URL`: direct PostgreSQL connection string for Prisma operations.
 - `JWT_SECRET`: long random secret, different from test/dev.
 - `NEXT_PUBLIC_APP_URL`: production app URL.
+
+## Optional Capabilities
+
 - `FROM_EMAIL`: verified sender address.
 - `RESEND_API_KEY`: production email provider key.
 - `CONTACT_EMAIL`: inbox for contact form submissions.
 - `CRON_SECRET`: secret for protected cron routes.
 - `BLOB_READ_WRITE_TOKEN`: Vercel Blob token so uploads/documents stay out of PostgreSQL.
+
+Missing optional integrations do not fail the uptime check. Email delivery becomes a safe no-op, scheduled cron processing remains unavailable, and uploads use the database fallback until the corresponding variables are configured.
 
 ## Database Safety
 
@@ -56,6 +61,6 @@ For performance checks, run the GitHub Actions `Load k6` workflow against stagin
 
 - Log in as super admin, owner/HR, and employee.
 - Confirm company page hiding still blocks hidden UI and hidden API routes.
-- Confirm contact form delivery.
+- Confirm the contact form safely no-ops when email is disabled, or delivers when Resend is configured.
 - Confirm login/logout cookies work over HTTPS.
 - Check server logs for Prisma, auth, or email errors.
