@@ -48,7 +48,7 @@
     "@vercel/blob": "^2.6.1",
     "@xmldom/xmldom": "^0.9.10",
     "@xyflow/react": "^12.10.2",
-    "axios": "^1.16.1",
+    "axios": "^1.18.1",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "docx-preview": "^0.3.7",
