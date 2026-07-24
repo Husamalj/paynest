@@ -46,8 +46,9 @@ export default defineConfig({
           DATABASE_URL: process.env.DATABASE_URL || "",
           DIRECT_URL: process.env.DIRECT_URL || process.env.DATABASE_URL || "",
           JWT_SECRET: process.env.JWT_SECRET || "test-jwt-secret-change-me",
-          RESEND_API_KEY: process.env.RESEND_API_KEY || "test-resend-disabled",
-          FROM_EMAIL: process.env.FROM_EMAIL || "noreply@example.test",
+          PAYNEST_DISABLE_EMAIL: "true",
+          RESEND_API_KEY: process.env.RESEND_API_KEY || "re_test_disabled",
+          EMAIL_FROM: process.env.EMAIL_FROM || "PayNest Test <noreply@example.test>",
         },
       },
 });

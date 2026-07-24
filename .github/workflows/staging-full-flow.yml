@@ -34,8 +34,9 @@ jobs:
           JWT_SECRET: ${{ secrets.STAGING_JWT_SECRET }}
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
           DIRECT_URL: ${{ secrets.STAGING_DIRECT_URL }}
-          RESEND_API_KEY: "test-resend-disabled"
-          FROM_EMAIL: "noreply@example.test"
+          PAYNEST_DISABLE_EMAIL: "true"
+          RESEND_API_KEY: "re_test_disabled"
+          EMAIL_FROM: "PayNest Test <noreply@example.test>"
         run: npm run test:e2e:flow
 
       - uses: actions/upload-artifact@v4
@@ -46,4 +47,3 @@ jobs:
             playwright-report
             test-results
           if-no-files-found: ignore
-

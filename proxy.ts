@@ -60,6 +60,7 @@ export async function proxy(req: NextRequest) {
   }
 
   if (req.method === "POST" && pathname === "/api/contact") return secure(NextResponse.next(), req);
+  if (req.method === "POST" && pathname === "/api/email/test") return secure(NextResponse.next(), req);
   if (PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p))) return secure(NextResponse.next(), req);
 
   const auth = req.headers.get("authorization") || "";

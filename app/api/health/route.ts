@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const checks: HealthChecks = {
     database: "unknown",
     jwt: process.env.JWT_SECRET ? "configured" : "missing",
-    email: process.env.RESEND_API_KEY && process.env.FROM_EMAIL ? "configured" : "disabled",
+    email: process.env.RESEND_API_KEY && process.env.EMAIL_FROM ? "configured" : "disabled",
     cron: process.env.CRON_SECRET ? "configured" : "disabled",
     storage: process.env.BLOB_READ_WRITE_TOKEN ? "configured" : "database-fallback",
   };

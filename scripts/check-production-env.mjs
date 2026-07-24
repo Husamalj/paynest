@@ -35,6 +35,7 @@ const errors = [];
 const warnings = [];
 const forbiddenProductionKeys = [
   "PAYNEST_ALLOW_TEST_DB",
+  "PAYNEST_DISABLE_EMAIL",
   "PAYNEST_TEST_DB_READY",
   "TEST_DATABASE_URL",
   "TEST_DIRECT_URL",
@@ -125,7 +126,7 @@ for (const key of Object.keys(process.env)) {
 requireUrl("DATABASE_URL", { protocols: ["postgresql:", "postgres:"], noLocalhost: true });
 requireUrl("DIRECT_URL", { protocols: ["postgresql:", "postgres:"], noLocalhost: true });
 requireUrl("NEXT_PUBLIC_APP_URL", { protocols: ["https:"] });
-requireEmail("FROM_EMAIL");
+requireEmail("EMAIL_FROM");
 requireEmail("CONTACT_EMAIL");
 requireStrongSecret("JWT_SECRET", 48);
 requireStrongSecret("CRON_SECRET", 32);

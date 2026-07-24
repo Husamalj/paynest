@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendDemoRequest } from "@/lib/email";
+import { getEmailFromAddress } from "@/lib/resend";
 import { requireAuth, requireRole, errorResponse } from "@/lib/auth";
 import { getClientIp, rateLimit } from "@/lib/rateLimit";
 
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
     await prisma.contactRequest.create({ data });
 
     // Also notify by email (best-effort).
-    const to = process.env.CONTACT_EMAIL || process.env.FROM_EMAIL || "info@paynest.app";
+    const to = process.env.CONTACT_EMAIL || getEmailFromAddress();
     await sendDemoRequest(to, {
       firstName, lastName: data.lastName ?? undefined, email,
       company: data.company ?? undefined, teamSize: data.teamSize ?? undefined, message: data.message ?? undefined,

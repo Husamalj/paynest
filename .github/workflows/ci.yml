@@ -35,9 +35,10 @@ jobs:
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
       PAYNEST_TEST_DB_READY: "true"
-      RESEND_API_KEY: test-resend-disabled
-      FROM_EMAIL: noreply@example.test
-      CONTACT_EMAIL: support@example.test
+      PAYNEST_DISABLE_EMAIL: "true"
+      RESEND_API_KEY: re_test_disabled
+      EMAIL_FROM: PayNest Test <noreply@example.test>
+      CONTACT_EMAIL: security@example.test
       CRON_SECRET: test-cron-secret-change-me
 
     steps:
